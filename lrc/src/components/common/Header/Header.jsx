@@ -6,8 +6,8 @@ const Header = () => {
   return (
     <header className="header">
       <div className="logo">
-        <img src="/logo.png" alt="logo" />
-        <h1>롤랜챔</h1>
+        <img src="/site_icon/lol_icon.png" alt="logo" />
+        <h1>정희준을 위한 롤랜챔</h1>
       </div>
     </header>
   );
