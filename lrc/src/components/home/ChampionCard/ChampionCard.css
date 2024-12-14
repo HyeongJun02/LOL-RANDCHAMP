@@ -1,0 +1,22 @@
+.champion-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-align: center;
+  padding: 1rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.champion-card img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.champion-card h3 {
+  margin: 0.5rem 0;
+}
+
+.champion-card p {
+  color: #555;
+  font-size: 0.9rem;
+}

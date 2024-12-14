@@ -1,0 +1,14 @@
+.main-content {
+  padding: 2rem;
+}
+
+.main-content h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.champion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
