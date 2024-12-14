@@ -18,6 +18,7 @@ const RoleFilter = () => {
   const [excludedChampions, setExcludedChampions] = useState([]); // 제외된 챔피언 목록
   const [selectedRoles, setSelectedRoles] = useState([]); // 선택된 역할군
   const [randomChampion, setRandomChampion] = useState(null); // 랜덤 선택된 챔피언
+  const [searchQuery, setSearchQuery] = useState(''); // 검색어
 
   // API 호출로 챔피언 데이터 가져오기
   useEffect(() => {
@@ -34,22 +35,26 @@ const RoleFilter = () => {
     loadChampions();
   }, []);
 
-  // 역할 필터링 로직
+  // 역할 필터링 및 검색 로직
   useEffect(() => {
-    if (selectedRoles.length === 0) {
-      setFilteredChampions(
-        champions.filter((champion) => !excludedChampions.includes(champion.id))
-      );
-    } else {
-      setFilteredChampions(
-        champions.filter(
-          (champion) =>
-            champion.tags.some((tag) => selectedRoles.includes(tag)) &&
-            !excludedChampions.includes(champion.id)
-        )
+    let filtered = champions.filter(
+      (champion) => !excludedChampions.includes(champion.id)
+    );
+
+    if (selectedRoles.length > 0) {
+      filtered = filtered.filter((champion) =>
+        champion.tags.some((tag) => selectedRoles.includes(tag))
       );
     }
-  }, [selectedRoles, champions, excludedChampions]);
+
+    if (searchQuery) {
+      filtered = filtered.filter((champion) =>
+        champion.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    setFilteredChampions(filtered);
+  }, [selectedRoles, champions, excludedChampions, searchQuery]);
 
   // 역할 선택/해제
   const toggleRole = (role) => {
@@ -104,6 +109,14 @@ const RoleFilter = () => {
           </div>
         ))}
       </div>
+
+      <input
+        type="text"
+        className="search-bar"
+        placeholder="챔피언 검색..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
 
       <div className="champion-grid">
         {filteredChampions.map((champion) => (
