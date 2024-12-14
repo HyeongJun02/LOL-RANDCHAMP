@@ -1,22 +1,30 @@
+/* 챔피언 카드 */
 .champion-card {
+  width: 100px; /* 카드 너비 조정 */
+  height: 150px; /* 카드 높이 추가 */
+  text-align: center;
   border: 1px solid #ddd;
   border-radius: 8px;
-  text-align: center;
-  padding: 1rem;
+  padding: 0.5rem;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .champion-card img {
   width: 100%;
-  height: auto;
-  border-radius: 8px;
+  height: 80px;
+  object-fit: cover; /* 이미지 크기 조정 */
+  border-radius: 4px;
 }
 
 .champion-card h3 {
-  margin: 0.5rem 0;
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
 }
 
 .champion-card p {
   color: #555;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
 }
