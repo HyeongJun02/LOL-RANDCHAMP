@@ -4,12 +4,11 @@ import SearchBar from './SearchBar';
 import ChampionList from './ChampionList';
 import RandomSelector from './RandomSelector';
 import { fetchChampionData } from '../../../services/api';
-import './RoleFilter.css';
+import './MainPage.css';
 
-const RoleFilter = () => {
+const MainPage = () => {
   const [champions, setChampions] = useState([]);
   const [filteredChampions, setFilteredChampions] = useState([]);
-  const [excludedChampions, setExcludedChampions] = useState([]);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -24,9 +23,7 @@ const RoleFilter = () => {
   }, []);
 
   useEffect(() => {
-    let filtered = champions.filter(
-      (champion) => !excludedChampions.includes(champion.id)
-    );
+    let filtered = champions;
 
     if (selectedRoles.length > 0) {
       filtered = filtered.filter((champion) =>
@@ -41,23 +38,16 @@ const RoleFilter = () => {
     }
 
     setFilteredChampions(filtered);
-  }, [selectedRoles, searchQuery, excludedChampions, champions]);
+  }, [selectedRoles, searchQuery, champions]);
 
   return (
-    <div>
+    <div className="main-page">
       <RoleIcons selectedRoles={selectedRoles} toggleRole={setSelectedRoles} />
       <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-      <ChampionList
-        filteredChampions={filteredChampions}
-        excludedChampions={excludedChampions}
-        toggleChampionExclusion={setExcludedChampions}
-      />
-      <RandomSelector
-        filteredChampions={filteredChampions}
-        excludedChampions={excludedChampions}
-      />
+      <ChampionList filteredChampions={filteredChampions} />
+      <RandomSelector filteredChampions={filteredChampions} />
     </div>
   );
 };
 
-export default RoleFilter;
+export default MainPage;

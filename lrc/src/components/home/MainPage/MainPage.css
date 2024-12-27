@@ -1,0 +1,61 @@
+/* 역할군 아이콘 */
+.role-icons {
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.role-icon-container {
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.role-icon-container:hover .role-icon {
+  transform: scale(1.1);
+  opacity: 0.9;
+}
+
+.role-icon-container.selected .role-icon {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.role-icon {
+  width: 50px;
+  height: 50px;
+  opacity: 0.6;
+}
+
+.role-label {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #333;
+  text-align: center;
+}
+
+/* 챔피언 그리드 */
+.champion-grid {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  max-height: 400px;
+}
+
+/* 랜덤 선택 */
+.random-selector-container {
+  margin-top: 2rem;
+}
+
+.random-champion-display {
+  margin-top: 1.5rem;
+  gap: 1.5rem;
+}
+
+.random-champion-image {
+  width: 200px;
+  height: 300px;
+  border-radius: 8px;
+}
+
+.random-champion-info {
+  gap: 0.5rem;
+}

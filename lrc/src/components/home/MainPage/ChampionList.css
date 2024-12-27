@@ -1,0 +1,22 @@
+/* 챔피언 그리드 스타일 */
+.champion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto; /* 세로 스크롤 활성화 */
+  max-height: 400px; /* 최대 높이 제한 */
+}
+
+.champion-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.champion-grid::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 4px;
+}
+
+.champion-grid::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}

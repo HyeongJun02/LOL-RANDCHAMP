@@ -1,0 +1,28 @@
+/* 검색창 스타일 */
+.search-bar-container {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.search-bar-custom {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px 15px;
+  border: 2px solid #ccc;
+  border-radius: 25px;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.search-bar-custom:focus {
+  border-color: #f3efb5;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.search-bar-custom::placeholder {
+  color: #aaa;
+  font-style: italic;
+}

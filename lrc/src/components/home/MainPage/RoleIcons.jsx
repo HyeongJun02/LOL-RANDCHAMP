@@ -1,3 +1,6 @@
+import React from 'react';
+import './RoleIcons.css';
+
 const RoleIcons = ({ selectedRoles, toggleRole }) => {
   const ROLE_ICONS = [
     { role: 'Assassin', icon: '/role_icon/Slayer.png', label: '암살자' },
@@ -9,24 +12,15 @@ const RoleIcons = ({ selectedRoles, toggleRole }) => {
   ];
 
   const handleRoleToggle = (role) => {
-    toggleRole(
-      (prevSelectedRoles) =>
-        prevSelectedRoles.includes(role)
-          ? prevSelectedRoles.filter((r) => r !== role) // 이미 선택된 경우 제거
-          : [...prevSelectedRoles, role] // 선택되지 않은 경우 추가
+    toggleRole((prevRoles) =>
+      prevRoles.includes(role)
+        ? prevRoles.filter((r) => r !== role)
+        : [...prevRoles, role]
     );
   };
 
   return (
     <div className="role-icons">
-      <div
-        className={`role-icon-container ${
-          selectedRoles.length === 0 ? 'selected' : ''
-        }`}
-        onClick={() => toggleRole([])} // 아무것도 선택되지 않았을 때 전체 선택으로 설정
-      >
-        <p className="role-label">초기화</p>
-      </div>
       {ROLE_ICONS.map(({ role, icon, label }) => (
         <div
           key={role}

@@ -1,12 +1,12 @@
 // components/MainContent.jsx
 import React from 'react';
-import RoleFilter from '../RoleFilter/RoleFilter';
+import MainPage from '../MainPage/MainPage';
 import './MainContent.css';
 
 const MainContent = ({ champions }) => {
   return (
     <main className="main-content">
-      <RoleFilter />
+      <MainPage />
     </main>
   );
 };

@@ -1,4 +1,3 @@
-// components/Header.jsx
 import React from 'react';
 import './Header.css';
 
@@ -7,7 +6,7 @@ const Header = () => {
     <header className="header">
       <div className="logo">
         <img src="/site_icon/lol_icon.png" alt="logo" />
-        <h1>정희준을 위한 롤랜챔</h1>
+        <h1>롤 랜덤 챔피언 선택기</h1>
       </div>
     </header>
   );
