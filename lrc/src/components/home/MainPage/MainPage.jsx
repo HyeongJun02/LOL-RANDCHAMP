@@ -42,10 +42,22 @@ const MainPage = () => {
 
   return (
     <div className="main-page">
-      <RoleIcons selectedRoles={selectedRoles} toggleRole={setSelectedRoles} />
-      <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-      <ChampionList filteredChampions={filteredChampions} />
-      <RandomSelector filteredChampions={filteredChampions} />
+      <div className="content-container">
+        <div className="left-content">
+          <RoleIcons
+            selectedRoles={selectedRoles}
+            toggleRole={setSelectedRoles}
+          />
+          <SearchBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
+          <ChampionList filteredChampions={filteredChampions} />
+        </div>
+        <div className="right-content">
+          <RandomSelector filteredChampions={filteredChampions} />
+        </div>
+      </div>
     </div>
   );
 };

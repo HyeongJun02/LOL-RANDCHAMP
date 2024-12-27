@@ -31,7 +31,7 @@
   margin-top: 1rem;
   font-size: 1.5rem;
   font-weight: bold;
-  color: #007bff;
+  color: #c5c5c5;
   animation: blink 1.5s linear infinite;
 }
 
@@ -51,6 +51,7 @@
   display: flex;
   gap: 1.5rem;
   padding: 1rem;
+  width: 600px;
   background: linear-gradient(135deg, #ffffff, #f8f9fa);
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -97,13 +98,15 @@
 }
 
 .champion-info-container h3 {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   margin-bottom: 0.5rem;
+  color: #333;
 }
 
 .champion-info-container p {
   font-size: 1rem;
-  margin: 0.5rem 0;
+  color: #555;
+  margin-bottom: 1rem;
 }
 
 .champion-role {
@@ -113,6 +116,9 @@
 
 /* OPGG 버튼 */
 .opgg-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* 아이콘과 텍스트 간격 */
   padding: 0.5rem 1rem;
   font-size: 1rem;
   font-weight: bold;
@@ -127,4 +133,33 @@
 .opgg-button:hover {
   background-color: #0056b3;
   transform: translateY(-2px);
+}
+
+/* OPGG 아이콘 */
+.opgg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.role-container {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.role-icon-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.role-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.role-icon-container p {
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
 }

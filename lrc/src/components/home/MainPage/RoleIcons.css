@@ -17,6 +17,7 @@
 .role-icon-container:hover .role-icon {
   transform: scale(1.1);
   opacity: 0.9;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 .role-icon-container.selected .role-icon {

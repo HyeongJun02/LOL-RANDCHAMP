@@ -2,6 +2,15 @@ import React, { useState } from 'react';
 import { FaDice } from 'react-icons/fa'; // 주사위 아이콘
 import './RandomSelector.css';
 
+const ROLE_ICONS = [
+  { role: 'Assassin', icon: '/role_icon/Slayer.png', label: '암살자' },
+  { role: 'Fighter', icon: '/role_icon/Fighter.png', label: '전사' },
+  { role: 'Support', icon: '/role_icon/Controller.png', label: '서포터' },
+  { role: 'Mage', icon: '/role_icon/Mage.png', label: '마법사' },
+  { role: 'Marksman', icon: '/role_icon/Marksman.png', label: '원거리 딜러' },
+  { role: 'Tank', icon: '/role_icon/Tank.png', label: '탱커' },
+];
+
 const RandomSelector = ({ filteredChampions }) => {
   const [selectedChampion, setSelectedChampion] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false); // 카드 뽑기 애니메이션 상태
@@ -27,6 +36,18 @@ const RandomSelector = ({ filteredChampions }) => {
     window.open(url, '_blank');
   };
 
+  const renderRoles = (tags) => {
+    return tags.map((tag) => {
+      const role = ROLE_ICONS.find((r) => r.role === tag);
+      return (
+        <div key={tag} className="role-icon-container">
+          <img src={role.icon} alt={role.label} className="role-icon" />
+          <p>{role.label}</p>
+        </div>
+      );
+    });
+  };
+
   return (
     <div className="random-selector-container">
       <button className="random-button" onClick={selectRandomChampion}>
@@ -48,14 +69,19 @@ const RandomSelector = ({ filteredChampions }) => {
           <div className="champion-info-container">
             <h3>{selectedChampion.name}</h3>
             <p>{selectedChampion.title}</p>
-            <p className="champion-role">
-              역할군: {selectedChampion.tags.join(', ')}
-            </p>
+            <div className="role-container">
+              {renderRoles(selectedChampion.tags)}
+            </div>
             <button
               className="opgg-button"
               onClick={() => openOPGG(selectedChampion.id)}
             >
-              OPGG 챔피언 공략 보기
+              <img
+                src="/site_icon/opgg_icon.png"
+                alt="OPGG Icon"
+                className="opgg-icon"
+              />
+              공략 보기
             </button>
           </div>
         </div>

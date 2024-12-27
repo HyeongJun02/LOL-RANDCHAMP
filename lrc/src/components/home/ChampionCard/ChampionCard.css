@@ -1,17 +1,42 @@
+/* 챔피언 그리드 */
+.champion-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(150px, 1fr)
+  ); /* 카드 최소 너비 */
+  gap: 20px; /* 카드 간 간격 */
+  padding: 20px; /* 그리드 내부 여백 */
+  max-height: 500px; /* 최대 높이 제한 */
+  overflow-y: auto; /* 스크롤 활성화 */
+  scrollbar-width: thin; /* 스크롤바 크기 */
+}
+
+.champion-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.champion-grid::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 4px;
+}
+
+.champion-grid::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
 /* 챔피언 카드 */
 .champion-card {
-  width: 120px; /* 카드 너비 조정 */
-  height: px; /* 카드 높이 조정 */
   text-align: center;
   border: none; /* 테두리 제거 */
   border-radius: 12px; /* 둥근 모서리 */
-  padding: 0.5rem;
+  padding: 10px;
   background: linear-gradient(
     135deg,
     #ffffff,
     #f2f2f2
   ); /* 카드 배경 그라데이션 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1); /* 그림자 효과 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 그림자 효과 */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -21,27 +46,21 @@
 
 .champion-card:hover {
   transform: scale(1.05); /* 호버 시 확대 */
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2); /* 호버 시 그림자 강화 */
-  background: linear-gradient(
-    135deg,
-    #f0f0f0,
-    #c9c9c9
-  ); /* 호버 시 배경 색상 변경 */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* 호버 시 그림자 강화 */
 }
 
 /* 챔피언 이미지 */
 .champion-card img {
   width: 100%;
-  height: 100%; /* 이미지 높이 */
-  object-fit: cover; /* 이미지 크기 조정 */
+  height: auto; /* 이미지 비율 유지 */
   border-radius: 8px; /* 둥근 모서리 */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 이미지에 그림자 추가 */
 }
 
 /* 챔피언 이름 */
 .champion-card h3 {
-  margin: 0.5rem 0 0.3rem;
-  font-size: 1rem; /* 이름 폰트 크기 확대 */
+  margin: 10px 0;
+  font-size: 1rem; /* 이름 폰트 크기 */
   font-weight: bold;
   color: #333; /* 이름 색상 */
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* 텍스트 그림자 */
@@ -50,7 +69,6 @@
 /* 챔피언 설명 */
 .champion-card p {
   color: #777; /* 설명 색상 */
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   margin: 0;
-  font-style: italic; /* 기울임 */
 }

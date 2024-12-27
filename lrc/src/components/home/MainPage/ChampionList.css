@@ -2,10 +2,10 @@
 .champion-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 1rem;
   padding: 1rem;
   overflow-y: auto; /* 세로 스크롤 활성화 */
   max-height: 400px; /* 최대 높이 제한 */
+  background-color: #a5a5a5;
 }
 
 .champion-grid::-webkit-scrollbar {

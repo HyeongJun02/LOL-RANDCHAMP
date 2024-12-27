@@ -1,35 +1,28 @@
-/* 역할군 아이콘 */
-.role-icons {
+/* 전체 레이아웃 */
+.main-page {
+  padding: 1rem;
+}
+
+.content-container {
+  display: flex;
+  gap: 2rem;
+}
+
+/* 왼쪽 콘텐츠 (역할군, 검색, 챔피언 리스트) */
+.left-content {
+  flex: 3; /* 왼쪽 콘텐츠가 더 많은 공간을 차지 */
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
-.role-icon-container {
-  cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.role-icon-container:hover .role-icon {
-  transform: scale(1.1);
-  opacity: 0.9;
-}
-
-.role-icon-container.selected .role-icon {
-  opacity: 1;
-  transform: scale(1.2);
-}
-
-.role-icon {
-  width: 50px;
-  height: 50px;
-  opacity: 0.6;
-}
-
-.role-label {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: #333;
-  text-align: center;
+/* 오른쪽 콘텐츠 (랜덤 선택 및 선택된 카드) */
+.right-content {
+  flex: 2; /* 오른쪽 콘텐츠가 더 작은 공간을 차지 */
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
 }
 
 /* 챔피언 그리드 */
@@ -38,24 +31,5 @@
   gap: 1rem;
   padding: 1rem;
   max-height: 400px;
-}
-
-/* 랜덤 선택 */
-.random-selector-container {
-  margin-top: 2rem;
-}
-
-.random-champion-display {
-  margin-top: 1.5rem;
-  gap: 1.5rem;
-}
-
-.random-champion-image {
-  width: 200px;
-  height: 300px;
-  border-radius: 8px;
-}
-
-.random-champion-info {
-  gap: 0.5rem;
+  overflow-y: auto; /* 스크롤 가능 */
 }
