@@ -1,26 +1,21 @@
-// App.jsx
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/common/Header/Header';
-import MainContent from './components/home/MainContent/MainContent';
-import { fetchChampionData } from './services/api';
+import HomePage from './components/home/HomePage';
+import RandomChampion from './components/home/RandomChampion/RandomChampion';
+import RandomLine from './components/home/RandomLine/RandomLine';
 import './App.css';
 
 const App = () => {
-  const [champions, setChampions] = useState([]);
-
-  useEffect(() => {
-    const loadChampions = async () => {
-      const data = await fetchChampionData();
-      setChampions(Object.values(data));
-    };
-    loadChampions();
-  }, []);
-
   return (
-    <div className="app">
+    <Router>
       <Header />
-      <MainContent champions={champions} />
-    </div>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/random-champion" element={<RandomChampion />} />
+        <Route path="/random-line" element={<RandomLine />} />
+      </Routes>
+    </Router>
   );
 };
 

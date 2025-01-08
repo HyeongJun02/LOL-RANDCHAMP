@@ -4,7 +4,7 @@ import SearchBar from './SearchBar';
 import ChampionList from './ChampionList';
 import RandomSelector from './RandomSelector';
 import { fetchChampionData } from '../../../services/api';
-import './MainPage.css';
+import './RandomChampion.css';
 
 const MainPage = () => {
   const [champions, setChampions] = useState([]);
