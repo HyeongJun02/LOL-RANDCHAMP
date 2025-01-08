@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import './RandomLine.css';
 
 const LINES = [
-  { name: '탑', icon: '/line_icon/top.webp' },
-  { name: '정글', icon: '/line_icon/jungle.webp' },
-  { name: '미드', icon: '/line_icon/mid.webp' },
-  { name: '원딜', icon: '/line_icon/adc.webp' },
-  { name: '서폿', icon: '/line_icon/support.webp' },
+  { name: '탑', icon: '/line_icon/top_gold.svg' },
+  { name: '정글', icon: '/line_icon/jungle_gold.svg' },
+  { name: '미드', icon: '/line_icon/mid_gold.svg' },
+  { name: '원딜', icon: '/line_icon/adc_gold.webp' },
+  { name: '서폿', icon: '/line_icon/support_gold.svg' },
 ];
 
 const RandomLine = () => {
@@ -75,21 +75,6 @@ const RandomLine = () => {
       updatedPlayers[playerIndex].disabledLines.push(lineName);
     }
 
-    setPlayers(updatedPlayers);
-  };
-
-  // 라인 고정
-  const fixLine = (playerIndex, lineName) => {
-    const updatedPlayers = [...players];
-    if (
-      updatedPlayers.some(
-        (player, i) => i !== playerIndex && player.fixedLine === lineName
-      )
-    ) {
-      alert('이미 고정된 라인입니다.');
-      return;
-    }
-    updatedPlayers[playerIndex].fixedLine = lineName;
     setPlayers(updatedPlayers);
   };
 
@@ -163,22 +148,10 @@ const RandomLine = () => {
                   className={`line-option ${
                     player.disabledLines.includes(line.name) ? 'disabled' : ''
                   }`}
+                  onClick={() => toggleLine(index, line.name)}
                 >
                   <img src={line.icon} alt={line.name} className="line-icon" />
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={!player.disabledLines.includes(line.name)}
-                      onChange={() => toggleLine(index, line.name)}
-                    />
-                    {line.name}
-                  </label>
-                  <button
-                    onClick={() => fixLine(index, line.name)}
-                    disabled={player.fixedLine === line.name}
-                  >
-                    {player.fixedLine === line.name ? '고정됨' : '고정'}
-                  </button>
+                  <span>{line.name}</span>
                 </div>
               ))}
             </div>

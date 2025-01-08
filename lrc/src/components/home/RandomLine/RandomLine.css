@@ -63,10 +63,19 @@ h1 {
   border-radius: 8px;
   width: 60px;
   text-align: center;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  font-size: 0.85rem;
+  user-select: none; /* 텍스트 선택 방지 */
+  -webkit-user-drag: none; /* 이미지 등 드래그 방지 (WebKit) */
+}
+
+.line-option:hover {
+  transform: scale(1.05);
 }
 
 .line-option.disabled {
-  opacity: 0.5;
+  opacity: 0.3;
+  background-color: #ff4d4d;
 }
 
 .line-option label {

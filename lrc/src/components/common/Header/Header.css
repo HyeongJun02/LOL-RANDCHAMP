@@ -29,6 +29,9 @@
 }
 
 .nav-link {
+  display: flex; /* 아이콘과 텍스트를 수평 정렬 */
+  align-items: center;
+  gap: 0.5rem; /* 아이콘과 텍스트 간격 */
   font-size: 0.8rem;
   font-weight: bold;
   color: white;
@@ -40,4 +43,9 @@
 
 .nav-link:hover {
   background-color: #374151; /* 호버 시 배경색 변경 */
+}
+
+.nav-icon {
+  font-size: 1.2rem; /* 아이콘 크기 */
+  color: #ffffff; /* 아이콘 색상 */
 }
