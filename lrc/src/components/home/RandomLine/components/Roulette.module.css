@@ -1,0 +1,39 @@
+.viewport {
+  position: relative;
+  width: calc(80px * 3); /* ITEM_WIDTH * VISIBLE_COUNT */
+  height: 100px;
+  margin: 0.5rem auto;
+  overflow: hidden;
+}
+
+/* 가운데 하이라이트 박스 */
+.viewport::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: calc(80px * 1); /* ITEM_WIDTH * (VISIBLE_COUNT/2) */
+  width: 80px; /* ITEM_WIDTH */
+  height: 100%;
+  border: 3px solid #f1c40f;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.list {
+  display: flex;
+  transition: transform 2s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.item {
+  flex: 0 0 80px; /* ITEM_WIDTH */
+  text-align: center;
+}
+.item img {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 0.2rem;
+}
+.item span {
+  display: block;
+  font-size: 0.85rem;
+}

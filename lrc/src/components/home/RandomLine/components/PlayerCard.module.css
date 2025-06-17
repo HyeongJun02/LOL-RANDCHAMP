@@ -1,0 +1,41 @@
+.card {
+  width: 200px;
+  padding: 1rem;
+  margin: 0.5rem;
+  background: #fff;
+  border: 2px solid #888;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.nameInput {
+  width: 100%;
+  padding: 0.4rem;
+  margin-bottom: 0.8rem;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.assignButton {
+  margin: 0.6rem 0;
+  width: 40px;
+  height: 40px;
+  background: #e74c3c;
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.assignButton:hover {
+  background: #c0392b;
+}
+
+.result {
+  margin-top: 0.6rem;
+  font-weight: bold;
+}
