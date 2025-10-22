@@ -10,12 +10,14 @@ export default function RandomLinePage() {
   const [assigned, setAssigned] = useState(Array(5).fill(null));
   const [triggers, setTriggers] = useState(Array(5).fill(0));
 
+  // 이름 변경
   const onNameChange = (i, newName) => {
     const cp = [...players];
     cp[i].name = newName;
     setPlayers(cp);
   };
 
+  // 라인 금지/허용
   const onToggleLine = (i, line) => {
     const cp = [...players];
     const arr = cp[i].disabled;
@@ -25,6 +27,7 @@ export default function RandomLinePage() {
     setPlayers(cp);
   };
 
+  // 개별 배정
   const assignOne = (i) => {
     const used = assigned.filter((_, idx) => idx !== i);
     const allow = LINE_NAMES.filter(
@@ -44,6 +47,7 @@ export default function RandomLinePage() {
     setTriggers(tg);
   };
 
+  // 전체 배정
   const assignAll = () => {
     const newAsg = [];
     const avail = [...LINE_NAMES];
@@ -63,22 +67,24 @@ export default function RandomLinePage() {
 
   return (
     <div className={styles.container}>
-      {players.map((p, i) => (
-        <PlayerCard
-          key={i}
-          index={i}
-          name={p.name}
-          disabledLines={p.disabled}
-          assignedLine={assigned[i]}
-          spinTrigger={triggers[i]}
-          onNameChange={onNameChange}
-          onToggleLine={onToggleLine}
-          onAssign={assignOne}
-        />
-      ))}
-
+      <h1 className={styles.title}>🎯 라인 랜덤 분배</h1>
+      <div className={styles.cardWrapper}>
+        {players.map((p, i) => (
+          <PlayerCard
+            key={i}
+            index={i}
+            name={p.name}
+            disabledLines={p.disabled}
+            assignedLine={assigned[i]}
+            spinTrigger={triggers[i]}
+            onNameChange={onNameChange}
+            onToggleLine={onToggleLine}
+            onAssign={assignOne}
+          />
+        ))}
+      </div>
       <button className={styles.assignAll} onClick={assignAll}>
-        전체 라인 배정
+        전체 라인 배정 🚀
       </button>
     </div>
   );
