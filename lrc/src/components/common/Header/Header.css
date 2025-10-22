@@ -1,51 +1,97 @@
+/* 전체 헤더 영역 */
 .header {
-  display: flex;
-  flex-direction: column; /* 로고와 메뉴를 세로로 정렬 */
-  align-items: start;
-  padding-top: 1rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-bottom: 0.5rem;
-  background-color: #1f2937;
-  color: #fff;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background: rgba(15, 23, 42, 0.8); /* 다크 네이비 + 반투명 */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* 내부 컨테이너 */
+.header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 로고 */
 .logo {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  text-decoration: none; /* 링크의 밑줄 제거 */
-  color: inherit; /* 텍스트 색상 유지 */
-  margin-bottom: 1rem; /* 로고와 메뉴 간격 */
+  gap: 0.6rem;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  transition: opacity 0.3s ease;
 }
 
-.logo img {
-  width: 50px;
+.logo:hover {
+  opacity: 0.8;
 }
 
+.dice-icon {
+  font-size: 1.5rem;
+  color: #38bdf8; /* 하늘빛 포인트 */
+}
+
+/* 네비게이션 */
 .nav-menu {
   display: flex;
-  gap: 2rem; /* 메뉴 간 간격 */
-}
-
-.nav-link {
-  display: flex; /* 아이콘과 텍스트를 수평 정렬 */
   align-items: center;
-  gap: 0.5rem; /* 아이콘과 텍스트 간격 */
-  font-size: 0.8rem;
-  font-weight: bold;
-  color: white;
+  gap: 1.5rem;
+}
+
+/* 각 메뉴 링크 */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #e2e8f0;
   text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  transition: background-color 0.3s ease;
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+  position: relative;
 }
 
+/* 기본 호버 효과 */
 .nav-link:hover {
-  background-color: #374151; /* 호버 시 배경색 변경 */
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
 }
 
+/* 활성화 상태 */
+.nav-link.active {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.3);
+}
+
+/* 아이콘 */
 .nav-icon {
-  font-size: 1.2rem; /* 아이콘 크기 */
-  color: #ffffff; /* 아이콘 색상 */
+  font-size: 1.1rem;
+}
+
+/* 반응형 대응 */
+@media (max-width: 640px) {
+  .header-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+
+  .nav-menu {
+    width: 100%;
+    justify-content: space-around;
+  }
 }

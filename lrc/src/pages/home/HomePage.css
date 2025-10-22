@@ -1,39 +1,129 @@
+/* 전체 배경 */
 .home-page {
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background-color: #f5f5f5;
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  color: #f1f5f9;
+  overflow: hidden;
+}
+
+/* 중앙 히어로 섹션 */
+.hero {
   text-align: center;
+  margin-top: 10vh;
+  animation: fadeIn 1s ease-in-out;
 }
 
-h1 {
-  font-size: 2rem;
-  /* margin-bottom: 2rem; */
-  color: #333;
+/* 주사위 아이콘 */
+.hero-icon {
+  font-size: 4rem;
+  color: #38bdf8;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
 }
 
+/* 제목 */
+.hero-title {
+  font-size: 2.4rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.5px;
+}
+
+/* 부제 */
+.hero-subtitle {
+  font-size: 1.1rem;
+  color: #cbd5e1;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+/* 버튼 영역 */
 .button-container {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  gap: 1rem;
 }
 
+/* 버튼 스타일 */
 .navigation-button {
-  display: inline-block;
-  padding: 1.5rem 3rem;
-  font-size: 1.2rem;
-  font-weight: bold;
-  text-align: center;
-  text-decoration: none;
-  color: white;
-  background-color: #1f2937;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 1rem 2rem;
   border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  text-decoration: none;
+  box-shadow: 0 4px 10px rgba(56, 189, 248, 0.25);
+  transition: all 0.3s ease;
 }
 
 .navigation-button:hover {
-  background-color: #374151;
-  transform: translateY(-3px);
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 6px 15px rgba(56, 189, 248, 0.4);
+}
+
+/* 보조 버튼 */
+.navigation-button.secondary {
+  background: linear-gradient(90deg, #475569, #334155);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.navigation-button.secondary:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 6px 15px rgba(148, 163, 184, 0.4);
+}
+
+/* 푸터 */
+.footer {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+/* 애니메이션 */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 반응형 */
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: 1.8rem;
+  }
+  .hero-subtitle {
+    font-size: 0.95rem;
+  }
+  .navigation-button {
+    width: 80%;
+    justify-content: center;
+  }
 }
