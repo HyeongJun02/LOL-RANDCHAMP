@@ -18,7 +18,7 @@ const PlayerCard = ({
 
   useEffect(() => {
     setDisplayName(name || `Player ${index + 1}`);
-  }, [name]);
+  }, [name, index]);
 
   return (
     <div className={styles.card}>

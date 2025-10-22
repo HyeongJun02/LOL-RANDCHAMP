@@ -3,7 +3,7 @@ import RoleIcons from './RoleIcons';
 import SearchBar from './SearchBar';
 import ChampionList from './ChampionList';
 import RandomSelector from './RandomSelector';
-import { fetchChampionData } from '../../../services/api';
+import { fetchChampionData } from '../../services/api';
 import './RandomChampion.css';
 
 const MainPage = () => {

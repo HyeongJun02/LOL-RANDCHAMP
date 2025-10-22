@@ -1,9 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/common/Header/Header';
-import HomePage from './components/home/HomePage';
-import RandomChampion from './components/home/RandomChampion/RandomChampion';
-import RandomLinePage from './components/home/RandomLine/pages/RandomLinePage';
+import HomePage from './pages/home/HomePage';
+import RandomChampion from './pages/randomChampion/RandomChampion';
+import RandomLinePage from './pages/home/RandomLine/pages/RandomLinePage';
 import './App.css';
 
 const App = () => {

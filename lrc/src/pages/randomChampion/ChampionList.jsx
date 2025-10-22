@@ -1,6 +1,6 @@
 import React from 'react';
 import './ChampionList.css';
-import ChampionCard from '../ChampionCard/ChampionCard';
+import ChampionCard from '../../components/ChampionCard/ChampionCard';
 
 const ChampionList = ({ filteredChampions }) => {
   return (
