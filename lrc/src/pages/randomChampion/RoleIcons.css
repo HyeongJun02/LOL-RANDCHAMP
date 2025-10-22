@@ -1,39 +1,38 @@
-/* 역할군 아이콘 스타일 */
 .role-icons {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
   justify-content: center;
-  margin-bottom: 1rem;
+  gap: 1rem;
 }
 
 .role-icon-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  text-align: center;
   cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.role-icon {
+  width: 60px;
+  height: 60px;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0));
+  opacity: 0.6;
+  transition: all 0.25s ease;
 }
 
 .role-icon-container:hover .role-icon {
   transform: scale(1.1);
-  opacity: 0.9;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 1;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6));
 }
 
 .role-icon-container.selected .role-icon {
-  opacity: 1;
   transform: scale(1.2);
-}
-
-.role-icon {
-  width: 50px;
-  height: 50px;
-  opacity: 0.6;
+  opacity: 1;
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.9));
 }
 
 .role-label {
-  margin-top: 0.5rem;
+  margin-top: 0.4rem;
   font-size: 0.9rem;
-  color: #333;
-  text-align: center;
+  color: #cbd5e1;
 }

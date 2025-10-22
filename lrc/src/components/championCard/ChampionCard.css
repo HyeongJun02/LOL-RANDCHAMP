@@ -1,74 +1,86 @@
-/* 챔피언 그리드 */
-.champion-grid {
-  display: grid;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(150px, 1fr)
-  ); /* 카드 최소 너비 */
-  gap: 20px; /* 카드 간 간격 */
-  padding: 20px; /* 그리드 내부 여백 */
-  max-height: 500px; /* 최대 높이 제한 */
-  overflow-y: auto; /* 스크롤 활성화 */
-  scrollbar-width: thin; /* 스크롤바 크기 */
-}
-
-.champion-grid::-webkit-scrollbar {
-  width: 8px;
-}
-
-.champion-grid::-webkit-scrollbar-thumb {
-  background-color: #888;
-  border-radius: 4px;
-}
-
-.champion-grid::-webkit-scrollbar-thumb:hover {
-  background-color: #555;
-}
-
-/* 챔피언 카드 */
+/* 🔹 카드 전체 스타일 */
 .champion-card {
-  text-align: center;
-  border: none; /* 테두리 제거 */
-  border-radius: 12px; /* 둥근 모서리 */
-  padding: 10px;
-  background: linear-gradient(
-    135deg,
-    #ffffff,
-    #f2f2f2
-  ); /* 카드 배경 그라데이션 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 그림자 효과 */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease; /* 호버 효과를 위한 트랜지션 */
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transition: all 0.35s ease;
+  cursor: pointer;
 }
 
 .champion-card:hover {
-  transform: scale(1.05); /* 호버 시 확대 */
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* 호버 시 그림자 강화 */
+  transform: translateY(-6px) scale(1.04);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.6);
 }
 
-/* 챔피언 이미지 */
-.champion-card img {
+/* 🔹 이미지 영역 */
+.champion-image-wrapper {
+  position: relative;
   width: 100%;
-  height: auto; /* 이미지 비율 유지 */
-  border-radius: 8px; /* 둥근 모서리 */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 이미지에 그림자 추가 */
+  height: 230px;
+  overflow: hidden;
 }
 
-/* 챔피언 이름 */
-.champion-card h3 {
-  margin: 10px 0;
-  font-size: 1rem; /* 이름 폰트 크기 */
-  font-weight: bold;
-  color: #333; /* 이름 색상 */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* 텍스트 그림자 */
+.champion-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
 }
 
-/* 챔피언 설명 */
-.champion-card p {
-  color: #777; /* 설명 색상 */
-  font-size: 0.8rem;
+.champion-card:hover .champion-image {
+  transform: scale(1.1);
+}
+
+/* 🔹 오버레이 (이름 + 타이틀) */
+.champion-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 0.8rem 0.6rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.1));
+  color: #f8fafc;
+  text-align: left;
+}
+
+.champion-overlay h3 {
+  font-size: 1rem;
+  font-weight: 700;
   margin: 0;
+  color: #38bdf8;
+}
+
+.champion-overlay p {
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+  color: #cbd5e1;
+}
+
+/* 🔹 hover 시 glow 효과 */
+.champion-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: radial-gradient(
+    circle at top left,
+    rgba(56, 189, 248, 0.25),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.champion-card:hover::after {
+  opacity: 1;
+}
+
+/* 🔹 반응형 */
+@media (max-width: 600px) {
+  .champion-image-wrapper {
+    height: 180px;
+  }
 }

@@ -1,165 +1,88 @@
-/* 랜덤 버튼 스타일 */
 .random-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  background-color: #1f2937;
-  color: white;
-  font-size: 1.2rem;
-  font-weight: bold;
-  padding: 0.8rem 1.5rem;
+  gap: 0.6rem;
+  padding: 0.9rem 2rem;
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.1rem;
   border: none;
-  border-radius: 25px;
+  border-radius: 30px;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  animation: pulse 3s infinite;
 }
 
 .random-button:hover {
-  background-color: #374151;
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
 }
 
-.dice-icon {
-  font-size: 1.5rem;
-  color: #e0e0e0;
-}
-
-/* 카드 뽑기 애니메이션 */
-.card-drawing-animation {
-  margin-top: 1rem;
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #c5c5c5;
-  animation: blink 1.5s linear infinite;
-}
-
-@keyframes blink {
+@keyframes pulse {
   0%,
   100% {
-    opacity: 1;
+    box-shadow: 0 0 0px rgba(56, 189, 248, 0.3);
   }
   50% {
-    opacity: 0.5;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
   }
 }
 
-/* 랜덤 챔피언 카드 */
+/* 카드 */
 .random-champion-card {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
   padding: 1rem;
-  width: 600px;
-  background: linear-gradient(135deg, #ffffff, #f8f9fa);
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-  animation: appear 0.5s ease-out;
+  color: #f8fafc;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: transform 0.4s ease;
 }
 
 .random-champion-card:hover {
   transform: translateY(-5px);
 }
 
-@keyframes appear {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* 챔피언 이미지 */
 .champion-image-container {
-  flex: 0 0 auto;
   width: 200px;
   height: 300px;
-  overflow: hidden;
   border-radius: 12px;
+  overflow: hidden;
 }
 
 .champion-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.5s ease;
+}
+.champion-image:hover {
+  transform: scale(1.1);
 }
 
-/* 챔피언 정보 */
-.champion-info-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.champion-info-container h3 {
-  font-size: 1.8rem;
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.champion-info-container p {
-  font-size: 1rem;
-  color: #555;
-  margin-bottom: 1rem;
-}
-
-.champion-role {
-  font-weight: bold;
-  color: #555;
-}
-
-/* OPGG 버튼 */
 .opgg-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem; /* 아이콘과 텍스트 간격 */
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
-  font-weight: bold;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
   border: none;
   border-radius: 8px;
-  background-color: #007bff;
   color: white;
+  padding: 0.6rem 1.2rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition: all 0.3s ease;
 }
-
 .opgg-button:hover {
-  background-color: #0056b3;
-  transform: translateY(-2px);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  transform: translateY(-3px);
 }
-
-/* OPGG 아이콘 */
 .opgg-icon {
-  width: 20px;
-  height: 20px;
-}
-
-.role-container {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
-}
-
-.role-icon-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.role-icon {
   width: 40px;
-  height: 40px;
-}
-
-.role-icon-container p {
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
 }

@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/common/Header/Header';
 import HomePage from './pages/home/HomePage';
 import RandomChampion from './pages/randomChampion/RandomChampion';
-import RandomLinePage from './pages/home/RandomLine/pages/RandomLinePage';
+import RandomLinePage from './pages/randomLine/pages/RandomLinePage';
 import './App.css';
 
 const App = () => {
