@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import PlayerCard from '../components/PlayerCard';
 import { LINE_NAMES } from '../components/lines';
 import styles from '../styles/randomLine.module.css';
@@ -34,7 +35,7 @@ export default function RandomLinePage() {
       (l) => !players[i].disabled.includes(l) && !used.includes(l)
     );
     if (!allow.length) {
-      alert('남은 라인이 없습니다.');
+      toast.error(`남은 라인이 없습니다.`);
       return;
     }
     const pick = allow[Math.floor(Math.random() * allow.length)];
@@ -65,7 +66,7 @@ export default function RandomLinePage() {
     // 먼저 "불가능한 플레이어" 빠르게 체크
     for (let i = 0; i < allowed.length; i++) {
       if (allowed[i].length === 0) {
-        alert(`플레이어 ${i + 1}에게 할당할 라인이 없습니다.`);
+        toast.error(`플레이어 ${i + 1}에게 가능한 라인이 없습니다.`);
         return;
       }
     }
@@ -97,13 +98,17 @@ export default function RandomLinePage() {
 
     if (!dfs(0)) {
       // 이 경우는 제약 자체가 모순일 때 (예: 두 명이 모두 한 라인만 허용)
-      alert('현재 설정으로는 모든 플레이어에게 라인을 배정할 수 없습니다.');
+      toast.error(
+        '현재 설정으로는 모든 플레이어에게 라인을 배정할 수 없습니다.'
+      );
       return;
     }
 
     setAssigned(result);
     // 룰렛 스핀 트리거 증가 (기존 동작 유지)
     setTriggers((trigs) => trigs.map((v) => v + 1));
+
+    toast.success('라인 배정이 완료되었습니다!');
   };
 
   return (
