@@ -1,53 +1,53 @@
 .viewport {
   position: relative;
-  width: calc(80px * 3); /* ITEM_WIDTH * VISIBLE_COUNT */
+  width: calc(80px * 3);
   height: 110px;
   margin: 0.5rem auto;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(
+    145deg,
+    rgba(15, 23, 42, 0.8),
+    rgba(10, 15, 25, 0.8)
+  );
   border-radius: 14px;
-  box-shadow: 0 0 20px rgba(56, 189, 248, 0.15),
-    inset 0 0 8px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
 }
 
-/* 가운데 하이라이트 박스 */
-.viewport::before {
-  content: '';
+/* 중앙 하이라이트 */
+.centerLight {
   position: absolute;
   top: 0;
-  left: calc(80px * 1); /* ITEM_WIDTH * (VISIBLE_COUNT / 2) */
-  width: 80px; /* ITEM_WIDTH */
+  left: calc(80px * 1);
+  width: 80px;
   height: 100%;
-  border: 2px solid rgba(56, 189, 248, 0.8);
+  border: 2px solid rgba(56, 189, 248, 0.9);
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.7);
   border-radius: 8px;
-  box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
-  box-sizing: border-box;
+  animation: pulse 2s ease-in-out infinite;
   pointer-events: none;
-  animation: glowPulse 2s ease-in-out infinite;
+  z-index: 2;
 }
 
-/* 아이템 리스트 */
 .list {
   display: flex;
-  transition: transform 2s cubic-bezier(0.33, 1, 0.68, 1);
+  will-change: transform;
 }
 
-/* 개별 아이템 */
 .item {
   flex: 0 0 80px;
   text-align: center;
   color: #e2e8f0;
   padding-top: 0.5rem;
   opacity: 0.9;
-  transition: transform 0.4s ease, opacity 0.4s ease;
+  transition: transform 0.3s ease;
 }
 
 .item img {
   width: 44px;
   height: 44px;
   margin-bottom: 0.4rem;
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3));
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.25));
   transition: transform 0.3s ease, filter 0.3s ease;
 }
 
@@ -58,31 +58,29 @@
   letter-spacing: 0.5px;
 }
 
-/* 이동 중 중앙 아이템 강조 (실제 가운데일 때 느낌) */
-.list .item:nth-child(3) img {
-  transform: scale(1.1);
+/* 회전 중 중앙 영역 강조 느낌 */
+.viewport.moving .item:nth-child(3) img {
+  transform: scale(1.2);
   filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.6));
-  opacity: 1;
 }
 
-/* 부드러운 발광 효과 */
-@keyframes glowPulse {
+/* 부드러운 중앙 빛 효과 */
+@keyframes pulse {
   0%,
   100% {
     box-shadow: 0 0 18px rgba(56, 189, 248, 0.4);
   }
   50% {
-    box-shadow: 0 0 30px rgba(56, 189, 248, 0.8);
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.8);
   }
 }
 
-/* 반응형 */
 @media (max-width: 500px) {
   .viewport {
     width: calc(80px * 2.5);
     height: 100px;
   }
-  .viewport::before {
+  .centerLight {
     left: calc(80px * 0.75);
   }
 }

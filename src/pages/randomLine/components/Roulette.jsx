@@ -2,45 +2,51 @@ import React, { useState, useEffect, useRef } from 'react';
 import { LINES } from './lines';
 import styles from './Roulette.module.css';
 
-const ITEM_WIDTH = 80; // 아이템 하나 너비(px)
-const VISIBLE_COUNT = 3; // 화면에 보이는 아이템 개수
-const CYCLES = 4; // 전체 회전 횟수 (옵션 길이의 몇 배를 굴릴지)
+const ITEM_WIDTH = 80;
+const VISIBLE_COUNT = 3;
+
+// 한정된 길이를 없애고, 아주 긴 리스트로 반복
+const LOOP_COUNT = 40; // 안전하게 40세트 (5라인 × 40 = 200 아이콘)
 
 const Roulette = ({ options, selectedOption, trigger }) => {
   const [offset, setOffset] = useState(0);
   const prevTrigger = useRef(trigger);
 
-  // spin 시작할 때마다 offset 초기화 → 애니메이션 적용
   useEffect(() => {
     if (trigger === prevTrigger.current) return;
     prevTrigger.current = trigger;
-    if (selectedOption == null) return;
+    if (!selectedOption) return;
 
-    // 최종 인덱스
     const finalIdx = options.findIndex((l) => l === selectedOption);
     if (finalIdx < 0) return;
 
-    // 전체 아이템 배열: CYCLES번 반복 + 마지막 한 세트
-    const totalItems = CYCLES * options.length + finalIdx;
-    // 가운데 인덱스
+    // 매번 다른 속도와 회전 거리
+    const spinRounds = 4 + Math.floor(Math.random() * 4); // 4~7바퀴
+    const totalItems = spinRounds * options.length + finalIdx;
     const mid = Math.floor(VISIBLE_COUNT / 2);
-    // translateX 계산 (px 단위)
-    const targetOffset = (mid - totalItems) * ITEM_WIDTH;
 
-    // offset 0으로 리셋
+    // Noise & 감속
+    const noise = (Math.random() - 0.5) * ITEM_WIDTH * 0.5;
+    const targetOffset = (mid - totalItems) * ITEM_WIDTH + noise;
+
+    // 초기화 → 부드럽게 이동
     setOffset(0);
-    // 다음 프레임에 애니메이션 트리거
     requestAnimationFrame(() => setOffset(targetOffset));
   }, [trigger, selectedOption, options]);
 
-  // 렌더링할 아이템들
-  const items = Array(CYCLES).fill(options).flat().concat(options);
+  // ✅ 아이콘 무한 반복 (길게 늘림)
+  const items = Array.from({ length: LOOP_COUNT })
+    .map(() => options)
+    .flat();
 
   return (
     <div className={styles.viewport}>
       <div
         className={styles.list}
-        style={{ transform: `translateX(${offset}px)` }}
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: 'transform 3s cubic-bezier(0.08, 0.82, 0.17, 1)',
+        }}
       >
         {items.map((name, i) => {
           const icon = LINES.find((l) => l.name === name)?.icon || '';
@@ -52,6 +58,7 @@ const Roulette = ({ options, selectedOption, trigger }) => {
           );
         })}
       </div>
+      <div className={styles.centerLight}></div>
     </div>
   );
 };

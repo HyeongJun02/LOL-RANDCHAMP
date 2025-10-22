@@ -22,6 +22,7 @@ const App = () => {
         position="top-center"
         toastOptions={{
           duration: 3000,
+          // limit: 3,
           style: {
             background: 'rgba(15, 23, 42, 0.9)', // dark glass
             color: '#e2e8f0',

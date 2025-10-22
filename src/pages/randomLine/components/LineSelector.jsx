@@ -13,7 +13,7 @@ const LineSelector = ({ disabledLines, onToggle }) => (
           onClick={() => onToggle(line.name)}
         >
           <img src={line.icon} alt={line.name} className={styles.icon} />
-          <span className={styles.label}>{line.name}</span>
+          {/* <span className={styles.label}>{line.name}</span> */}
         </div>
       );
     })}
