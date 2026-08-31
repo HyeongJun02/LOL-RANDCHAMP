@@ -1,16 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { LINES } from './lines';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { LINES, getLine } from './lines';
 import styles from './Roulette.module.css';
 
-const ITEM_WIDTH = 80;
 const VISIBLE_COUNT = 3;
+const LOOP_COUNT = 40; // 5라인 × 40 = 200 아이콘, 무한 루프처럼 보이게
 
-// 한정된 길이를 없애고, 아주 긴 리스트로 반복
-const LOOP_COUNT = 40; // 안전하게 40세트 (5라인 × 40 = 200 아이콘)
-
-const Roulette = ({ options, selectedOption, trigger }) => {
+const Roulette = ({ options, selectedOption, trigger, resetTrigger }) => {
   const [offset, setOffset] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [itemWidth, setItemWidth] = useState(80);
+  const viewportRef = useRef(null);
   const prevTrigger = useRef(trigger);
+  const prevReset = useRef(resetTrigger);
+
+  // 실제 렌더링된 폭을 측정해서 반응형 화면에서도 정렬이 어긋나지 않게 함
+  useLayoutEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth / VISIBLE_COUNT;
+      if (w > 0) setItemWidth(w);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (resetTrigger === undefined) return;
+    if (resetTrigger === prevReset.current) return;
+    prevReset.current = resetTrigger;
+    setSpinning(false);
+    setOffset(0);
+  }, [resetTrigger]);
 
   useEffect(() => {
     if (trigger === prevTrigger.current) return;
@@ -20,27 +43,36 @@ const Roulette = ({ options, selectedOption, trigger }) => {
     const finalIdx = options.findIndex((l) => l === selectedOption);
     if (finalIdx < 0) return;
 
-    // 매번 다른 속도와 회전 거리
     const spinRounds = 4 + Math.floor(Math.random() * 4); // 4~7바퀴
     const totalItems = spinRounds * options.length + finalIdx;
     const mid = Math.floor(VISIBLE_COUNT / 2);
 
-    // Noise & 감속
-    const noise = (Math.random() - 0.5) * ITEM_WIDTH * 0.5;
-    const targetOffset = (mid - totalItems) * ITEM_WIDTH + noise;
+    const noise = (Math.random() - 0.5) * itemWidth * 0.5;
+    const targetOffset = (mid - totalItems) * itemWidth + noise;
 
-    // 초기화 → 부드럽게 이동
+    setSpinning(true);
     setOffset(0);
     requestAnimationFrame(() => setOffset(targetOffset));
-  }, [trigger, selectedOption, options]);
+    const stopTimer = setTimeout(() => setSpinning(false), 3050);
+    return () => clearTimeout(stopTimer);
+  }, [trigger, selectedOption, options, itemWidth]);
 
-  // ✅ 아이콘 무한 반복 (길게 늘림)
   const items = Array.from({ length: LOOP_COUNT })
     .map(() => options)
     .flat();
 
+  const winner = selectedOption ? getLine(selectedOption) : null;
+
   return (
-    <div className={styles.viewport}>
+    <div
+      ref={viewportRef}
+      className={`${styles.viewport} ${spinning ? styles.spinning : ''}`}
+      style={
+        winner && !spinning
+          ? { boxShadow: `0 0 25px ${winner.glow}`, borderColor: winner.color }
+          : undefined
+      }
+    >
       <div
         className={styles.list}
         style={{
@@ -49,16 +81,27 @@ const Roulette = ({ options, selectedOption, trigger }) => {
         }}
       >
         {items.map((name, i) => {
-          const icon = LINES.find((l) => l.name === name)?.icon || '';
+          const l = LINES.find((line) => line.name === name);
           return (
-            <div key={`${name}-${i}`} className={styles.item}>
-              <img src={icon} alt={name} />
-              <span>{name}</span>
+            <div
+              key={`${name}-${i}`}
+              className={styles.item}
+              style={{ flex: `0 0 ${itemWidth}px` }}
+            >
+              <img src={l?.icon || ''} alt={name} />
+              <span style={{ color: l?.color }}>{name}</span>
             </div>
           );
         })}
       </div>
-      <div className={styles.centerLight}></div>
+      <div
+        className={styles.centerLight}
+        style={{
+          left: itemWidth,
+          width: itemWidth,
+          ...(winner ? { borderColor: winner.color, boxShadow: `0 0 30px ${winner.glow}` } : null),
+        }}
+      />
     </div>
   );
 };

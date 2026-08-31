@@ -4,6 +4,7 @@
   border-radius: 14px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
   transition: all 0.35s ease;
@@ -12,7 +13,8 @@
 
 .champion-card:hover {
   transform: translateY(-6px) scale(1.04);
-  box-shadow: 0 0 25px rgba(56, 189, 248, 0.6);
+  border-color: rgba(200, 170, 110, 0.5);
+  box-shadow: 0 0 25px rgba(200, 170, 110, 0.5);
 }
 
 /* 🔹 이미지 영역 */
@@ -50,7 +52,7 @@
   font-size: 1rem;
   font-weight: 700;
   margin: 0;
-  color: #38bdf8;
+  color: #f0d99a;
 }
 
 .champion-overlay p {
@@ -67,7 +69,7 @@
   border-radius: 14px;
   background: radial-gradient(
     circle at top left,
-    rgba(56, 189, 248, 0.25),
+    rgba(200, 170, 110, 0.25),
     transparent 60%
   );
   opacity: 0;
@@ -81,6 +83,14 @@
 /* 🔹 반응형 */
 @media (max-width: 600px) {
   .champion-image-wrapper {
-    height: 180px;
+    height: 150px;
+  }
+
+  .champion-overlay h3 {
+    font-size: 0.88rem;
+  }
+
+  .champion-overlay p {
+    font-size: 0.72rem;
   }
 }

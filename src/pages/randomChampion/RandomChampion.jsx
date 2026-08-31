@@ -42,6 +42,13 @@ const MainPage = () => {
 
   return (
     <div className="main-page">
+      <div className="gg-aurora" aria-hidden="true">
+        <span className="gg-blob gg-blob-blue main-blob-1" />
+        <span className="gg-blob gg-blob-purple main-blob-2" />
+      </div>
+      <div className="gg-hexbg" aria-hidden="true" />
+      <div className="gg-grain" aria-hidden="true" />
+
       <div className="content-container">
         <div className="left-content">
           <RoleIcons

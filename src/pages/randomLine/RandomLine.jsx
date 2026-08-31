@@ -1,25 +1,35 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import PlayerCard from './components/PlayerCard';
-import { LINE_NAMES } from './components/lines';
+import { LINE_NAMES, randomQuote } from './components/lines';
 import styles from './RandomLine.module.css';
 
-export default function RandomLinePage() {
-  const [players, setPlayers] = useState(
-    Array.from({ length: 5 }, () => ({ name: '', disabled: [] }))
-  );
-  const [assigned, setAssigned] = useState(Array(5).fill(null));
-  const [triggers, setTriggers] = useState(Array(5).fill(0));
-  const [resetTriggers, setResetTriggers] = useState(Array(5).fill(0)); // ✅ 추가
+const SUBTITLES = [
+  '가기 싫은 라인은 미리 밴 때려두자. 억울함 방지 차원에서.',
+  '여기서 정해지면 무를 수 없습니다. 신중하게 밴하세요.',
+  '탑차이, 정글탓, 원딜캐리 다 필요없고 일단 뽑고 봅시다.',
+];
 
-  // 이름 변경
+const makeEmptyPlayers = () =>
+  Array.from({ length: 5 }, () => ({ name: '', disabled: [] }));
+
+export default function RandomLinePage() {
+  const [players, setPlayers] = useState(makeEmptyPlayers());
+  const [assigned, setAssigned] = useState(Array(5).fill(null));
+  const [quotes, setQuotes] = useState(Array(5).fill(''));
+  const [triggers, setTriggers] = useState(Array(5).fill(0));
+  const [resetTriggers, setResetTriggers] = useState(Array(5).fill(0));
+  const [celebrate, setCelebrate] = useState(false);
+  const [subtitle] = useState(
+    () => SUBTITLES[Math.floor(Math.random() * SUBTITLES.length)]
+  );
+
   const onNameChange = (i, newName) => {
     const cp = [...players];
     cp[i].name = newName;
     setPlayers(cp);
   };
 
-  // 라인 금지/허용
   const onToggleLine = (i, line) => {
     const cp = [...players];
     const arr = cp[i].disabled;
@@ -29,14 +39,21 @@ export default function RandomLinePage() {
     setPlayers(cp);
   };
 
-  // 개별 배정
+  const checkCelebrate = (arr) => {
+    if (arr.every(Boolean)) {
+      setCelebrate(true);
+      toast.success('구성 완료! GL HF 🍀', { duration: 4000 });
+      setTimeout(() => setCelebrate(false), 3200);
+    }
+  };
+
   const assignOne = (i) => {
     const used = assigned.filter((_, idx) => idx !== i);
     const allow = LINE_NAMES.filter(
       (l) => !players[i].disabled.includes(l) && !used.includes(l)
     );
     if (!allow.length) {
-      toast.error(`남은 라인이 없습니다.`);
+      toast.error('갈 라인이 없습니다... 밴을 너무 세게 때렸네요 😱');
       return;
     }
     const pick = allow[Math.floor(Math.random() * allow.length)];
@@ -44,12 +61,17 @@ export default function RandomLinePage() {
     asg[i] = pick;
     setAssigned(asg);
 
+    const qt = [...quotes];
+    qt[i] = randomQuote(pick);
+    setQuotes(qt);
+
     const tg = [...triggers];
     tg[i] += 1;
     setTriggers(tg);
+
+    checkCelebrate(asg);
   };
 
-  // 유틸: 제자리 섞기
   const shuffle = (arr) => {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -58,7 +80,6 @@ export default function RandomLinePage() {
     return arr;
   };
 
-  // 전체 라인 배정
   const assignAll = () => {
     const allowed = players.map((p) =>
       LINE_NAMES.filter((l) => !p.disabled.includes(l))
@@ -66,7 +87,7 @@ export default function RandomLinePage() {
 
     for (let i = 0; i < allowed.length; i++) {
       if (allowed[i].length === 0) {
-        toast.error(`플레이어 ${i + 1}에게 가능한 라인이 없습니다.`);
+        toast.error(`플레이어 ${i + 1}, 밴을 너무 많이 해서 갈 곳이 없어요 🙈`);
         return;
       }
     }
@@ -94,29 +115,44 @@ export default function RandomLinePage() {
     };
 
     if (!dfs(0)) {
-      toast.error(
-        '현재 설정으로는 모든 플레이어에게 라인을 배정할 수 없습니다.'
-      );
+      toast.error('이 조합으로는 다섯 명을 다 배정할 수 없어요. 밴 좀 풀어주세요 🥲');
       return;
     }
 
     setAssigned(result);
+    setQuotes(result.map((line) => randomQuote(line)));
     setTriggers((trigs) => trigs.map((v) => v + 1));
-    toast.success('라인 배정이 완료되었습니다!');
+    checkCelebrate(result);
   };
 
-  // ✅ 초기화 (Reset)
   const resetAll = () => {
-    setPlayers(Array.from({ length: 5 }, () => ({ name: '', disabled: [] })));
+    setPlayers(makeEmptyPlayers());
     setAssigned(Array(5).fill(null));
+    setQuotes(Array(5).fill(''));
     setTriggers(Array(5).fill(0));
-    setResetTriggers((r) => r.map((x) => x + 1)); // 룰렛 초기화 트리거
-    toast.success('모든 설정이 초기화되었습니다!');
+    setResetTriggers((r) => r.map((x) => x + 1));
+    setCelebrate(false);
+    toast('판 갈아엎었습니다. 원한 관계 리셋 🔄', { icon: '🧹' });
   };
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>🎯 라인 랜덤 분배</h1>
+      <div className={styles.auroraLayer} aria-hidden="true">
+        <span className={`${styles.blob} ${styles.blob1}`} />
+        <span className={`${styles.blob} ${styles.blob2}`} />
+        <span className={`${styles.blob} ${styles.blob3}`} />
+      </div>
+      <div className={styles.hexBg} aria-hidden="true" />
+      <div className={styles.grain} aria-hidden="true" />
+
+      <div className={styles.headerBlock}>
+        <span className={styles.kicker}>🎮 협곡 친선전 · 5v5</span>
+        <h1 className={styles.title}>
+          <span className={styles.dice}>🎲</span>
+          오늘의 라인 결정전
+        </h1>
+        <p className={styles.subtitle}>{subtitle}</p>
+      </div>
 
       <div className={styles.cardWrapper}>
         {players.map((p, i) => (
@@ -126,8 +162,9 @@ export default function RandomLinePage() {
             name={p.name}
             disabledLines={p.disabled}
             assignedLine={assigned[i]}
+            quote={quotes[i]}
             spinTrigger={triggers[i]}
-            resetTrigger={resetTriggers[i]} // ✅ 전달
+            resetTrigger={resetTriggers[i]}
             onNameChange={onNameChange}
             onToggleLine={onToggleLine}
             onAssign={assignOne}
@@ -137,12 +174,30 @@ export default function RandomLinePage() {
 
       <div className={styles.buttonGroup}>
         <button className={styles.resetAll} onClick={resetAll}>
-          초기화 🔄
+          전체 초기화 🔄
         </button>
         <button className={styles.assignAll} onClick={assignAll}>
-          전체 라인 배정 🚀
+          한 방에 정하기 🚀
         </button>
       </div>
+
+      {celebrate && (
+        <div className={styles.confettiLayer} aria-hidden="true">
+          {Array.from({ length: 24 }).map((_, i) => (
+            <span
+              key={i}
+              className={styles.confetti}
+              style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 0.6}s`,
+                animationDuration: `${2 + Math.random() * 1.5}s`,
+              }}
+            >
+              {['🎉', '⚔️', '🔥', '✨', '🍀'][i % 5]}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

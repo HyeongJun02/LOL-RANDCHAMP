@@ -23,7 +23,7 @@ const Header = () => {
             }`}
           >
             <FaRandom className="nav-icon" />
-            챔피언 랜덤
+            <span>챔피언 랜덤</span>
           </Link>
 
           <Link
@@ -33,7 +33,7 @@ const Header = () => {
             }`}
           >
             <GiPathDistance className="nav-icon" />
-            라인 분배
+            <span>라인 분배</span>
           </Link>
         </nav>
       </div>

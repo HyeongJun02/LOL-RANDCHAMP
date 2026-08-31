@@ -7,14 +7,17 @@ const LineSelector = ({ disabledLines, onToggle }) => (
     {LINES.map((line) => {
       const banned = disabledLines.includes(line.name);
       return (
-        <div
+        <button
+          type="button"
           key={line.name}
           className={`${styles.option} ${banned ? styles.banned : ''}`}
           onClick={() => onToggle(line.name)}
+          title={banned ? `${line.name} 밴 해제` : `${line.name} 밴하기`}
+          style={!banned ? { '--line-color': line.color, '--line-glow': line.glow } : undefined}
         >
           <img src={line.icon} alt={line.name} className={styles.icon} />
-          {/* <span className={styles.label}>{line.name}</span> */}
-        </div>
+          {banned && <span className={styles.banMark}>✕</span>}
+        </button>
       );
     })}
   </div>

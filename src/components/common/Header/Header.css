@@ -4,94 +4,122 @@
   top: 0;
   width: 100%;
   z-index: 100;
-  backdrop-filter: blur(10px);
-  background: rgba(15, 23, 42, 0.8); /* 다크 네이비 + 반투명 */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(14px);
+  background: rgba(5, 7, 13, 0.75);
+  border-bottom: 1px solid rgba(200, 170, 110, 0.15);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
 }
 
 /* 내부 컨테이너 */
 .header-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0.8rem 1.5rem;
+  padding: 0.85rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
 }
 
 /* 로고 */
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 1.3rem;
+  gap: 0.55rem;
+  color: #fdf6e3;
+  font-family: 'Black Han Sans', 'Noto Sans KR', sans-serif;
+  font-weight: 400;
+  font-size: 1.35rem;
   letter-spacing: 0.5px;
   text-decoration: none;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease, filter 0.3s ease;
 }
 
 .logo:hover {
-  opacity: 0.8;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 10px rgba(200, 170, 110, 0.5));
 }
 
 .dice-icon {
-  font-size: 1.5rem;
-  color: #38bdf8; /* 하늘빛 포인트 */
+  font-size: 1.4rem;
+  color: #c8aa6e;
+  filter: drop-shadow(0 0 6px rgba(200, 170, 110, 0.5));
 }
 
 /* 네비게이션 */
 .nav-menu {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.4rem;
 }
 
 /* 각 메뉴 링크 */
 .nav-link {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  color: #e2e8f0;
+  gap: 0.45rem;
+  color: #b9c3d6;
   text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
-  padding: 0.5rem 0.8rem;
-  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
   transition: all 0.25s ease;
-  position: relative;
+  white-space: nowrap;
 }
 
 /* 기본 호버 효과 */
 .nav-link:hover {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
+  color: #f0d99a;
+  background: rgba(200, 170, 110, 0.1);
 }
 
 /* 활성화 상태 */
 .nav-link.active {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.15);
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.3);
+  color: #06111f;
+  background: linear-gradient(135deg, #f0d99a, #c8aa6e);
+  box-shadow: 0 4px 16px -4px rgba(200, 170, 110, 0.7);
 }
 
 /* 아이콘 */
 .nav-icon {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
 }
 
 /* 반응형 대응 */
 @media (max-width: 640px) {
   .header-inner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.8rem;
+    padding: 0.7rem 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem;
+  }
+
+  .logo {
+    font-size: 1.15rem;
   }
 
   .nav-menu {
     width: 100%;
-    justify-content: space-around;
+    justify-content: center;
+    gap: 0.3rem;
+  }
+
+  .nav-link {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem 0.5rem;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .nav-link span {
+    display: none;
+  }
+
+  .nav-icon {
+    font-size: 1.2rem;
   }
 }

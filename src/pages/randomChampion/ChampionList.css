@@ -13,16 +13,14 @@
   width: 6px;
 }
 .champion-grid::-webkit-scrollbar-thumb {
-  background-color: rgba(56, 189, 248, 0.4);
+  background-color: rgba(200, 170, 110, 0.4);
   border-radius: 10px;
 }
 
-/* 카드 */
-.champion-grid img {
-  border-radius: 8px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.champion-grid img:hover {
-  transform: scale(1.07);
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+@media (max-width: 480px) {
+  .champion-grid {
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 0.55rem;
+    max-height: 360px;
+  }
 }
