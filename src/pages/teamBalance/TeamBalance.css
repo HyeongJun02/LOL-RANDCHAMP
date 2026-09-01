@@ -555,3 +555,50 @@
 }
 
 
+
+/* ---------- 재미용 승률 ---------- */
+
+.win-odds {
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--gg-panel-border);
+}
+
+.win-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--gg-red);
+}
+
+.win-fill {
+  display: block;
+  height: 100%;
+  background: var(--gg-blue);
+  transition: width 0.6s cubic-bezier(0.25, 0.8, 0.28, 1);
+}
+
+.win-legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.win-blue {
+  color: var(--gg-blue);
+}
+
+.win-red {
+  color: var(--gg-red);
+}
+
+.win-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: #5b6b85;
+}

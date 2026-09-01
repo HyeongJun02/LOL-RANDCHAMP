@@ -1,4 +1,4 @@
-import { splitTeams } from './balance';
+import { splitTeams, winChance } from './balance';
 import { ratingOf } from '../../tiers';
 
 const p = (name, rating, lock = 0) => ({ name, rating, lock });
@@ -97,5 +97,33 @@ test('각 후보는 참가자를 빠짐없이 한 번씩만 담는다', () => {
     const all = [...o.teamA, ...o.teamB].map((x) => x.name).sort();
     expect(all).toEqual(['a', 'b', 'c', 'd', 'e']);
     expect(o.sumA + o.sumB).toBe(18);
+  });
+});
+
+describe('재미용 승률', () => {
+  test('평점이 같으면 50%', () => {
+    expect(winChance(50, 5, 50, 5)).toBe(50);
+  });
+
+  test('인원이 달라도 평균으로 비교한다', () => {
+    // 5명 합 50 vs 4명 합 40 -> 둘 다 평균 10
+    expect(winChance(50, 5, 40, 4)).toBe(50);
+  });
+
+  test('평점이 높은 쪽이 50%를 넘고, 두 팀 합은 100%', () => {
+    const a = winChance(60, 5, 50, 5);
+    expect(a).toBeGreaterThan(50);
+    expect(100 - a).toBe(winChance(50, 5, 60, 5));
+  });
+
+  test('한 디비전 차이는 54%, 한 티어 차이는 66%', () => {
+    expect(winChance(5, 5, 0, 5)).toBe(54); // 인당 1칸
+    expect(winChance(20, 5, 0, 5)).toBe(66); // 인당 4칸(한 티어)
+    expect(winChance(40, 5, 0, 5)).toBe(79); // 인당 두 티어
+  });
+
+  test('아무리 벌어져도 5~95% 안에 머문다', () => {
+    expect(winChance(1000, 5, 0, 5)).toBe(95);
+    expect(winChance(0, 5, 1000, 5)).toBe(5);
   });
 });

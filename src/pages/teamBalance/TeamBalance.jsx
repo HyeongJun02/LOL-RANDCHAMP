@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaDownload } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
-import { splitTeams, MAX_PLAYERS } from './balance';
+import { splitTeams, MAX_PLAYERS, winChance } from './balance';
 import { mergeMembers, useRoster } from '../../roster';
 import RosterPicker from '../../components/common/RosterPicker';
 import CandidateModal from './CandidateModal';
@@ -297,6 +297,29 @@ const TeamBalance = () => {
                   후보 {result.count}가지
                 </button>
               </div>
+              {(() => {
+                const win = winChance(
+                  result.sumA,
+                  result.teamA.length,
+                  result.sumB,
+                  result.teamB.length
+                );
+                return (
+                  <div className="win-odds">
+                    <div className="win-bar">
+                      <span className="win-fill" style={{ width: `${win}%` }} />
+                    </div>
+                    <div className="win-legend">
+                      <span className="win-blue">1팀 {win}%</span>
+                      <span className="win-red">{100 - win}% 2팀</span>
+                    </div>
+                    <p className="win-note">
+                      티어 평점만 넣고 계산한 재미용 수치입니다. 실제 승패와는 관계 없어요.
+                    </p>
+                  </div>
+                );
+              })()}
+
               {renderTeam(result.teamA, '1팀', result.sumA, 'team-blue')}
               {renderTeam(result.teamB, '2팀', result.sumB, 'team-red')}
             </div>

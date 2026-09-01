@@ -15,6 +15,13 @@ const SUBTITLES = [
   '탑차이, 정글탓, 원딜캐리 다 필요없고 일단 뽑고 봅시다.',
 ];
 
+/* 좁은 화면에서는 카드 5장이 세로로 한없이 늘어져서 목록이 낫다.
+   jsdom에는 matchMedia가 없으므로 방어한다 */
+const prefersCompact = () =>
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(max-width: 780px)').matches;
+
 const makeEmptyPlayers = () =>
   Array.from({ length: 5 }, () => ({ name: '', disabled: [] }));
 
@@ -25,7 +32,7 @@ export default function RandomLinePage() {
   const [triggers, setTriggers] = useState(Array(5).fill(0));
   const [resetTriggers, setResetTriggers] = useState(Array(5).fill(0));
   const [celebrate, setCelebrate] = useState(false);
-  const [compact, setCompact] = useState(false);
+  const [compact, setCompact] = useState(prefersCompact);
   const [showLoader, setShowLoader] = useState(false);
   const roster = useRoster();
   const [subtitle] = useState(

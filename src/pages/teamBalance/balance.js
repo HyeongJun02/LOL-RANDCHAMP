@@ -6,6 +6,18 @@ export const MAX_PLAYERS = 20;
 /* 팝업에 한 번에 뿌릴 조합 수 상한. 넘어가면 평점 차이가 작은 것부터 자른다 */
 export const MAX_OPTIONS = 300;
 
+/* 평점 차이를 로지스틱에 넣은 재미용 수치. 실측 승률이 아니다.
+   ponytail: 인당 한 디비전 차이가 54%, 한 티어(4칸)가 66%가 되도록 잡은 상수.
+   체감이 다르면 WIN_SCALE만 조정하면 된다. */
+export const WIN_SCALE = 14;
+
+export const winChance = (sumA, sizeA, sumB, sizeB) => {
+  if (!sizeA || !sizeB) return 50;
+  const avgDiff = sumA / sizeA - sumB / sizeB;
+  const p = 1 / (1 + 10 ** (-avgDiff / WIN_SCALE));
+  return Math.round(Math.min(0.95, Math.max(0.05, p)) * 100);
+};
+
 /**
  * @param players [{ rating, lock }] lock: 0 자동 / 1 반드시 1팀 / 2 반드시 2팀
  * @param randomness 최적 평점차 대비 허용할 추가 오차. 0이면 항상 최적 조합
