@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 import { fetchChampionData, championIcon } from '../../services/api';
 import { ROLES } from './roles';
+import { LINES } from '../../lines';
+import { LANE_META, countUnclassified } from '../../champLanes';
 import { filterChampions } from './filter';
 import ResultPanel from './ResultPanel';
 import PageHeader from '../../components/common/PageHeader';
@@ -16,6 +18,7 @@ const RandomChampion = () => {
   const [champions, setChampions] = useState([]);
   const [status, setStatus] = useState('loading');
   const [roles, setRoles] = useState([]);
+  const [lanes, setLanes] = useState([]);
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState(null);
   const [rolling, setRolling] = useState(null);
@@ -34,14 +37,18 @@ const RandomChampion = () => {
   }, []);
 
   const filtered = useMemo(
-    () => filterChampions(champions, roles, query),
-    [champions, roles, query]
+    () => filterChampions(champions, roles, query, lanes),
+    [champions, roles, query, lanes]
   );
 
-  const toggleRole = (role) =>
-    setRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+  const toggle = (setter) => (value) =>
+    setter((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
     );
+
+  const toggleRole = toggle(setRoles);
+  const toggleLane = toggle(setLanes);
+  const unclassified = countUnclassified(champions);
 
   const pick = () => filtered[Math.floor(Math.random() * filtered.length)];
 
@@ -66,7 +73,7 @@ const RandomChampion = () => {
     }, ROLL_INTERVAL);
   };
 
-  const hasFilter = roles.length > 0 || query !== '';
+  const hasFilter = roles.length > 0 || lanes.length > 0 || query !== '';
 
   return (
     <div className="page champ-page">
@@ -103,18 +110,38 @@ const RandomChampion = () => {
           <span className="champ-count">
             <strong>{filtered.length}</strong> / {champions.length}
           </span>
-          {hasFilter && (
-            <button
-              className="reset-btn"
-              onClick={() => {
-                setRoles([]);
-                setQuery('');
-              }}
-            >
-              <FaTimes /> 초기화
-            </button>
-          )}
+          <button
+            className="reset-btn"
+            disabled={!hasFilter}
+            onClick={() => {
+              setRoles([]);
+              setLanes([]);
+              setQuery('');
+            }}
+          >
+            <FaTimes /> 초기화
+          </button>
         </div>
+      </div>
+
+      <div className="lane-bar">
+        <span className="lane-bar-label">라인</span>
+        <div className="lane-chips">
+          {LINES.map((l) => (
+            <button
+              key={l.name}
+              className={`lane-chip ${lanes.includes(l.name) ? 'active' : ''}`}
+              onClick={() => toggleLane(l.name)}
+            >
+              <img src={l.icon} alt="" />
+              {l.name}
+            </button>
+          ))}
+        </div>
+        <span className="lane-source" title={LANE_META.note}>
+          비공식 · {LANE_META.author} 분류 · {LANE_META.updatedAt} 기준
+          {lanes.length > 0 && unclassified > 0 && ` · 미분류 ${unclassified}명 제외`}
+        </span>
       </div>
 
       <div className="champ-layout">

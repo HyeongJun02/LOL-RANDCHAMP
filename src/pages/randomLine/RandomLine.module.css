@@ -1,6 +1,7 @@
 .container {
   --page-width: 1500px;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -157,16 +158,17 @@
     padding-bottom: 2.4rem;
   }
 
+  .buttonGroup {
+    width: 100%;
+  }
+
   .assignAll,
   .resetAll {
-    padding: 0.85rem 1.3rem;
-    font-size: 0.9rem;
+    flex: 1;
+    padding: 0.6rem 0.7rem;
+    font-size: 0.82rem;
     white-space: nowrap;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .dice {
-    animation: none;
-  }
-}
+

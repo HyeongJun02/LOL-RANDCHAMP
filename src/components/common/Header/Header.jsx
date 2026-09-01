@@ -19,9 +19,11 @@ const Header = () => (
             key={t.to}
             to={t.to}
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            title={t.name}
+            aria-label={t.name}
           >
             <span className="nav-icon">{t.icon}</span>
-            <span>{t.name}</span>
+            <span className="nav-label">{t.name}</span>
           </NavLink>
         ))}
       </nav>

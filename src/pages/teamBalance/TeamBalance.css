@@ -374,7 +374,7 @@
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .player-row {
     grid-template-columns: 1fr 5.6rem 2.6rem 1.6rem;
     grid-template-areas:
@@ -401,6 +401,16 @@
 
   .row-lock button {
     flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .player-row {
+    grid-template-columns: 1fr 3rem 2.6rem;
+    grid-template-areas:
+      'name name del'
+      'tier tier div'
+      'lock lock lock';
   }
 }
 

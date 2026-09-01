@@ -31,3 +31,22 @@ test('역할군과 검색어는 AND', () => {
 test('공백만 입력하면 검색어 없는 것으로 취급', () => {
   expect(filterChampions(CHAMPS, [], '   ')).toHaveLength(3);
 });
+
+test('라인 필터는 OR로 걸리고 역할군과는 AND', () => {
+  const roster = [
+    { id: 'Ahri', name: '아리', tags: ['Mage'] },       // 미드
+    { id: 'Leona', name: '레오나', tags: ['Tank'] },     // 서폿
+    { id: 'Malphite', name: '말파이트', tags: ['Tank'] }, // 탑, 서폿
+  ];
+
+  expect(ids(filterChampions(roster, [], '', ['미드']))).toEqual(['Ahri']);
+  expect(ids(filterChampions(roster, [], '', ['서폿']))).toEqual(['Leona', 'Malphite']);
+  expect(ids(filterChampions(roster, ['Tank'], '', ['탑']))).toEqual(['Malphite']);
+});
+
+test('라인 표에 없는 챔피언은 라인 필터가 걸리면 빠진다', () => {
+  const roster = [{ id: 'Zaahen', name: '자헨', tags: ['Fighter'] }];
+
+  expect(ids(filterChampions(roster, [], '', []))).toEqual(['Zaahen']);
+  expect(ids(filterChampions(roster, [], '', ['탑']))).toEqual([]);
+});

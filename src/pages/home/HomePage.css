@@ -1,6 +1,7 @@
 .home-page {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -427,5 +428,15 @@
     grid-area: lines;
     justify-content: flex-start;
     padding-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .member-row {
+    grid-template-columns: 1fr 3rem 2.6rem;
+    grid-template-areas:
+      'name name del'
+      'tier tier div'
+      'lines lines lines';
   }
 }

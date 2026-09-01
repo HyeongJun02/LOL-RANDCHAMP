@@ -132,9 +132,90 @@
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 
-.reset-btn:hover {
+.reset-btn:hover:not(:disabled) {
   color: var(--gg-red);
   border-color: rgba(249, 115, 98, 0.5);
+}
+
+/* 조건이 없을 땐 자리만 지킨다. 숨기면 옆 카운터가 튄다 */
+.reset-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ---------- 라인 필터 (역할군보다 한 단계 낮은 보조 필터) ---------- */
+
+.lane-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  margin: -0.8rem 0 1.2rem;
+  padding: 0 0.3rem;
+}
+
+.lane-bar-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7a94;
+}
+
+.lane-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.lane-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #7d8ba3;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lane-chip img {
+  width: 14px;
+  height: 14px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.lane-chip:hover {
+  color: var(--gg-gold-light);
+  border-color: rgba(200, 170, 110, 0.3);
+}
+
+.lane-chip.active {
+  color: var(--gg-gold-light);
+  border-color: rgba(200, 170, 110, 0.55);
+  background: rgba(200, 170, 110, 0.12);
+}
+
+.lane-chip.active img {
+  opacity: 1;
+}
+
+.lane-source {
+  margin-left: auto;
+  font-size: 0.68rem;
+  color: #4d5b73;
+  cursor: help;
+}
+
+@media (max-width: 640px) {
+  .lane-source {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
 }
 
 /* ---------- 레이아웃 ---------- */

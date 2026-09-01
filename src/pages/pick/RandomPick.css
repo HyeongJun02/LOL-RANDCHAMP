@@ -105,6 +105,8 @@
   color: #d7dfec;
   font-size: 0.82rem;
   font-weight: 700;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .pick-items li.is-used {

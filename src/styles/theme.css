@@ -96,6 +96,7 @@
 .gg-aurora {
   position: fixed;
   inset: -10%;
+  overflow: hidden;
   z-index: 0;
   filter: blur(70px);
   opacity: 0.55;
