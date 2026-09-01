@@ -30,7 +30,14 @@ test('페이지마다 제목이 서로 다르다 (중복 제목은 색인에서 
 
 test('경로가 App.js 라우트와 일치한다', () => {
   const paths = pages.map(([, m]) => m.path).sort();
-  expect(paths).toEqual(['/', '/pick', '/random-champion', '/random-line', '/team-balance']);
+  expect(paths).toEqual([
+    '/',
+    '/pick',
+    '/random-champion',
+    '/random-line',
+    '/scrim-record',
+    '/team-balance',
+  ]);
 });
 
 test('노리는 검색어가 실제로 문구에 들어 있다', () => {

@@ -1,0 +1,287 @@
+.sr-page {
+  --page-width: 900px;
+}
+
+.sr-mode-tabs {
+  max-width: 420px;
+  margin: 0 auto 1.2rem;
+}
+
+.sr-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1.2rem;
+}
+
+/* ---------- 팀 입력 ---------- */
+
+.sr-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.sr-team {
+  --team: var(--gg-blue);
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--gg-panel-border);
+  border-top: 3px solid var(--team);
+}
+
+.sr-team.team-red {
+  --team: var(--gg-red);
+}
+
+.sr-team-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.7rem;
+}
+
+.sr-team-head h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--team);
+}
+
+.sr-team-count {
+  font-size: 0.75rem;
+  color: #6b7a94;
+}
+
+.sr-row {
+  display: grid;
+  grid-template-columns: 1.3rem 1fr auto 1.8rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.sr-row input {
+  padding: 0.42rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--gg-text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  min-width: 0;
+  transition: border-color 0.2s ease;
+}
+
+.sr-row input:focus {
+  border-color: rgba(200, 170, 110, 0.55);
+}
+
+.sr-add-slot {
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.3rem;
+}
+
+/* ---------- 승리 버튼 ---------- */
+
+.win-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+}
+
+.win-btn {
+  --team: var(--gg-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.9rem;
+  border: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--team) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--team) 45%, transparent);
+  color: var(--team);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.win-btn.team-red {
+  --team: var(--gg-red);
+}
+
+.win-btn:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--team) 28%, transparent);
+}
+
+.win-btn:active {
+  transform: translateY(0);
+}
+
+/* ---------- 리더보드 ---------- */
+
+.sr-board,
+.sr-history {
+  margin-bottom: 1.6rem;
+}
+
+.sr-board h2,
+.sr-history h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #e6ecf7;
+  margin: 0 0 0.8rem;
+}
+
+.sr-board h2 svg {
+  color: var(--gg-gold);
+}
+
+.board-blank {
+  padding: 1.4rem;
+  text-align: center;
+  color: var(--gg-text-muted);
+  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid var(--gg-panel-border);
+}
+
+.board-list,
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* 순위+이름+배지를 한 줄, 전적 텍스트를 그 아래 한 줄로 고정한다.
+   전에는 grid 한 줄에 다 욱여넣어서 폭이 좁으면 점수 배지만 다음 줄로
+   떨어져 나갔다 — 배지는 flex:none이라 절대 줄바꿈되지 않고,
+   대신 이름 쪽이 말줄임표로 줄어든다 */
+.board-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--gg-panel-border);
+}
+
+.board-rank {
+  flex: none;
+  width: 1.4rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #6b7a94;
+  text-align: center;
+}
+
+.board-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.board-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.board-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #e6ecf7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-top .scrim-badge {
+  font-size: 0.76rem;
+  padding: 0.22rem 0.6rem;
+}
+
+.board-record {
+  font-size: 0.75rem;
+  color: #93a5c4;
+  white-space: nowrap;
+}
+
+/* ---------- 최근 기록 ---------- */
+
+.history-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--gg-panel-border);
+}
+
+.hist-time {
+  flex: none;
+  font-size: 0.72rem;
+  color: #5b6b85;
+  width: 3.6rem;
+}
+
+.hist-teams {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #7d8ba3;
+  overflow: hidden;
+}
+
+.hist-teams span:not(.hist-vs) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hist-winner {
+  color: var(--gg-gold-light);
+  font-weight: 700;
+}
+
+.hist-vs {
+  flex: none;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #4d5b73;
+}
+
+/* ---------- 반응형 ---------- */
+
+@media (max-width: 640px) {
+  .sr-teams,
+  .win-buttons {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaDice, FaArrowRight } from 'react-icons/fa';
-import { READY_TOOLS, SOON_TOOLS } from '../../tools';
+import { GRID_TOOLS, SPOTLIGHT_TOOL, SOON_TOOLS } from '../../tools';
 import RosterManager from './RosterManager';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './HomePage.css';
@@ -9,7 +9,8 @@ import './HomePage.css';
 /* --i 순서대로 슉슉 올라온다. 위에서 아래로 세는 값이라 순서를 바꾸면 여기도 같이 바꿀 것 */
 const step = (i) => ({ '--i': i });
 const READY_FROM = 5;
-const SOON_FROM = READY_FROM + READY_TOOLS.length + 1;
+const SPOTLIGHT_FROM = READY_FROM + GRID_TOOLS.length + 1;
+const SOON_FROM = SPOTLIGHT_FROM + (SPOTLIGHT_TOOL ? 1 : 0) + 1;
 const ROSTER_AT = SOON_FROM + SOON_TOOLS.length;
 
 const HomePage = () => {
@@ -39,10 +40,10 @@ const HomePage = () => {
     <section className="tool-section">
       <h2 className="section-title rise" style={step(READY_FROM - 1)}>
         지금 쓸 수 있는 도구
-        <span className="section-count">{READY_TOOLS.length}</span>
+        <span className="section-count">{GRID_TOOLS.length}</span>
       </h2>
       <div className="feature-grid">
-        {READY_TOOLS.map((t, i) => (
+        {GRID_TOOLS.map((t, i) => (
           <Link
             to={t.to}
             key={t.to}
@@ -59,6 +60,28 @@ const HomePage = () => {
         ))}
       </div>
     </section>
+
+    {SPOTLIGHT_TOOL && (
+      <section className="tool-section">
+        <h2 className="section-title rise" style={step(SPOTLIGHT_FROM - 1)}>
+          내전 팀 짜고 난 다음
+        </h2>
+        <Link
+          to={SPOTLIGHT_TOOL.to}
+          className={`feature-card spotlight-card rise accent-${SPOTLIGHT_TOOL.accent}`}
+          style={step(SPOTLIGHT_FROM)}
+        >
+          <span className="feature-icon">{SPOTLIGHT_TOOL.icon}</span>
+          <span className="spotlight-text">
+            <h3 className="feature-title">{SPOTLIGHT_TOOL.title}</h3>
+            <p className="feature-desc">{SPOTLIGHT_TOOL.desc}</p>
+          </span>
+          <span className="feature-cta">
+            시작하기 <FaArrowRight />
+          </span>
+        </Link>
+      </section>
+    )}
 
     <section className="tool-section">
       <h2 className="section-title rise" style={step(SOON_FROM - 1)}>

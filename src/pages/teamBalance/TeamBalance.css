@@ -76,12 +76,6 @@
   gap: 0.4rem;
 }
 
-.row-no {
-  font-size: 0.75rem;
-  color: #5b6b85;
-  text-align: center;
-}
-
 .row-name {
   display: flex;
   align-items: center;
@@ -158,23 +152,6 @@
 .row-lock button.active {
   background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
   color: #06111f;
-}
-
-.row-del {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.4rem;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: #4d5b73;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.row-del:hover {
-  color: var(--gg-red);
 }
 
 .panel-actions {
@@ -355,6 +332,13 @@
   white-space: nowrap;
 }
 
+.li-badges {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .tier-badge {
   flex: none;
   padding: 0.15rem 0.5rem;
@@ -390,14 +374,17 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 
-  .row-no {
+  /* row-no/row-del는 다른 페이지와도 같이 쓰는 전역 클래스라 .player-row로 한정한다.
+     한정하지 않으면 이 미디어쿼리가 다른 페이지의 grid에도 grid-area를 얹어서
+     엉뚱하게 줄바꿈시켜 버린다 */
+  .player-row .row-no {
     display: none;
   }
 
   .row-name { grid-area: name; }
   .row-tier { grid-area: tier; }
   .row-div { grid-area: div; }
-  .row-del { grid-area: del; }
+  .player-row .row-del { grid-area: del; }
 
   .row-lock {
     grid-area: lock;

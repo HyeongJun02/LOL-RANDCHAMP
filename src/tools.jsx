@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaRandom, FaUsers, FaBan } from 'react-icons/fa';
+import { FaRandom, FaUsers, FaBan, FaClipboardList } from 'react-icons/fa';
 import { GiPathDistance, GiCardRandom } from 'react-icons/gi';
 
 /* 도구 추가 = 여기 한 항목. 헤더 nav와 홈 카드가 같이 따라온다.
@@ -30,6 +30,16 @@ export const TOOLS = [
     accent: 'purple',
   },
   {
+    to: '/scrim-record',
+    name: '내전 기록지',
+    title: '내전 기록지',
+    desc: '팀을 채우고 이긴 팀을 고르면 승패와 내전 포인트가 쌓인다. 팀 짜기 결과도 그대로 불러온다.',
+    icon: <FaClipboardList />,
+    accent: 'teal',
+    /* 다른 도구와 나란한 그리드 타일이 아니라 홈에서 독자 섹션으로 보여준다 */
+    spotlight: true,
+  },
+  {
     name: '랜덤 밴픽',
     title: '랜덤 밴픽',
     desc: '밴할 챔피언도 주사위로. 아무도 원망 못 하게.',
@@ -48,3 +58,8 @@ export const TOOLS = [
 
 export const READY_TOOLS = TOOLS.filter((t) => t.to);
 export const SOON_TOOLS = TOOLS.filter((t) => !t.to);
+
+/* 홈 화면 전용 분리: spotlight 도구는 그리드가 아니라 독자 섹션으로 뺀다.
+   헤더 nav는 READY_TOOLS를 그대로 쓰므로 영향 없다 */
+export const GRID_TOOLS = READY_TOOLS.filter((t) => !t.spotlight);
+export const SPOTLIGHT_TOOL = READY_TOOLS.find((t) => t.spotlight);

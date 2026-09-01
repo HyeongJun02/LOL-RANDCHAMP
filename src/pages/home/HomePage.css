@@ -128,6 +128,7 @@
 .accent-purple { --accent: var(--gg-purple); }
 .accent-green { --accent: var(--gg-green); }
 .accent-red { --accent: var(--gg-red); }
+.accent-teal { --accent: var(--gg-teal); }
 
 .feature-card {
   position: relative;
@@ -204,6 +205,46 @@
 
 .feature-card:hover .feature-cta {
   gap: 0.7rem;
+}
+
+/* 내전 팀 짜기 다음 순서로 이어지는 도구라 그리드 타일이 아니라
+   가로로 긴 배너 카드로 독립시켜서 시선이 먼저 가게 한다 */
+.spotlight-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 1.1rem;
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.spotlight-card .feature-icon {
+  margin-bottom: 0;
+}
+
+.spotlight-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.spotlight-card .feature-cta {
+  flex: none;
+  margin-top: 0;
+}
+
+@media (max-width: 560px) {
+  .spotlight-card {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .spotlight-card .feature-cta {
+    align-self: flex-start;
+  }
 }
 
 /* 준비 중 카드 */

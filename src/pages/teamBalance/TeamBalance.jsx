@@ -1,15 +1,29 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaDownload } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
 import { splitTeams, MAX_PLAYERS, winChance, IGNORE_RATING } from './balance';
 import { mergeMembers, useRoster } from '../../roster';
+import { useMatches, statsFor, pointsOf, POINTS } from '../../matches';
+import { saveLastSplit } from '../../lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
+import ScrimBadge from '../../components/common/ScrimBadge';
 import CandidateModal from './CandidateModal';
 import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './TeamBalance.css';
+
+const RATING_MODES = [
+  { value: 'tier', label: '티어만' },
+  { value: 'both', label: '티어 + 내전 포인트' },
+  { value: 'points', label: '내전 포인트만' },
+];
+
+const SCRIM_MODES = [
+  { value: 'normal', label: '일반 내전' },
+  { value: 'aram', label: '칼바람 내전' },
+];
 
 const LOCKS = [
   { value: 0, label: '자동' },
@@ -37,8 +51,30 @@ const TeamBalance = () => {
   const [result, setResult] = useState(null);
   const [showCandidates, setShowCandidates] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const [ratingMode, setRatingMode] = useState('tier');
+  const [scrimMode, setScrimMode] = useState('normal');
   usePageMeta(PAGE_META.teamBalance);
   const roster = useRoster();
+  const matches = useMatches();
+
+  const scrimStats = useMemo(() => statsFor(matches, scrimMode), [matches, scrimMode]);
+  const showScrim = ratingMode !== 'tier';
+
+  /* 평점 기준에 따라 실제로 팀을 나눌 때 쓸 값을 만든다.
+     both는 티어 평점에 그대로 더한다 — tiers.js 눈금(디비전 1~2점)에
+     맞춰 승/패 1회를 ±2점으로 잡아뒀기 때문에 스케일을 따로 맞출 필요가 없다 */
+  const ratingFor = (p) => {
+    const scrim = pointsOf(scrimStats, p.name);
+    if (ratingMode === 'points') return scrim;
+    if (ratingMode === 'both') return ratingOf(p) + scrim;
+    return ratingOf(p);
+  };
+
+  /* 결과가 나올 때마다(직접 짜기/후보 고르기 공통) 내전 기록지가 이어받을 수 있게 남겨둔다 */
+  useEffect(() => {
+    if (!result) return;
+    saveLastSplit(result.teamA.map((p) => p.name), result.teamB.map((p) => p.name));
+  }, [result]);
 
   const update = (id, patch) =>
     setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
@@ -111,7 +147,7 @@ const TeamBalance = () => {
       return;
     }
     const split = splitTeams(
-      entered.map((p) => ({ ...p, rating: ratingOf(p) })),
+      entered.map((p) => ({ ...p, rating: ratingFor(p) })),
       ignoreRating ? IGNORE_RATING : randomness
     );
     if (!split) {
@@ -136,7 +172,10 @@ const TeamBalance = () => {
           .map((p, i) => (
             <li key={p.id} style={{ animationDelay: `${i * 90}ms` }}>
               <span className="team-player">{p.name}</span>
-              <TierBadge player={p} />
+              <span className="li-badges">
+                <TierBadge player={p} />
+                {showScrim && <ScrimBadge points={pointsOf(scrimStats, p.name)} />}
+              </span>
             </li>
           ))}
       </ul>
@@ -179,6 +218,9 @@ const TeamBalance = () => {
                       placeholder="이름"
                       onChange={(e) => update(p.id, { name: e.target.value })}
                     />
+                    {showScrim && p.name.trim() !== '' && (
+                      <ScrimBadge points={pointsOf(scrimStats, p.name)} />
+                    )}
                     <RosterPicker
                       taken={players.filter((x) => x.id !== p.id).map((x) => x.name)}
                       onPick={(m) =>
@@ -261,6 +303,41 @@ const TeamBalance = () => {
         </section>
 
         <aside className="tb-side">
+          <div className="tb-panel">
+            <span className="range-label">평점 기준</span>
+            <div className="seg-tabs">
+              {RATING_MODES.map((m) => (
+                <button
+                  key={m.value}
+                  className={`seg-tab ${ratingMode === m.value ? 'active' : ''}`}
+                  onClick={() => setRatingMode(m.value)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {showScrim && (
+              <>
+                <div className="seg-tabs" style={{ marginTop: '0.5rem' }}>
+                  {SCRIM_MODES.map((m) => (
+                    <button
+                      key={m.value}
+                      className={`seg-tab ${scrimMode === m.value ? 'active' : ''}`}
+                      onClick={() => setScrimMode(m.value)}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="range-hint">
+                  내전 기록지에 쌓인 {scrimMode === 'aram' ? '칼바람' : '일반'} 내전 승패를
+                  {ratingMode === 'points' ? ' 평점 대신' : ' 티어 평점에 더해'} 반영합니다.
+                  승 1회당 {`+${POINTS.WIN}`}점, 패 1회당 {POINTS.LOSS}점.
+                </p>
+              </>
+            )}
+          </div>
+
           <div className="tb-panel">
             <label className="range-label" htmlFor="randomness">
               랜덤성

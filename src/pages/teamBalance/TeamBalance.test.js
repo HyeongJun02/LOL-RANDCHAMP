@@ -151,6 +151,57 @@ test('이미 들어간 팀원은 체크된 채로 뜨고, 풀면 참가자에서
   expect(names).toContain('영희');
 });
 
+const seedMatches = (list) => localStorage.setItem('lrc.matches', JSON.stringify(list));
+
+describe('내전 포인트 반영', () => {
+  test('평점 기준을 티어만이 아닌 걸로 바꾸면 내전 포인트 배지가 보인다', () => {
+    seedMatches([
+      { id: 'm1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
+    ]);
+    const el = buildWith(['철수', '영희']);
+
+    expect(el.querySelector('.scrim-badge')).toBeNull();
+
+    click(byText(el, '티어 + 내전 포인트'));
+    expect(el.querySelectorAll('.scrim-badge').length).toBeGreaterThan(0);
+  });
+
+  test('내전 포인트만 기준으로 짜면 평점 합이 내전 포인트 합과 같아진다', () => {
+    seedMatches([
+      { id: 'm1', mode: 'normal', teamA: ['가'], teamB: ['나'], winner: 'A', playedAt: 1 },
+      { id: 'm2', mode: 'normal', teamA: ['다'], teamB: ['라'], winner: 'A', playedAt: 2 },
+    ]);
+    const el = buildWith(['가', '나', '다', '라']);
+    click(byText(el, '내전 포인트만'));
+    click(el.querySelector('.build-btn'));
+
+    // 티어 기준이면 전원 골드라 합이 0일 수 없다 — 실제로 바뀌었는지 확인
+    const sums = [...el.querySelectorAll('.team-sum strong')].map((s) => Number(s.textContent));
+    expect(sums[0] + sums[1]).toBe(0); // 가·다 +2, 나·라 -2
+  });
+
+  test('칼바람/일반 전환에 따라 같은 사람도 다른 내전 포인트가 반영된다', () => {
+    seedMatches([
+      { id: 'm1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
+      { id: 'm2', mode: 'aram', teamA: ['영희'], teamB: ['철수'], winner: 'A', playedAt: 2 },
+    ]);
+    const el = buildWith(['철수', '영희']);
+    click(byText(el, '내전 포인트만'));
+    click(el.querySelector('.build-btn'));
+
+    const badgeFor = (name) =>
+      [...el.querySelectorAll('.team-list li')]
+        .find((li) => li.textContent.includes(name))
+        .querySelector('.scrim-badge').textContent;
+
+    expect(badgeFor('철수')).toBe('+2'); // 기본값 '일반'에서는 철수가 이김
+
+    click(byText(el, '칼바람 내전'));
+    click(el.querySelector('.build-btn'));
+    expect(badgeFor('철수')).toBe('-2'); // 칼바람에서는 영희가 이김
+  });
+});
+
 test('직접 입력한 이름은 팝업이 건드리지 않는다', () => {
   seedRoster([{ id: 'a', name: '철수', tier: 'GOLD', division: 4 }]);
   const el = render();

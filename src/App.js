@@ -8,6 +8,7 @@ import RandomChampion from './pages/randomChampion/RandomChampion';
 import RandomLinePage from './pages/randomLine/RandomLine';
 import TeamBalance from './pages/teamBalance/TeamBalance';
 import RandomPick from './pages/pick/RandomPick';
+import ScrimRecord from './pages/scrimRecord/ScrimRecord';
 
 const TOAST_LIMIT = 3;
 
@@ -37,6 +38,7 @@ const App = () => {
           <Route path="/random-line" element={<RandomLinePage />} />
           <Route path="/team-balance" element={<TeamBalance />} />
           <Route path="/pick" element={<RandomPick />} />
+          <Route path="/scrim-record" element={<ScrimRecord />} />
         </Routes>
       </Router>
       <ToastLimiter />
