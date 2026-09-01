@@ -12,7 +12,13 @@ const read = () => {
     const raw = JSON.parse(localStorage.getItem(KEY));
     if (!Array.isArray(raw)) return [];
     /* id 없던 옛 데이터도 그대로 살린다 */
-    return raw.map((m) => ({ tier: 'GOLD', division: 4, ...m, id: m.id || uid() }));
+    return raw.map((m) => ({
+      tier: 'GOLD',
+      division: 4,
+      lines: [],
+      ...m,
+      id: m.id || uid(),
+    }));
   } catch {
     return [];
   }
@@ -47,7 +53,7 @@ window.addEventListener('storage', (e) => {
 export const useRoster = () => useSyncExternalStore(subscribe, () => roster);
 
 export const addMember = (member = {}) =>
-  commit([...roster, { id: uid(), name: '', tier: 'GOLD', division: 4, ...member }]);
+  commit([...roster, { id: uid(), name: '', tier: 'GOLD', division: 4, lines: [], ...member }]);
 
 export const updateMember = (id, patch) =>
   commit(roster.map((m) => (m.id === id ? { ...m, ...patch } : m)));

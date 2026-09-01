@@ -1,4 +1,3 @@
-// src/pages/randomLine/components/lines.js
 export const LINES = [
   {
     name: '탑',

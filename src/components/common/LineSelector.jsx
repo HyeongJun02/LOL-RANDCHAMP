@@ -1,9 +1,9 @@
 import React from 'react';
-import { LINES } from './lines';
+import { LINES } from '../../lines';
 import styles from './LineSelector.module.css';
 
-const LineSelector = ({ disabledLines, onToggle }) => (
-  <div className={styles.selector}>
+const LineSelector = ({ disabledLines, onToggle, compact = false }) => (
+  <div className={`${styles.selector} ${compact ? styles.compact : ''}`}>
     {LINES.map((line) => {
       const banned = disabledLines.includes(line.name);
       return (

@@ -3,12 +3,12 @@
   --accent-glow: rgba(200, 170, 110, 0.35);
 
   position: relative;
-  width: min(316px, calc(100vw - 3rem));
+  width: min(268px, calc(100vw - 3rem));
   box-sizing: border-box;
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015));
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 26px;
-  padding: 1.6rem 1.35rem 1.5rem;
+  border-radius: 20px;
+  padding: 1.1rem 1rem 1rem;
   text-align: center;
   backdrop-filter: blur(18px);
   box-shadow:
@@ -40,12 +40,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 0.7rem;
 }
 
 .badge {
   font-family: 'Black Han Sans', sans-serif;
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   letter-spacing: 0.5px;
   color: #06111f;
   background: linear-gradient(135deg, #f0d99a, #c8aa6e);
@@ -73,7 +73,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.7rem;
 }
 
 .nameInput {
@@ -85,7 +85,7 @@
   background: transparent;
   color: #f8fafc;
   padding: 0.3rem 0.2rem 0.6rem;
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.2px;
   transition: border-color 0.25s ease;
@@ -161,12 +161,12 @@
 .assignButton {
   position: relative;
   width: 100%;
-  margin-top: 1.1rem;
-  padding: 0.72rem 0;
+  margin-top: 0.8rem;
+  padding: 0.55rem 0;
   border-radius: 999px;
   background: linear-gradient(135deg, #f0d99a, #c8aa6e 55%, #a9824c);
   color: #06111f;
-  font-size: 0.92rem;
+  font-size: 0.85rem;
   font-weight: 800;
   letter-spacing: 0.3px;
   border: none;
@@ -247,4 +247,22 @@
   font-size: 0.75rem;
   color: #93a5c4;
   font-style: italic;
+}
+
+/* 이미 뽑은 사람: 금색을 빼서 '끝났다'는 느낌을 준다 */
+.assignButton.assignDone {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #8b98ad;
+  box-shadow: none;
+}
+
+.assignButton.assignDone::after {
+  content: none;
+}
+
+.assignButton.assignDone:hover:not(:disabled) {
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
 }

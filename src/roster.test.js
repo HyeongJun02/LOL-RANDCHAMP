@@ -74,3 +74,13 @@ test('id 없던 옛 데이터도 살린다', () => {
   expect(all[0]).toMatchObject({ name: '철수', division: 2 });
   expect(all[0].id).toBeTruthy();
 });
+
+test('못 가는 라인도 저장되고, 없던 데이터는 빈 배열로 채워진다', () => {
+  store.addMember({ name: '철수', lines: ['탑', '정글'] });
+  expect(stored()[0].lines).toEqual(['탑', '정글']);
+
+  localStorage.setItem(KEY, JSON.stringify([{ name: '영희', tier: 'GOLD', division: 4 }]));
+  load();
+  store.addMember({ name: '민수' });
+  expect(stored()[0].lines).toEqual([]);
+});

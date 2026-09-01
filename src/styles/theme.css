@@ -17,6 +17,34 @@
   --font-body: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
 }
 
+/* ---------- 공용 버튼 ---------- */
+
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #b9c3d6;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ghost-btn:hover:not(:disabled) {
+  color: var(--gg-gold-light);
+  border-color: rgba(200, 170, 110, 0.45);
+}
+
+.ghost-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ---------- 배경 데코 (오로라 블롭 + 헥스 패턴 + 그레인) ---------- */
 /* App에서 <Backdrop/>로 한 번만 렌더. fixed라 헤더 뒤까지 깔린다. */
 

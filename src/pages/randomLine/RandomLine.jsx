@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import PlayerCard from './components/PlayerCard';
-import { LINE_NAMES, randomQuote } from './components/lines';
+import PlayerRow from './components/PlayerRow';
+import { LINE_NAMES, randomQuote } from '../../lines';
 import styles from './RandomLine.module.css';
 
 const SUBTITLES = [
@@ -20,6 +21,7 @@ export default function RandomLinePage() {
   const [triggers, setTriggers] = useState(Array(5).fill(0));
   const [resetTriggers, setResetTriggers] = useState(Array(5).fill(0));
   const [celebrate, setCelebrate] = useState(false);
+  const [compact, setCompact] = useState(false);
   const [subtitle] = useState(
     () => SUBTITLES[Math.floor(Math.random() * SUBTITLES.length)]
   );
@@ -28,6 +30,15 @@ export default function RandomLinePage() {
     const cp = [...players];
     cp[i].name = newName;
     setPlayers(cp);
+  };
+
+  /* 저장된 팀원을 고르면 못 가는 라인까지 같이 채운다 */
+  const onPickMember = (i, member) => {
+    setPlayers((prev) =>
+      prev.map((p, j) =>
+        j === i ? { ...p, name: member.name, disabled: [...(member.lines || [])] } : p
+      )
+    );
   };
 
   const onToggleLine = (i, line) => {
@@ -125,14 +136,14 @@ export default function RandomLinePage() {
     checkCelebrate(result);
   };
 
+  /* 이름과 밴은 그대로 두고 배정 결과만 되돌린다 */
   const resetAll = () => {
-    setPlayers(makeEmptyPlayers());
     setAssigned(Array(5).fill(null));
     setQuotes(Array(5).fill(''));
     setTriggers(Array(5).fill(0));
     setResetTriggers((r) => r.map((x) => x + 1));
     setCelebrate(false);
-    toast('판 갈아엎었습니다. 원한 관계 리셋 🔄', { icon: '🧹' });
+    toast('배정을 되돌렸습니다. 이름과 밴은 그대로 🔄', { icon: '🧹' });
   };
 
   return (
@@ -144,25 +155,50 @@ export default function RandomLinePage() {
           오늘의 라인 결정전
         </h1>
         <p className={styles.subtitle}>{subtitle}</p>
+
+        <div className={styles.viewToggle} role="group" aria-label="보기 방식">
+          <button
+            className={compact ? '' : styles.viewActive}
+            aria-pressed={!compact}
+            onClick={() => setCompact(false)}
+          >
+            🃏 카드
+          </button>
+          <button
+            className={compact ? styles.viewActive : ''}
+            aria-pressed={compact}
+            onClick={() => setCompact(true)}
+          >
+            📋 한눈에
+          </button>
+        </div>
       </div>
 
-      <div className={styles.cardWrapper}>
-        {players.map((p, i) => (
-          <PlayerCard
-            key={i}
-            index={i}
-            name={p.name}
-            takenNames={players.filter((_, j) => j !== i).map((x) => x.name)}
-            disabledLines={p.disabled}
-            assignedLine={assigned[i]}
-            quote={quotes[i]}
-            spinTrigger={triggers[i]}
-            resetTrigger={resetTriggers[i]}
-            onNameChange={onNameChange}
-            onToggleLine={onToggleLine}
-            onAssign={assignOne}
-          />
-        ))}
+      <div className={compact ? styles.rowWrapper : styles.cardWrapper}>
+        {players.map((p, i) => {
+          const shared = {
+            index: i,
+            name: p.name,
+            takenNames: players.filter((_, j) => j !== i).map((x) => x.name),
+            disabledLines: p.disabled,
+            assignedLine: assigned[i],
+            quote: quotes[i],
+            onNameChange,
+            onPickMember,
+            onToggleLine,
+            onAssign: assignOne,
+          };
+          return compact ? (
+            <PlayerRow key={i} {...shared} />
+          ) : (
+            <PlayerCard
+              key={i}
+              {...shared}
+              spinTrigger={triggers[i]}
+              resetTrigger={resetTriggers[i]}
+            />
+          );
+        })}
       </div>
 
       <div className={styles.buttonGroup}>

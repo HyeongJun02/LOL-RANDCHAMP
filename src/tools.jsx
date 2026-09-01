@@ -37,9 +37,10 @@ export const TOOLS = [
     accent: 'red',
   },
   {
-    name: '벌칙 룰렛',
-    title: '벌칙 룰렛',
-    desc: '진 팀이 뭘 할지 정해주는 룰렛. 내기용.',
+    to: '/pick',
+    name: '랜덤 뽑기',
+    title: '랜덤 뽑기',
+    desc: '항목 넣고 하나 뽑기. 2개면 동전 던지기, 이름 넣으면 벌칙 당첨자.',
     icon: <GiCardRandom />,
     accent: 'green',
   },

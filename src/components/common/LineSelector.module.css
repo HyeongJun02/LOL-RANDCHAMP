@@ -8,8 +8,8 @@
 
 .option {
   position: relative;
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -41,8 +41,8 @@
 }
 
 .icon {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   filter: grayscale(1) brightness(0.75);
   transition: filter 0.25s ease;
 }
@@ -61,4 +61,26 @@
   font-size: 1.3rem;
   font-weight: 900;
   text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
+}
+
+/* 목록 뷰용 축소 버전 */
+.compact {
+  gap: 0.3rem;
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+
+.compact .option {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.compact .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.compact .banMark {
+  font-size: 1rem;
 }

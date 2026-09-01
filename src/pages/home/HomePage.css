@@ -5,8 +5,8 @@
   flex-direction: column;
   align-items: center;
   color: #f1f5f9;
-  padding: 3.5rem 1.5rem 3rem;
-  gap: 3.5rem;
+  padding: 2.3rem 1.5rem 2.2rem;
+  gap: 2.2rem;
 }
 
 /* ---------- 히어로 ---------- */
@@ -30,13 +30,13 @@
   border: 1px solid rgba(200, 170, 110, 0.3);
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
-  margin-bottom: 1.3rem;
+  margin-bottom: 0.9rem;
 }
 
 .hero-icon {
   display: block;
-  margin: 0 auto 0.8rem;
-  font-size: 3rem;
+  margin: 0 auto 0.5rem;
+  font-size: 2rem;
   color: var(--gg-gold);
   filter: drop-shadow(0 0 16px rgba(200, 170, 110, 0.5));
   animation: float 3s ease-in-out infinite;
@@ -45,7 +45,7 @@
 .hero-title {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(2.4rem, 7vw, 3.8rem);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
   letter-spacing: 1px;
   margin: 0 0 0.7rem;
   background: linear-gradient(180deg, #fff7e0, #e7c98a 60%, var(--gg-gold));
@@ -55,9 +55,9 @@
 }
 
 .hero-subtitle {
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   color: var(--gg-text-muted);
-  line-height: 1.7;
+  line-height: 1.65;
   max-width: 500px;
   margin: 0 auto;
 }
@@ -72,7 +72,7 @@
   justify-content: center;
   gap: 0.5rem;
   list-style: none;
-  margin: 1.6rem 0 0;
+  margin: 1.1rem 0 0;
   padding: 0;
 }
 
@@ -99,7 +99,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 1.05rem;
+  font-size: 0.92rem;
   font-weight: 800;
   color: #e6ecf7;
   margin: 0 0 1.1rem;
@@ -136,8 +136,8 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.55rem;
-  padding: 1.7rem 1.5rem;
-  border-radius: 20px;
+  padding: 1.15rem 1.1rem;
+  border-radius: 16px;
   text-decoration: none;
   color: inherit;
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015));
@@ -168,26 +168,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 15px;
-  font-size: 1.35rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 1.05rem;
   margin-bottom: 0.3rem;
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .feature-title {
-  font-size: 1.15rem;
+  font-size: 0.98rem;
   font-weight: 800;
   margin: 0;
   color: #f8fafc;
 }
 
 .feature-desc {
-  font-size: 0.87rem;
+  font-size: 0.8rem;
   color: var(--gg-text-muted);
-  line-height: 1.55;
+  line-height: 1.5;
   margin: 0;
   flex: 1;
 }
@@ -245,8 +245,8 @@
 
 @media (max-width: 640px) {
   .home-page {
-    padding: 2.4rem 1.2rem 2rem;
-    gap: 2.6rem;
+    padding: 1.8rem 1.1rem 1.8rem;
+    gap: 1.8rem;
   }
 
   .feature-grid {
@@ -289,20 +289,26 @@
 
 .member-row {
   display: grid;
-  grid-template-columns: 1fr 7rem 3.2rem 2rem;
+  grid-template-columns: 1fr 7rem 3.2rem auto 2rem;
   gap: 0.4rem;
   align-items: center;
 }
 
+.member-lines {
+  display: flex;
+  justify-content: center;
+  padding-left: 0.3rem;
+}
+
 .member-row input,
 .member-row select {
-  padding: 0.5rem 0.6rem;
+  padding: 0.42rem 0.55rem;
   border-radius: 8px;
   border: 1px solid var(--gg-panel-border);
   background: rgba(0, 0, 0, 0.3);
   color: var(--gg-text);
   font-family: inherit;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   outline: none;
   min-width: 0;
   transition: border-color 0.2s ease;
@@ -355,7 +361,7 @@
   justify-content: center;
   gap: 0.4rem;
   margin-top: 0.4rem;
-  padding: 0.55rem 0.9rem;
+  padding: 0.45rem 0.8rem;
   border-radius: 9px;
   border: 1px dashed rgba(200, 170, 110, 0.35);
   background: transparent;
@@ -377,8 +383,25 @@
   font-size: 0.95rem;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 700px) {
   .member-row {
     grid-template-columns: 1fr 6rem 2.8rem 1.8rem;
+    grid-template-areas:
+      'name tier div del'
+      'lines lines lines lines';
+    row-gap: 0.35rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .member-name { grid-area: name; }
+  .member-tier { grid-area: tier; }
+  .member-div { grid-area: div; }
+  .member-del { grid-area: del; }
+
+  .member-lines {
+    grid-area: lines;
+    justify-content: flex-start;
+    padding-left: 0;
   }
 }

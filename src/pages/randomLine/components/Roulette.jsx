@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { LINES, getLine } from './lines';
+import { LINES, getLine } from '../../../lines';
 import styles from './Roulette.module.css';
 
 const VISIBLE_COUNT = 3;

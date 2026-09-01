@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { LINE_NAMES, getLine } from './lines';
-import LineSelector from './LineSelector';
+import { LINE_NAMES, getLine } from '../../../lines';
+import LineSelector from '../../../components/common/LineSelector';
 import RosterPicker from '../../../components/common/RosterPicker';
 import Roulette from './Roulette';
 import styles from './PlayerCard.module.css';
@@ -17,6 +17,7 @@ const PlayerCard = ({
   resetTrigger,
   takenNames,
   onNameChange,
+  onPickMember,
   onToggleLine,
   onAssign,
 }) => {
@@ -68,7 +69,7 @@ const PlayerCard = ({
           taken={takenNames}
           onPick={(m) => {
             setDisplayName(m.name);
-            onNameChange(index, m.name);
+            onPickMember(index, m);
           }}
         />
       </div>
@@ -93,7 +94,7 @@ const PlayerCard = ({
       </div>
 
       <button
-        className={styles.assignButton}
+        className={`${styles.assignButton} ${line ? styles.assignDone : ''}`}
         onClick={() => onAssign(index)}
         disabled={noWayOut}
       >

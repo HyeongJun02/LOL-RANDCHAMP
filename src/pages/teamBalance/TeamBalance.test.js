@@ -52,3 +52,49 @@ test('이미 들어간 팀원은 다른 칸의 목록에서 빠진다', () => {
   expect(el.querySelector('.picker-item')).toBeNull();
   expect(el.querySelector('.picker-empty')).not.toBeNull();
 });
+
+/* React 값 추적기 우회 */
+const setValue = (el, value) => {
+  const proto = Object.getPrototypeOf(el);
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+  return act(() => el.dispatchEvent(new Event('change', { bubbles: true })));
+};
+
+const buildWith = (names) => {
+  const el = render();
+  const inputs = el.querySelectorAll('.row-name input');
+  names.forEach((n, i) => setValue(inputs[i], n));
+  click(el.querySelector('.build-btn'));
+  return el;
+};
+
+test('후보 버튼을 누르면 모든 조합이 팝업으로 뜬다', () => {
+  const el = buildWith(['가', '나', '다', '라']);
+
+  expect(el.querySelector('.cand-backdrop')).toBeNull();
+  click(el.querySelector('.result-cands'));
+
+  // 서로 다른 4명을 2:2로 나누는 방법 3가지
+  expect(el.querySelectorAll('.cand-card')).toHaveLength(3);
+  expect(el.querySelectorAll('.cand-card.is-current')).toHaveLength(1);
+});
+
+test('팝업에서 다른 조합을 고르면 결과가 그 조합으로 바뀐다', () => {
+  const el = buildWith(['가', '나', '다', '라']);
+  click(el.querySelector('.result-cands'));
+
+  const other = [...el.querySelectorAll('.cand-card')].find(
+    (c) => !c.classList.contains('is-current')
+  );
+  const expected = [...other.querySelectorAll('.cand-team.blue li')].map((li) =>
+    li.textContent.trim()
+  );
+
+  click(other);
+
+  expect(el.querySelector('.cand-backdrop')).toBeNull();
+  const team1 = [...el.querySelectorAll('.team-card:not(.team-red) .team-player')].map(
+    (s) => s.textContent
+  );
+  expect(team1).toEqual(expected);
+});

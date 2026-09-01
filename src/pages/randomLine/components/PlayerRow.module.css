@@ -1,0 +1,171 @@
+.row {
+  --accent: rgba(200, 170, 110, 0.5);
+  --accent-glow: rgba(200, 170, 110, 0.25);
+
+  display: grid;
+  grid-template-columns: 2.2rem minmax(120px, 1fr) auto minmax(140px, 1.2fr) 4.6rem;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--accent);
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.badge {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 0.8rem;
+  text-align: center;
+  color: #06111f;
+  background: linear-gradient(135deg, #f0d99a, #c8aa6e);
+  padding: 0.15rem 0;
+  border-radius: 7px;
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.nameInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.nameInput::placeholder {
+  color: #55637d;
+  font-weight: 400;
+}
+
+.nameInput:focus {
+  border-color: #c8aa6e;
+}
+
+.linesCell {
+  display: flex;
+  justify-content: center;
+}
+
+.resultCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.lineTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: 0 0 12px var(--accent-glow);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  animation: row-pop 0.35s ease;
+}
+
+.lineTag img {
+  width: 15px;
+  height: 15px;
+}
+
+@keyframes row-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.quote {
+  font-size: 0.74rem;
+  color: #6b7a94;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waiting {
+  font-size: 0.76rem;
+  color: #4d5b73;
+}
+
+.assign {
+  padding: 0.45rem 0.6rem;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #fff2cf, #e7c98a 45%, #c8aa6e);
+  color: #06111f;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.assign:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+.assign:disabled {
+  background: rgba(255, 255, 255, 0.07);
+  color: #55637d;
+  cursor: default;
+}
+
+@media (max-width: 780px) {
+  .row {
+    grid-template-columns: 2.2rem 1fr 4.6rem;
+    grid-template-areas:
+      'badge name assign'
+      'lines lines lines'
+      'result result result';
+    row-gap: 0.55rem;
+  }
+
+  .badge { grid-area: badge; }
+  .linesCell { grid-area: lines; }
+  .nameCell { grid-area: name; }
+  .assign { grid-area: assign; }
+  .resultCell { grid-area: result; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lineTag {
+    animation: none;
+  }
+}
+
+/* 이미 뽑은 사람: 금색을 빼서 '끝났다'는 느낌을 준다 */
+.assign.assignDone {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #8b98ad;
+}
+
+.assign.assignDone:hover:not(:disabled) {
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.28);
+  filter: none;
+}

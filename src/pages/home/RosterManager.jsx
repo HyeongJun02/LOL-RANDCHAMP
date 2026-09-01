@@ -2,6 +2,7 @@ import React from 'react';
 import { FaPlus, FaTimes, FaUserFriends } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier } from '../../tiers';
 import { useRoster, addMember, updateMember, removeMember } from '../../roster';
+import LineSelector from '../../components/common/LineSelector';
 
 const RosterManager = () => {
   const roster = useRoster();
@@ -14,7 +15,7 @@ const RosterManager = () => {
       </h2>
       <p className="roster-desc">
         자주 같이 하는 친구들을 저장해두면, 도구마다 이름 칸 옆의 버튼으로 바로 불러올 수 있어요.
-        이 브라우저에만 저장됩니다.
+        못 가는 라인까지 저장해두면 라인 분배에서 자동으로 밴됩니다. 이 브라우저에만 저장됩니다.
       </p>
 
       <div className="roster-panel">
@@ -60,6 +61,19 @@ const RosterManager = () => {
                   <option value={m.division}>-</option>
                 )}
               </select>
+              <div className="member-lines" title="못 가는 라인">
+                <LineSelector
+                  compact
+                  disabledLines={m.lines || []}
+                  onToggle={(line) =>
+                    updateMember(m.id, {
+                      lines: (m.lines || []).includes(line)
+                        ? m.lines.filter((l) => l !== line)
+                        : [...(m.lines || []), line],
+                    })
+                  }
+                />
+              </div>
               <button
                 className="member-del"
                 onClick={() => removeMember(m.id)}

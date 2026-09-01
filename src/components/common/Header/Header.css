@@ -14,7 +14,7 @@
 .header-inner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0.85rem 1.5rem;
+  padding: 0.55rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -29,7 +29,7 @@
   color: #fdf6e3;
   font-family: 'Black Han Sans', 'Noto Sans KR', sans-serif;
   font-weight: 400;
-  font-size: 1.35rem;
+  font-size: 1.1rem;
   letter-spacing: 0.5px;
   text-decoration: none;
   transition: opacity 0.3s ease, filter 0.3s ease;
@@ -41,7 +41,7 @@
 }
 
 .dice-icon {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   color: #c8aa6e;
   filter: drop-shadow(0 0 6px rgba(200, 170, 110, 0.5));
 }
@@ -80,8 +80,8 @@
   color: #b9c3d6;
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.92rem;
-  padding: 0.55rem 0.9rem;
+  font-size: 0.83rem;
+  padding: 0.42rem 0.75rem;
   border-radius: 999px;
   transition: all 0.25s ease;
   white-space: nowrap;
@@ -102,7 +102,7 @@
 
 /* 아이콘 */
 .nav-icon {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
 }
 
 /* 반응형 대응 */
@@ -113,7 +113,7 @@
   }
 
   .logo {
-    font-size: 1.15rem;
+    font-size: 1rem;
   }
 
   .logo-tag {

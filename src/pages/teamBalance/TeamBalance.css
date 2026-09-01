@@ -3,20 +3,20 @@
   z-index: 1;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 2.6rem 1.5rem 3rem;
+  padding: 1.8rem 1.5rem 2.4rem;
   color: var(--gg-text);
   font-family: var(--font-body);
 }
 
 .tb-head {
   text-align: center;
-  margin-bottom: 1.8rem;
+  margin-bottom: 1.2rem;
 }
 
 .tb-title {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
   margin: 0 0 0.4rem;
   background: linear-gradient(180deg, #fff7e0, #e7c98a 60%, var(--gg-gold));
   -webkit-background-clip: text;
@@ -25,7 +25,7 @@
 
 .tb-sub {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.83rem;
   color: var(--gg-text-muted);
 }
 
@@ -37,8 +37,8 @@
 }
 
 .tb-panel {
-  padding: 1.1rem;
-  border-radius: 16px;
+  padding: 0.85rem;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--gg-panel-border);
   backdrop-filter: blur(14px);
@@ -49,7 +49,7 @@
   flex-direction: column;
   gap: 1rem;
   position: sticky;
-  top: 84px;
+  top: 68px;
 }
 
 /* ---------- 참가자 패널 ---------- */
@@ -67,7 +67,7 @@
   align-items: center;
   gap: 0.45rem;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: #e6ecf7;
 }
@@ -118,13 +118,13 @@
 
 .player-row input,
 .player-row select {
-  padding: 0.45rem 0.55rem;
-  border-radius: 8px;
+  padding: 0.38rem 0.5rem;
+  border-radius: 7px;
   border: 1px solid var(--gg-panel-border);
   background: rgba(0, 0, 0, 0.3);
   color: var(--gg-text);
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   outline: none;
   min-width: 0;
   transition: border-color 0.2s ease;
@@ -205,32 +205,6 @@
   margin-top: 0.9rem;
 }
 
-.ghost-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.5rem 0.8rem;
-  border-radius: 9px;
-  border: 1px solid var(--gg-panel-border);
-  background: rgba(255, 255, 255, 0.03);
-  color: #b9c3d6;
-  font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.ghost-btn:hover:not(:disabled) {
-  color: var(--gg-gold-light);
-  border-color: rgba(200, 170, 110, 0.45);
-}
-
-.ghost-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
 /* ---------- 설정 ---------- */
 
 .range-label {
@@ -268,13 +242,13 @@
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.85rem 1rem;
+  padding: 0.6rem 0.9rem;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
   color: #06111f;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 8px 22px -10px rgba(200, 170, 110, 0.9);
@@ -304,7 +278,7 @@
 }
 
 .result-summary strong {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--gg-gold);
 }
 
@@ -355,7 +329,7 @@
 
 .team-head h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 800;
   color: var(--team);
 }
@@ -507,13 +481,13 @@
 .cand-head {
   position: relative;
   flex: none;
-  padding: 1.1rem 3rem 0.9rem 1.3rem;
+  padding: 0.9rem 2.8rem 0.75rem 1.1rem;
   border-bottom: 1px solid var(--gg-panel-border);
 }
 
 .cand-head h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #e6ecf7;
 }

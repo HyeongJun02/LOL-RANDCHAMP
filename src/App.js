@@ -7,6 +7,7 @@ import HomePage from './pages/home/HomePage';
 import RandomChampion from './pages/randomChampion/RandomChampion';
 import RandomLinePage from './pages/randomLine/RandomLine';
 import TeamBalance from './pages/teamBalance/TeamBalance';
+import RandomPick from './pages/pick/RandomPick';
 
 const App = () => {
   return (
@@ -19,6 +20,7 @@ const App = () => {
           <Route path="/random-champion" element={<RandomChampion />} />
           <Route path="/random-line" element={<RandomLinePage />} />
           <Route path="/team-balance" element={<TeamBalance />} />
+          <Route path="/pick" element={<RandomPick />} />
         </Routes>
       </Router>
       <Toaster
