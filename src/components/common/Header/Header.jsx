@@ -1,44 +1,32 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { FaDice, FaRandom } from 'react-icons/fa';
-import { GiPathDistance } from 'react-icons/gi';
+import { Link, NavLink } from 'react-router-dom';
+import { FaDice } from 'react-icons/fa';
+import { READY_TOOLS } from '../../../tools';
 import './Header.css';
 
-const Header = () => {
-  const location = useLocation();
+const Header = () => (
+  <header className="header">
+    <div className="header-inner">
+      <Link to="/" className="logo">
+        <FaDice className="dice-icon" />
+        <span className="logo-text">롤랜챔</span>
+        <span className="logo-tag">LRC</span>
+      </Link>
 
-  return (
-    <header className="header">
-      <div className="header-inner">
-        <Link to="/" className="logo">
-          <FaDice className="dice-icon" />
-          <span className="logo-text">LRC</span>
-        </Link>
-
-        <nav className="nav-menu">
-          <Link
-            to="/random-champion"
-            className={`nav-link ${
-              location.pathname === '/random-champion' ? 'active' : ''
-            }`}
+      <nav className="nav-menu">
+        {READY_TOOLS.map((t) => (
+          <NavLink
+            key={t.to}
+            to={t.to}
+            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
           >
-            <FaRandom className="nav-icon" />
-            <span>챔피언 랜덤</span>
-          </Link>
-
-          <Link
-            to="/random-line"
-            className={`nav-link ${
-              location.pathname === '/random-line' ? 'active' : ''
-            }`}
-          >
-            <GiPathDistance className="nav-icon" />
-            <span>라인 분배</span>
-          </Link>
-        </nav>
-      </div>
-    </header>
-  );
-};
+            <span className="nav-icon">{t.icon}</span>
+            <span>{t.name}</span>
+          </NavLink>
+        ))}
+      </nav>
+    </div>
+  </header>
+);
 
 export default Header;

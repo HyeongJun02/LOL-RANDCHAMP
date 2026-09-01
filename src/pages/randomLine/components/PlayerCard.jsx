@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { LINE_NAMES, getLine } from './lines';
 import LineSelector from './LineSelector';
+import RosterPicker from '../../../components/common/RosterPicker';
 import Roulette from './Roulette';
 import styles from './PlayerCard.module.css';
 
@@ -14,6 +15,7 @@ const PlayerCard = ({
   quote,
   spinTrigger,
   resetTrigger,
+  takenNames,
   onNameChange,
   onToggleLine,
   onAssign,
@@ -52,15 +54,24 @@ const PlayerCard = ({
         </span>
       </div>
 
-      <input
-        className={styles.nameInput}
-        value={displayName}
-        placeholder={PLACEHOLDER_NAMES[index % PLACEHOLDER_NAMES.length]}
-        onChange={(e) => {
-          setDisplayName(e.target.value);
-          onNameChange(index, e.target.value);
-        }}
-      />
+      <div className={styles.nameRow}>
+        <input
+          className={styles.nameInput}
+          value={displayName}
+          placeholder={PLACEHOLDER_NAMES[index % PLACEHOLDER_NAMES.length]}
+          onChange={(e) => {
+            setDisplayName(e.target.value);
+            onNameChange(index, e.target.value);
+          }}
+        />
+        <RosterPicker
+          taken={takenNames}
+          onPick={(m) => {
+            setDisplayName(m.name);
+            onNameChange(index, m.name);
+          }}
+        />
+      </div>
 
       <div className={styles.selectorLabel}>가기 싫은 라인 밴하기</div>
       <LineSelector

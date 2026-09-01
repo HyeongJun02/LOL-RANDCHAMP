@@ -1,21 +1,24 @@
 import React from 'react';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Backdrop from './components/common/Backdrop';
 import Header from './components/common/Header/Header';
 import HomePage from './pages/home/HomePage';
 import RandomChampion from './pages/randomChampion/RandomChampion';
 import RandomLinePage from './pages/randomLine/RandomLine';
-import './App.css';
+import TeamBalance from './pages/teamBalance/TeamBalance';
 
 const App = () => {
   return (
     <>
+      <Backdrop />
       <Router>
         <Header />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/random-champion" element={<RandomChampion />} />
           <Route path="/random-line" element={<RandomLinePage />} />
+          <Route path="/team-balance" element={<TeamBalance />} />
         </Routes>
       </Router>
       <Toaster

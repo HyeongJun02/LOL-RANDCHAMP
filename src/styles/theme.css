@@ -18,10 +18,10 @@
 }
 
 /* ---------- 배경 데코 (오로라 블롭 + 헥스 패턴 + 그레인) ---------- */
-/* 각 페이지 컨테이너(position:relative, overflow:hidden)에 넣어 사용 */
+/* App에서 <Backdrop/>로 한 번만 렌더. fixed라 헤더 뒤까지 깔린다. */
 
 .gg-aurora {
-  position: absolute;
+  position: fixed;
   inset: -10%;
   z-index: 0;
   filter: blur(70px);
@@ -50,8 +50,29 @@
   animation: gg-drift3 30s ease-in-out infinite;
 }
 
+.gg-blob-1 {
+  top: -12%;
+  left: 5%;
+  width: 40vw;
+  height: 40vw;
+}
+
+.gg-blob-2 {
+  top: 8%;
+  right: 0%;
+  width: 34vw;
+  height: 34vw;
+}
+
+.gg-blob-3 {
+  bottom: -14%;
+  left: 28%;
+  width: 38vw;
+  height: 38vw;
+}
+
 .gg-hexbg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   opacity: 0.4;
@@ -66,7 +87,7 @@
 }
 
 .gg-grain {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;

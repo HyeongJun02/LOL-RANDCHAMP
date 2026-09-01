@@ -1,18 +1,23 @@
 import axios from 'axios';
 
-const VERSION_URL = 'https://ddragon.leagueoflegends.com/api/versions.json';
-const getChampionDataUrl = (version) =>
-  `https://ddragon.leagueoflegends.com/cdn/${version}/data/ko_KR/champion.json`;
+const DDRAGON = 'https://ddragon.leagueoflegends.com';
+
+/* 정사각 초상화. 그리드용(약 24KB) */
+export const championIcon = (version, id) =>
+  `${DDRAGON}/cdn/${version}/img/champion/${id}.png`;
+
+/* 세로 로딩 일러스트. 결과 패널용(약 37KB) */
+export const championPortrait = (id) =>
+  `${DDRAGON}/cdn/img/champion/loading/${id}_0.jpg`;
 
 export const fetchChampionData = async () => {
-  try {
-    const versionResponse = await axios.get(VERSION_URL);
-    const latestVersion = versionResponse.data[0];
-
-    const championResponse = await axios.get(getChampionDataUrl(latestVersion));
-    return championResponse.data.data; // 챔피언 데이터 반환
-  } catch (error) {
-    console.error('Error fetching champion data:', error);
-    throw error;
-  }
+  const { data: versions } = await axios.get(`${DDRAGON}/api/versions.json`);
+  const version = versions[0];
+  const { data } = await axios.get(
+    `${DDRAGON}/cdn/${version}/data/ko_KR/champion.json`
+  );
+  const champions = Object.values(data.data).sort((a, b) =>
+    a.name.localeCompare(b.name, 'ko')
+  );
+  return { version, champions };
 };

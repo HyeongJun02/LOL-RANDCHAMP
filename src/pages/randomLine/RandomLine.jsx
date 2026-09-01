@@ -137,14 +137,6 @@ export default function RandomLinePage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.auroraLayer} aria-hidden="true">
-        <span className={`${styles.blob} ${styles.blob1}`} />
-        <span className={`${styles.blob} ${styles.blob2}`} />
-        <span className={`${styles.blob} ${styles.blob3}`} />
-      </div>
-      <div className={styles.hexBg} aria-hidden="true" />
-      <div className={styles.grain} aria-hidden="true" />
-
       <div className={styles.headerBlock}>
         <span className={styles.kicker}>🎮 협곡 친선전 · 5v5</span>
         <h1 className={styles.title}>
@@ -160,6 +152,7 @@ export default function RandomLinePage() {
             key={i}
             index={i}
             name={p.name}
+            takenNames={players.filter((_, j) => j !== i).map((x) => x.name)}
             disabledLines={p.disabled}
             assignedLine={assigned[i]}
             quote={quotes[i]}
