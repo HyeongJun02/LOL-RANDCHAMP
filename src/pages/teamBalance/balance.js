@@ -6,15 +6,34 @@ export const MAX_PLAYERS = 20;
 /* 팝업에 한 번에 뿌릴 조합 수 상한. 넘어가면 평점 차이가 작은 것부터 자른다 */
 export const MAX_OPTIONS = 300;
 
+/* randomness에 이 값을 주면 평점을 완전히 무시하고 뽑는다.
+   인원 수(4대4, 3대4)와 팀 고정 조건은 그대로 지켜진다 */
+export const IGNORE_RATING = Infinity;
+
 /* 평점 차이를 로지스틱에 넣은 재미용 수치. 실측 승률이 아니다.
-   ponytail: 인당 한 디비전 차이가 54%, 한 티어(4칸)가 66%가 되도록 잡은 상수.
+   ponytail: 5대5에서 팀 전체가 한 티어 위면 약 66%가 되도록 잡은 상수.
+   평점 자체가 랭크 분포 z점수 기반이라(tiers.js) 티어별 간격이 균등하지 않다.
    체감이 다르면 WIN_SCALE만 조정하면 된다. */
-export const WIN_SCALE = 14;
+export const WIN_SCALE = 24;
+
+/* 사람이 한 명 더 있다는 것 자체의 값.
+   아이언4의 평점이 0이라고 해서 기여가 0인 건 아니다. 이 값이 없으면
+   인원이 다를 때 '평점 높은 한 명'이 '평점 낮은 두 명'보다 세게 나온다.
+
+   ponytail: 18은 '골드 하나 vs 아이언 둘'이 골드 쪽 약 59%가 되게 맞춘 값이다.
+   실제 4대5가 훨씬 참혹하다는 점과는 상충하지만, 이 도구는 5대5 내전이 기본이고
+   인원이 같으면 이 값이 상쇄되어 아무 영향이 없다. */
+export const BODY_VALUE = 18;
 
 export const winChance = (sumA, sizeA, sumB, sizeB) => {
   if (!sizeA || !sizeB) return 50;
-  const avgDiff = sumA / sizeA - sumB / sizeB;
-  const p = 1 / (1 + 10 ** (-avgDiff / WIN_SCALE));
+
+  const strengthA = sumA + sizeA * BODY_VALUE;
+  const strengthB = sumB + sizeB * BODY_VALUE;
+  /* 인원이 같으면 BODY_VALUE가 상쇄되어 인당 평점 차이 비교와 완전히 같아진다 */
+  const scale = WIN_SCALE * ((sizeA + sizeB) / 2);
+
+  const p = 1 / (1 + 10 ** (-(strengthA - strengthB) / scale));
   return Math.round(Math.min(0.95, Math.max(0.05, p)) * 100);
 };
 

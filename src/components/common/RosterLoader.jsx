@@ -23,9 +23,11 @@ const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
 
-  const allSelected = roster.length > 0 && picked.length === roster.length;
+  /* 자리가 모자라면 위에서부터 채운다 */
+  const selectable = Math.min(limit ?? roster.length, roster.length);
+  const allSelected = selectable > 0 && picked.length >= selectable;
   const selectAll = () =>
-    setPicked(allSelected ? [] : roster.slice(0, limit ?? roster.length).map((m) => m.id));
+    setPicked(allSelected ? [] : roster.slice(0, selectable).map((m) => m.id));
 
   const confirm = () => {
     onConfirm(roster.filter((m) => picked.includes(m.id)));
@@ -63,7 +65,11 @@ const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
       ) : (
         <>
           <button className="loader-all" onClick={selectAll}>
-            {allSelected ? '전체 해제' : '전체 선택'}
+            {allSelected
+              ? '전체 해제'
+              : selectable < roster.length
+                ? `위에서 ${selectable}명 선택`
+                : '전체 선택'}
           </button>
 
           <ul className="loader-list">

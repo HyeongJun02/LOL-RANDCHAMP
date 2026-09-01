@@ -602,3 +602,32 @@
   line-height: 1.45;
   color: #5b6b85;
 }
+
+.shuffle-btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: #b9c3d6;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.shuffle-btn:hover {
+  color: var(--gg-purple);
+  border-color: color-mix(in srgb, var(--gg-purple) 50%, transparent);
+  background: color-mix(in srgb, var(--gg-purple) 10%, transparent);
+}
+
+.shuffle-hint {
+  margin: 0.4rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: #5b6b85;
+}

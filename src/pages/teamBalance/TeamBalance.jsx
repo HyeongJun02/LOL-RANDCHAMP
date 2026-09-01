@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaDownload } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
-import { splitTeams, MAX_PLAYERS, winChance } from './balance';
+import { splitTeams, MAX_PLAYERS, winChance, IGNORE_RATING } from './balance';
 import { mergeMembers, useRoster } from '../../roster';
 import RosterPicker from '../../components/common/RosterPicker';
 import CandidateModal from './CandidateModal';
@@ -103,14 +103,14 @@ const TeamBalance = () => {
     );
   };
 
-  const build = () => {
+  const build = (ignoreRating = false) => {
     if (entered.length < 2) {
       toast.error('이름을 2명 이상 입력해 주세요.');
       return;
     }
     const split = splitTeams(
       entered.map((p) => ({ ...p, rating: ratingOf(p) })),
-      randomness
+      ignoreRating ? IGNORE_RATING : randomness
     );
     if (!split) {
       toast.error('팀 고정 조건이 서로 맞지 않아요.');
@@ -276,9 +276,15 @@ const TeamBalance = () => {
               최적 조합보다 평점 차이가 이 값만큼 더 나는 조합까지 후보에 넣고 그 중에서 뽑습니다.
               0이면 항상 가장 균형 잡힌 팀이 나옵니다.
             </p>
-            <button className="build-btn" onClick={build}>
+            <button className="build-btn" onClick={() => build()}>
               <FaRandom /> 팀 짜기
             </button>
+            <button className="shuffle-btn" onClick={() => build(true)}>
+              완전 무작위
+            </button>
+            <p className="shuffle-hint">
+              평점을 무시하고 뽑습니다. 인원 수와 팀 고정은 그대로 지켜져요.
+            </p>
           </div>
 
           {result && (
@@ -314,7 +320,7 @@ const TeamBalance = () => {
                       <span className="win-red">{100 - win}% 2팀</span>
                     </div>
                     <p className="win-note">
-                      티어 평점만 넣고 계산한 재미용 수치입니다. 실제 승패와는 관계 없어요.
+                      티어 평점과 인원 수만 넣고 계산한 재미용 수치입니다. 실제 승패와는 관계 없어요.
                     </p>
                   </div>
                 );
