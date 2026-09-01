@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 /* 도메인은 여기 한 곳. public/index.html과 public/sitemap.xml,
    public/robots.txt의 URL도 같이 맞춰야 한다 */
-export const SITE_URL = 'https://your-domain.com';
+export const SITE_URL = 'https://lol-randchamp.vercel.app/';
 
 /* index.html에 이미 있는 태그를 갈아끼운다.
    새로 만들지 않으므로 description이 두 개가 되는 일이 없다 */
