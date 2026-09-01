@@ -6,6 +6,7 @@ import { splitTeams, MAX_PLAYERS } from './balance';
 import { mergeMembers } from '../../roster';
 import RosterPicker from '../../components/common/RosterPicker';
 import CandidateModal from './CandidateModal';
+import PageHeader from '../../components/common/PageHeader';
 import './TeamBalance.css';
 
 const LOCKS = [
@@ -101,13 +102,11 @@ const TeamBalance = () => {
   );
 
   return (
-    <div className="tb-page">
-      <header className="tb-head">
-        <h1 className="tb-title">내전 팀 짜기</h1>
-        <p className="tb-sub">
-          티어로 평점을 매겨 양 팀이 최대한 비슷해지게 나눕니다. 10명 안 채워도 됩니다.
-        </p>
-      </header>
+    <div className="page tb-page">
+      <PageHeader
+        title="내전 팀 짜기"
+        sub="티어로 평점을 매겨 양 팀이 최대한 비슷해지게 나눕니다. 10명 안 채워도 됩니다."
+      />
 
       <div className="tb-layout">
         <section className="tb-panel">

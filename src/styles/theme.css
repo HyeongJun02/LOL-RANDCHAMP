@@ -17,6 +17,51 @@
   --font-body: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
 }
 
+/* ---------- 도구 페이지 공통 컨테이너 ---------- */
+/* 폭만 페이지별로 --page-width로 바꾼다 */
+
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: var(--page-width, 1100px);
+  margin: 0 auto;
+  padding: 1.8rem 1.5rem 2.4rem;
+  color: var(--gg-text);
+  font-family: var(--font-body);
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 1.6rem 1rem 2.2rem;
+  }
+}
+
+/* ---------- 도구 페이지 공통 헤더 ---------- */
+
+.page-head {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 1.2rem;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  letter-spacing: 0.5px;
+  margin: 0 0 0.4rem;
+  background: linear-gradient(180deg, #fff7e0, #e7c98a 60%, var(--gg-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.page-sub {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--gg-text-muted);
+}
+
 /* ---------- 공용 버튼 ---------- */
 
 .ghost-btn {

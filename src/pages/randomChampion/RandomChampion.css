@@ -1,35 +1,8 @@
 .champ-page {
-  position: relative;
-  z-index: 1;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 1.8rem 1.5rem 2.4rem;
-  color: var(--gg-text);
-  font-family: var(--font-body);
+  --page-width: 1240px;
 }
 
 /* ---------- 페이지 헤더 ---------- */
-
-.champ-head {
-  text-align: center;
-  margin-bottom: 1.2rem;
-}
-
-.champ-title {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(1.4rem, 3vw, 1.9rem);
-  margin: 0 0 0.4rem;
-  background: linear-gradient(180deg, #fff7e0, #e7c98a 60%, var(--gg-gold));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.champ-sub {
-  margin: 0;
-  font-size: 0.83rem;
-  color: var(--gg-text-muted);
-}
 
 /* ---------- 툴바 ---------- */
 
@@ -464,10 +437,6 @@
 }
 
 @media (max-width: 640px) {
-  .champ-page {
-    padding: 1.8rem 1rem 2.5rem;
-  }
-
   .champ-grid {
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
     gap: 0.5rem;

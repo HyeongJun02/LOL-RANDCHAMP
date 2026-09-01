@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaDice, FaRedo, FaUserFriends } from 'react-icons/fa';
 import { useRoster } from '../../roster';
 import { addItems, poolOf } from './pick';
+import PageHeader from '../../components/common/PageHeader';
 import './RandomPick.css';
 
 const ROLL_TICKS = 16;
@@ -81,13 +82,11 @@ const RandomPick = () => {
   const shown = rolling || result;
 
   return (
-    <div className="pick-page">
-      <header className="pick-head">
-        <h1 className="pick-title">랜덤 뽑기</h1>
-        <p className="pick-sub">
-          항목을 넣고 하나 뽑습니다. 2개만 넣으면 동전 던지기, 이름을 넣으면 벌칙 당첨자.
-        </p>
-      </header>
+    <div className="page pick-page">
+      <PageHeader
+        title="랜덤 뽑기"
+        sub="항목을 넣고 하나 뽑습니다. 2개만 넣으면 동전 던지기, 이름을 넣으면 벌칙 당첨자."
+      />
 
       <div className="pick-layout">
         <section className="pick-panel">

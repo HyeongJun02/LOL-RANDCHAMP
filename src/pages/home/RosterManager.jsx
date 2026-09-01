@@ -4,11 +4,11 @@ import { TIERS, DIVISIONS, getTier } from '../../tiers';
 import { useRoster, addMember, updateMember, removeMember } from '../../roster';
 import LineSelector from '../../components/common/LineSelector';
 
-const RosterManager = () => {
+const RosterManager = ({ className = '', style }) => {
   const roster = useRoster();
 
   return (
-    <section className="tool-section">
+    <section className={`tool-section ${className}`} style={style}>
       <h2 className="section-title">
         <FaUserFriends /> 내 팀원 명단
         <span className="section-count">{roster.length}</span>

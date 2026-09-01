@@ -5,6 +5,7 @@ import { fetchChampionData, championIcon } from '../../services/api';
 import { ROLES } from './roles';
 import { filterChampions } from './filter';
 import ResultPanel from './ResultPanel';
+import PageHeader from '../../components/common/PageHeader';
 import './RandomChampion.css';
 
 const ROLL_TICKS = 16;
@@ -68,13 +69,11 @@ const RandomChampion = () => {
   const hasFilter = roles.length > 0 || query !== '';
 
   return (
-    <div className="champ-page">
-      <header className="champ-head">
-        <h1 className="champ-title">챔피언 랜덤 선택</h1>
-        <p className="champ-sub">
-          역할군으로 거르고 주사위를 굴리세요. 챔피언을 눌러 직접 골라도 됩니다.
-        </p>
-      </header>
+    <div className="page champ-page">
+      <PageHeader
+        title="챔피언 랜덤 선택"
+        sub="역할군으로 거르고 주사위를 굴리세요. 챔피언을 눌러 직접 골라도 됩니다."
+      />
 
       <div className="champ-toolbar">
         <div className="search-box">

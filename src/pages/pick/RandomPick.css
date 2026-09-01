@@ -1,32 +1,5 @@
 .pick-page {
-  position: relative;
-  z-index: 1;
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 1.8rem 1.5rem 2.4rem;
-  color: var(--gg-text);
-  font-family: var(--font-body);
-}
-
-.pick-head {
-  text-align: center;
-  margin-bottom: 1.2rem;
-}
-
-.pick-title {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(1.4rem, 3vw, 1.9rem);
-  margin: 0 0 0.4rem;
-  background: linear-gradient(180deg, #fff7e0, #e7c98a 60%, var(--gg-gold));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.pick-sub {
-  margin: 0;
-  font-size: 0.83rem;
-  color: var(--gg-text-muted);
+  --page-width: 980px;
 }
 
 .pick-layout {
@@ -326,12 +299,6 @@
   .pick-side {
     position: static;
     order: -1;
-  }
-}
-
-@media (max-width: 560px) {
-  .pick-page {
-    padding: 1.6rem 1rem 2.2rem;
   }
 }
 

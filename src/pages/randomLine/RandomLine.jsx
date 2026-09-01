@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
+import PageHeader from '../../components/common/PageHeader';
 import { LINE_NAMES, randomQuote } from '../../lines';
 import styles from './RandomLine.module.css';
 
@@ -147,15 +148,8 @@ export default function RandomLinePage() {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.headerBlock}>
-        <span className={styles.kicker}>🎮 협곡 친선전 · 5v5</span>
-        <h1 className={styles.title}>
-          <span className={styles.dice}>🎲</span>
-          오늘의 라인 결정전
-        </h1>
-        <p className={styles.subtitle}>{subtitle}</p>
-
+    <div className={`page ${styles.container}`}>
+      <PageHeader title="라인 랜덤 분배" sub={subtitle}>
         <div className={styles.viewToggle} role="group" aria-label="보기 방식">
           <button
             className={compact ? '' : styles.viewActive}
@@ -172,7 +166,7 @@ export default function RandomLinePage() {
             📋 한눈에
           </button>
         </div>
-      </div>
+      </PageHeader>
 
       <div className={compact ? styles.rowWrapper : styles.cardWrapper}>
         {players.map((p, i) => {
