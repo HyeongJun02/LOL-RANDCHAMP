@@ -133,3 +133,49 @@ test('이미 뽑은 사람의 버튼은 회색 처리된다', () => {
   click(row.querySelector('.assign'));
   expect(row.querySelector('.assign').classList.contains('assignDone')).toBe(true);
 });
+
+test('불러오기로 넣으면 이름과 못 가는 라인이 함께 들어간다', () => {
+  localStorage.setItem(
+    'lrc.roster',
+    JSON.stringify([
+      { id: 'a', name: '철수', tier: 'GOLD', division: 4, lines: ['탑', '정글'] },
+      { id: 'b', name: '영희', tier: 'GOLD', division: 4, lines: [] },
+    ])
+  );
+  const el = render();
+  click(byText(el, '한눈에'));
+
+  click(byText(el, '불러오기'));
+  el.querySelectorAll('.loader-list input').forEach((box) => click(box));
+  click(byText(el, '완료'));
+
+  const rows = [...el.querySelectorAll('.rowWrapper .row')];
+  expect(rows[0].querySelector('.nameInput').value).toBe('철수');
+  expect(rows[0].querySelectorAll('.banned')).toHaveLength(2);
+  expect(rows[1].querySelector('.nameInput').value).toBe('영희');
+  expect(rows[1].querySelectorAll('.banned')).toHaveLength(0);
+});
+
+test('자리보다 많이 고를 수 없다', () => {
+  localStorage.setItem(
+    'lrc.roster',
+    JSON.stringify(
+      Array.from({ length: 7 }, (_, i) => ({
+        id: String(i),
+        name: '사람' + i,
+        tier: 'GOLD',
+        division: 4,
+        lines: [],
+      }))
+    )
+  );
+  const el = render();
+
+  click(byText(el, '불러오기'));
+  const boxes = [...el.querySelectorAll('.loader-list input')];
+  boxes.slice(0, 5).forEach((box) => click(box));
+
+  // 자리가 5개뿐이라 6번째부터는 잠긴다
+  expect(boxes[5].disabled).toBe(true);
+  expect(boxes[6].disabled).toBe(true);
+});

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { FaThLarge, FaListUl, FaDownload } from 'react-icons/fa';
 import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
 import PageHeader from '../../components/common/PageHeader';
+import RosterLoader from '../../components/common/RosterLoader';
 import { LINE_NAMES, randomQuote } from '../../lines';
 import styles from './RandomLine.module.css';
 
@@ -23,6 +25,7 @@ export default function RandomLinePage() {
   const [resetTriggers, setResetTriggers] = useState(Array(5).fill(0));
   const [celebrate, setCelebrate] = useState(false);
   const [compact, setCompact] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
   const [subtitle] = useState(
     () => SUBTITLES[Math.floor(Math.random() * SUBTITLES.length)]
   );
@@ -42,6 +45,21 @@ export default function RandomLinePage() {
     );
   };
 
+  /* 빈 자리에 순서대로 채운다. 자리는 5개로 고정 */
+  const loadMembers = (members) => {
+    const queue = [...members];
+    const next = players.map((p) =>
+      p.name.trim() === '' && queue.length > 0
+        ? { ...p, name: queue[0].name, disabled: [...(queue.shift().lines || [])] }
+        : p
+    );
+
+    setPlayers(next);
+    if (queue.length > 0) {
+      toast.error(`자리가 모자라 ${queue.length}명은 넣지 못했습니다.`);
+    }
+  };
+
   const onToggleLine = (i, line) => {
     const cp = [...players];
     const arr = cp[i].disabled;
@@ -54,7 +72,6 @@ export default function RandomLinePage() {
   const checkCelebrate = (arr) => {
     if (arr.every(Boolean)) {
       setCelebrate(true);
-      toast.success('구성 완료! GL HF 🍀', { duration: 4000 });
       setTimeout(() => setCelebrate(false), 3200);
     }
   };
@@ -65,7 +82,7 @@ export default function RandomLinePage() {
       (l) => !players[i].disabled.includes(l) && !used.includes(l)
     );
     if (!allow.length) {
-      toast.error('갈 라인이 없습니다... 밴을 너무 세게 때렸네요 😱');
+      toast.error('갈 수 있는 라인이 없습니다. 밴을 풀어주세요.');
       return;
     }
     const pick = allow[Math.floor(Math.random() * allow.length)];
@@ -99,7 +116,7 @@ export default function RandomLinePage() {
 
     for (let i = 0; i < allowed.length; i++) {
       if (allowed[i].length === 0) {
-        toast.error(`플레이어 ${i + 1}, 밴을 너무 많이 해서 갈 곳이 없어요 🙈`);
+        toast.error(`${i + 1}번 플레이어가 갈 수 있는 라인이 없습니다.`);
         return;
       }
     }
@@ -127,7 +144,7 @@ export default function RandomLinePage() {
     };
 
     if (!dfs(0)) {
-      toast.error('이 조합으로는 다섯 명을 다 배정할 수 없어요. 밴 좀 풀어주세요 🥲');
+      toast.error('이 밴 조합으로는 다섯 명을 모두 배정할 수 없습니다.');
       return;
     }
 
@@ -144,7 +161,6 @@ export default function RandomLinePage() {
     setTriggers(Array(5).fill(0));
     setResetTriggers((r) => r.map((x) => x + 1));
     setCelebrate(false);
-    toast('배정을 되돌렸습니다. 이름과 밴은 그대로 🔄', { icon: '🧹' });
   };
 
   return (
@@ -156,14 +172,14 @@ export default function RandomLinePage() {
             aria-pressed={!compact}
             onClick={() => setCompact(false)}
           >
-            🃏 카드
+            <FaThLarge /> 카드
           </button>
           <button
             className={compact ? styles.viewActive : ''}
             aria-pressed={compact}
             onClick={() => setCompact(true)}
           >
-            📋 한눈에
+            <FaListUl /> 한눈에
           </button>
         </div>
       </PageHeader>
@@ -197,12 +213,24 @@ export default function RandomLinePage() {
 
       <div className={styles.buttonGroup}>
         <button className={styles.resetAll} onClick={resetAll}>
-          전체 초기화 🔄
+          전체 초기화
+        </button>
+        <button className={styles.loadRoster} onClick={() => setShowLoader(true)}>
+          <FaDownload /> 불러오기
         </button>
         <button className={styles.assignAll} onClick={assignAll}>
-          한 방에 정하기 🚀
+          한 방에 정하기
         </button>
       </div>
+
+      {showLoader && (
+        <RosterLoader
+          taken={players.map((p) => p.name)}
+          limit={players.filter((p) => p.name.trim() === '').length}
+          onConfirm={loadMembers}
+          onClose={() => setShowLoader(false)}
+        />
+      )}
 
       {celebrate && (
         <div className={styles.confettiLayer} aria-hidden="true">

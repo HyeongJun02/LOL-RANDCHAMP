@@ -10,9 +10,9 @@ const ROLL_TICKS = 16;
 const ROLL_INTERVAL = 70;
 
 const PRESETS = [
-  { label: '🪙 동전', items: ['앞', '뒤'] },
-  { label: '✊ 가위바위보', items: ['가위', '바위', '보'] },
-  { label: '🎯 예/아니오', items: ['예', '아니오'] },
+  { label: '동전', items: ['앞', '뒤'] },
+  { label: '가위바위보', items: ['가위', '바위', '보'] },
+  { label: '예 / 아니오', items: ['예', '아니오'] },
 ];
 
 const RandomPick = () => {

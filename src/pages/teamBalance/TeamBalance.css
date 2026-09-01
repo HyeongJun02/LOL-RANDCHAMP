@@ -35,6 +35,11 @@
   margin-bottom: 0.9rem;
 }
 
+.panel-head-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
 .panel-head h2 {
   display: flex;
   align-items: center;
@@ -422,94 +427,10 @@
 
 /* ---------- 후보 조합 팝업 ---------- */
 
-.cand-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  background: rgba(3, 6, 12, 0.75);
-  backdrop-filter: blur(6px);
-  animation: cand-fade 0.18s ease;
-}
-
-@keyframes cand-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.cand-modal {
-  display: flex;
-  flex-direction: column;
-  width: min(1000px, 100%);
-  max-height: min(760px, 88vh);
-  border-radius: 18px;
-  border: 1px solid rgba(200, 170, 110, 0.25);
-  background: rgba(10, 14, 24, 0.97);
-  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.9);
-  animation: cand-rise 0.22s ease;
-}
-
-@keyframes cand-rise {
-  from { opacity: 0; transform: translateY(14px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.cand-head {
-  position: relative;
-  flex: none;
-  padding: 0.9rem 2.8rem 0.75rem 1.1rem;
-  border-bottom: 1px solid var(--gg-panel-border);
-}
-
-.cand-head h2 {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #e6ecf7;
-}
-
-.cand-head h2 strong {
-  color: var(--gg-gold);
-}
-
-.cand-head p {
-  margin: 0.25rem 0 0;
-  font-size: 0.78rem;
-  color: #6b7a94;
-}
-
-.cand-close {
-  position: absolute;
-  top: 0.9rem;
-  right: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #93a5c4;
-  cursor: pointer;
-  transition: color 0.2s ease, background 0.2s ease;
-}
-
-.cand-close:hover {
-  color: var(--gg-red);
-  background: rgba(249, 115, 98, 0.14);
-}
-
 .cand-grid {
-  flex: 1;
-  overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 0.7rem;
-  padding: 1rem 1.3rem 1.3rem;
 }
 
 .cand-card {
@@ -628,19 +549,9 @@
 }
 
 @media (max-width: 560px) {
-  .cand-backdrop {
-    padding: 0.8rem;
-  }
-
   .cand-grid {
     grid-template-columns: 1fr;
-    padding: 0.8rem;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .cand-backdrop,
-  .cand-modal {
-    animation: none;
-  }
-}
+

@@ -1,0 +1,131 @@
+.loader-blank {
+  margin: 1.2rem 0;
+  font-size: 0.83rem;
+  color: #5b6b85;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.loader-all {
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--gg-panel-border);
+  background: transparent;
+  color: #93a5c4;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.loader-all:hover {
+  color: var(--gg-gold-light);
+  border-color: rgba(200, 170, 110, 0.45);
+}
+
+.loader-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.loader-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.loader-list label:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.loader-list input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--gg-gold);
+  cursor: pointer;
+}
+
+.loader-list .is-added label {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.loader-list .is-added label:hover {
+  background: none;
+}
+
+.loader-name {
+  font-size: 0.87rem;
+  font-weight: 700;
+  color: #e6ecf7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loader-tier {
+  flex: none;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--tier);
+  background: color-mix(in srgb, var(--tier) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tier) 40%, transparent);
+  white-space: nowrap;
+}
+
+.loader-lines {
+  font-size: 0.7rem;
+  color: #5b6b85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loader-added {
+  margin-left: auto;
+  flex: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #4d5b73;
+}
+
+.loader-count {
+  margin-right: auto;
+  font-size: 0.78rem;
+  color: #93a5c4;
+}
+
+.loader-confirm {
+  padding: 0.45rem 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
+  color: #06111f;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.loader-confirm:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.loader-confirm:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

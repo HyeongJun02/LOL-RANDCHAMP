@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaDownload } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
 import { splitTeams, MAX_PLAYERS } from './balance';
 import { mergeMembers } from '../../roster';
 import RosterPicker from '../../components/common/RosterPicker';
 import CandidateModal from './CandidateModal';
 import PageHeader from '../../components/common/PageHeader';
+import RosterLoader from '../../components/common/RosterLoader';
 import './TeamBalance.css';
 
 const LOCKS = [
@@ -34,6 +35,7 @@ const TeamBalance = () => {
   const [randomness, setRandomness] = useState(0);
   const [result, setResult] = useState(null);
   const [showCandidates, setShowCandidates] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
 
   const update = (id, patch) =>
     setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
@@ -49,6 +51,28 @@ const TeamBalance = () => {
         ? prev
         : [...prev, { ...blankPlayer(), ...preset, id: uid() }]
     );
+
+  /* 빈 자리부터 채우고, 모자라면 행을 늘린다 */
+  const loadMembers = (members) => {
+    const next = [...players];
+    const queue = [...members];
+
+    for (let i = 0; i < next.length && queue.length > 0; i += 1) {
+      if (next[i].name.trim() === '') {
+        const m = queue.shift();
+        next[i] = { ...next[i], name: m.name, tier: m.tier, division: m.division };
+      }
+    }
+    while (queue.length > 0 && next.length < MAX_PLAYERS) {
+      const m = queue.shift();
+      next.push({ ...blankPlayer(), name: m.name, tier: m.tier, division: m.division });
+    }
+
+    setPlayers(next);
+    if (queue.length > 0) {
+      toast.error(`자리가 모자라 ${queue.length}명은 넣지 못했습니다.`);
+    }
+  };
 
   const saveToRoster = () => {
     if (entered.length === 0) {
@@ -115,9 +139,14 @@ const TeamBalance = () => {
               <FaUsers /> 참가자
               <span className="panel-count">{entered.length}명</span>
             </h2>
-            <button className="ghost-btn" onClick={saveToRoster}>
-              <FaBookmark /> 명단에 저장
-            </button>
+            <div className="panel-head-actions">
+              <button className="ghost-btn" onClick={() => setShowLoader(true)}>
+                <FaDownload /> 불러오기
+              </button>
+              <button className="ghost-btn" onClick={saveToRoster}>
+                <FaBookmark /> 명단에 저장
+              </button>
+            </div>
           </div>
 
           <div className="player-rows">
@@ -258,6 +287,15 @@ const TeamBalance = () => {
           )}
         </aside>
       </div>
+
+      {showLoader && (
+        <RosterLoader
+          taken={players.map((p) => p.name)}
+          limit={MAX_PLAYERS - entered.length}
+          onConfirm={loadMembers}
+          onClose={() => setShowLoader(false)}
+        />
+      )}
 
       {showCandidates && result && (
         <CandidateModal

@@ -60,6 +60,9 @@ const setValue = (el, value) => {
   return act(() => el.dispatchEvent(new Event('change', { bubbles: true })));
 };
 
+const byText = (el, text) =>
+  [...el.querySelectorAll('button')].find((b) => b.textContent.includes(text));
+
 const buildWith = (names) => {
   const el = render();
   const inputs = el.querySelectorAll('.row-name input');
@@ -71,7 +74,7 @@ const buildWith = (names) => {
 test('후보 버튼을 누르면 모든 조합이 팝업으로 뜬다', () => {
   const el = buildWith(['가', '나', '다', '라']);
 
-  expect(el.querySelector('.cand-backdrop')).toBeNull();
+  expect(el.querySelector('.modal-backdrop')).toBeNull();
   click(el.querySelector('.result-cands'));
 
   // 서로 다른 4명을 2:2로 나누는 방법 3가지
@@ -92,9 +95,45 @@ test('팝업에서 다른 조합을 고르면 결과가 그 조합으로 바뀐�
 
   click(other);
 
-  expect(el.querySelector('.cand-backdrop')).toBeNull();
+  expect(el.querySelector('.modal-backdrop')).toBeNull();
   const team1 = [...el.querySelectorAll('.team-card:not(.team-red) .team-player')].map(
     (s) => s.textContent
   );
   expect(team1).toEqual(expected);
+});
+
+const seedRoster = (members) =>
+  localStorage.setItem('lrc.roster', JSON.stringify(members));
+
+test('불러오기로 여러 명을 한 번에 참가자로 넣는다', () => {
+  seedRoster([
+    { id: 'a', name: '철수', tier: 'DIAMOND', division: 2 },
+    { id: 'b', name: '영희', tier: 'SILVER', division: 1 },
+  ]);
+  const el = render();
+
+  click(byText(el, '불러오기'));
+  el.querySelectorAll('.loader-list input').forEach((box) => click(box));
+  click(byText(el, '완료'));
+
+  expect(el.querySelector('.modal-backdrop')).toBeNull();
+
+  const rows = [...el.querySelectorAll('.player-row')];
+  expect(rows[0].querySelector('.row-name input').value).toBe('철수');
+  expect(rows[0].querySelector('.row-tier').value).toBe('DIAMOND');
+  expect(rows[1].querySelector('.row-name input').value).toBe('영희');
+  expect(rows[1].querySelector('.row-div').value).toBe('1');
+});
+
+test('이미 들어간 팀원은 다시 고를 수 없다', () => {
+  seedRoster([{ id: 'a', name: '철수', tier: 'GOLD', division: 4 }]);
+  const el = render();
+
+  click(byText(el, '불러오기'));
+  click(el.querySelector('.loader-list input'));
+  click(byText(el, '완료'));
+
+  click(byText(el, '불러오기'));
+  expect(el.querySelector('.loader-list input').disabled).toBe(true);
+  expect(el.querySelector('.loader-added')).not.toBeNull();
 });

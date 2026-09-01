@@ -15,7 +15,7 @@ const HomePage = () => (
   <div className="home-page">
     <section className="hero">
       <span className="home-kicker rise" style={step(0)}>
-        🎮 롤 친구 도구 모음
+        롤 친구 도구 모음
       </span>
       <FaDice className="hero-icon rise" style={step(1)} />
       <h1 className="hero-title rise" style={step(2)}>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FaDice } from 'react-icons/fa';
 import { LINE_NAMES, getLine } from '../../../lines';
 import LineSelector from '../../../components/common/LineSelector';
 import RosterPicker from '../../../components/common/RosterPicker';
@@ -98,7 +99,7 @@ const PlayerCard = ({
         onClick={() => onAssign(index)}
         disabled={noWayOut}
       >
-        <span className={styles.dice}>🎲</span>
+        <FaDice className={styles.dice} />
         {noWayOut ? '갈 곳 없음' : line ? '다시 뽑기' : '뽑기'}
       </button>
 
