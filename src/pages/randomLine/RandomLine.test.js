@@ -179,3 +179,42 @@ test('자리보다 많이 고를 수 없다', () => {
   expect(boxes[5].disabled).toBe(true);
   expect(boxes[6].disabled).toBe(true);
 });
+
+test('개별 초기화는 그 사람 배정만 되돌린다', () => {
+  const el = render();
+  click(byText(el, '한눈에'));
+
+  const rows = [...el.querySelectorAll('.rowWrapper .row')];
+  click(rows[0].querySelector('.assign'));
+  click(rows[1].querySelector('.assign'));
+  expect(rows[0].querySelector('.lineTag')).not.toBeNull();
+  expect(rows[1].querySelector('.lineTag')).not.toBeNull();
+
+  click(rows[0].querySelector('.resetOne'));
+
+  expect(rows[0].querySelector('.lineTag')).toBeNull();
+  expect(rows[0].querySelector('.resetOne')).toBeNull(); // 뽑기 전엔 안 보인다
+  expect(rows[1].querySelector('.lineTag')).not.toBeNull();
+});
+
+test('체크를 풀면 참가자에서 빠지고 밴도 지워진다', () => {
+  localStorage.setItem(
+    'lrc.roster',
+    JSON.stringify([{ id: 'a', name: '철수', tier: 'GOLD', division: 4, lines: ['탑'] }])
+  );
+  const el = render();
+  click(byText(el, '한눈에'));
+
+  click(byText(el, '불러오기'));
+  click(el.querySelector('.loader-list input'));
+  click(byText(el, '완료'));
+  expect(el.querySelector('.rowWrapper .nameInput').value).toBe('철수');
+  expect(el.querySelectorAll('.banned')).toHaveLength(1);
+
+  click(byText(el, '불러오기'));
+  click(el.querySelector('.loader-list input'));
+  click(byText(el, '완료'));
+
+  expect(el.querySelector('.rowWrapper .nameInput').value).toBe('');
+  expect(el.querySelectorAll('.banned')).toHaveLength(0);
+});

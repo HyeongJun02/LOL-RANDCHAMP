@@ -1,15 +1,15 @@
+/* 5칸 그리드라 카드 폭이 어떻든 절대 줄바꿈되지 않는다 */
 .selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
   margin-bottom: 0.7rem;
 }
 
 .option {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 100%;
+  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -41,8 +41,8 @@
 }
 
 .icon {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   filter: grayscale(1) brightness(0.75);
   transition: filter 0.25s ease;
 }
@@ -63,22 +63,26 @@
   text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
 }
 
-/* 목록 뷰용 축소 버전 */
+/* 목록 뷰용 축소 버전. 여기선 늘어나지 않게 고정 폭 */
 .compact {
-  gap: 0.3rem;
+  grid-template-columns: repeat(5, 30px);
+  gap: 0.25rem;
   margin-bottom: 0;
-  flex-wrap: nowrap;
 }
 
 .compact .option {
-  width: 34px;
-  height: 34px;
   border-radius: 10px;
 }
 
 .compact .icon {
-  width: 22px;
-  height: 22px;
+  width: 19px;
+  height: 19px;
+}
+
+/* 아이콘은 칸 크기를 따라간다 */
+.icon {
+  max-width: 70%;
+  max-height: 70%;
 }
 
 .compact .banMark {

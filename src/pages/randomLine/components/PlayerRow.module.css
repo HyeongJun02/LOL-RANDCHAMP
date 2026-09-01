@@ -3,7 +3,7 @@
   --accent-glow: rgba(200, 170, 110, 0.25);
 
   display: grid;
-  grid-template-columns: 2.2rem minmax(120px, 1fr) auto minmax(140px, 1.2fr) 4.6rem;
+  grid-template-columns: 2.2rem minmax(120px, 1fr) auto minmax(140px, 1.2fr) auto;
   align-items: center;
   gap: 0.8rem;
   padding: 0.6rem 0.9rem;
@@ -110,7 +110,34 @@
   color: #4d5b73;
 }
 
+.actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0.3rem;
+}
+
+.resetOne {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #8b98ad;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.resetOne:hover {
+  color: #f0d99a;
+  border-color: rgba(200, 170, 110, 0.5);
+}
+
 .assign {
+  min-width: 3.4rem;
   padding: 0.45rem 0.6rem;
   border: none;
   border-radius: 9px;
@@ -136,9 +163,9 @@
 
 @media (max-width: 780px) {
   .row {
-    grid-template-columns: 2.2rem 1fr 4.6rem;
+    grid-template-columns: 2.2rem 1fr auto;
     grid-template-areas:
-      'badge name assign'
+      'badge name actions'
       'lines lines lines'
       'result result result';
     row-gap: 0.55rem;
@@ -147,7 +174,7 @@
   .badge { grid-area: badge; }
   .linesCell { grid-area: lines; }
   .nameCell { grid-area: name; }
-  .assign { grid-area: assign; }
+  .actions { grid-area: actions; }
   .resultCell { grid-area: result; }
 }
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useRoster } from '../../roster';
 import { FaThLarge, FaListUl, FaDownload } from 'react-icons/fa';
 import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
@@ -26,6 +27,7 @@ export default function RandomLinePage() {
   const [celebrate, setCelebrate] = useState(false);
   const [compact, setCompact] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const roster = useRoster();
   const [subtitle] = useState(
     () => SUBTITLES[Math.floor(Math.random() * SUBTITLES.length)]
   );
@@ -45,10 +47,21 @@ export default function RandomLinePage() {
     );
   };
 
-  /* 빈 자리에 순서대로 채운다. 자리는 5개로 고정 */
-  const loadMembers = (members) => {
-    const queue = [...members];
-    const next = players.map((p) =>
+  /* 팝업에서 고른 대로 맞춘다. 체크가 풀린 사람은 자리를 비운다. 자리는 5개 고정 */
+  const syncMembers = (members) => {
+    const wanted = new Set(members.map((m) => m.name.trim()));
+    const rosterNames = new Set(roster.map((m) => m.name.trim()));
+
+    const cleared = players.map((p) => {
+      const name = p.name.trim();
+      const dropped = name !== '' && rosterNames.has(name) && !wanted.has(name);
+      return dropped ? { ...p, name: '', disabled: [] } : p;
+    });
+
+    const already = new Set(cleared.map((p) => p.name.trim()));
+    const queue = members.filter((m) => !already.has(m.name.trim()));
+
+    const next = cleared.map((p) =>
       p.name.trim() === '' && queue.length > 0
         ? { ...p, name: queue[0].name, disabled: [...(queue.shift().lines || [])] }
         : p
@@ -58,6 +71,14 @@ export default function RandomLinePage() {
     if (queue.length > 0) {
       toast.error(`자리가 모자라 ${queue.length}명은 넣지 못했습니다.`);
     }
+  };
+
+  /* 이 사람 배정만 되돌린다. 이름과 밴은 그대로 */
+  const resetOne = (i) => {
+    setAssigned((prev) => prev.map((v, j) => (j === i ? null : v)));
+    setQuotes((prev) => prev.map((v, j) => (j === i ? '' : v)));
+    setResetTriggers((prev) => prev.map((v, j) => (j === i ? v + 1 : v)));
+    setCelebrate(false);
   };
 
   const onToggleLine = (i, line) => {
@@ -166,21 +187,27 @@ export default function RandomLinePage() {
   return (
     <div className={`page ${styles.container}`}>
       <PageHeader title="라인 랜덤 분배" sub={subtitle}>
-        <div className={styles.viewToggle} role="group" aria-label="보기 방식">
-          <button
-            className={compact ? '' : styles.viewActive}
-            aria-pressed={!compact}
-            onClick={() => setCompact(false)}
-          >
-            <FaThLarge /> 카드
+        <div className={styles.headActions}>
+          <button className={styles.loadRoster} onClick={() => setShowLoader(true)}>
+            <FaDownload /> 불러오기
           </button>
-          <button
-            className={compact ? styles.viewActive : ''}
-            aria-pressed={compact}
-            onClick={() => setCompact(true)}
-          >
-            <FaListUl /> 한눈에
-          </button>
+
+          <div className={styles.viewToggle} role="group" aria-label="보기 방식">
+            <button
+              className={compact ? '' : styles.viewActive}
+              aria-pressed={!compact}
+              onClick={() => setCompact(false)}
+            >
+              <FaThLarge /> 카드
+            </button>
+            <button
+              className={compact ? styles.viewActive : ''}
+              aria-pressed={compact}
+              onClick={() => setCompact(true)}
+            >
+              <FaListUl /> 한눈에
+            </button>
+          </div>
         </div>
       </PageHeader>
 
@@ -197,6 +224,7 @@ export default function RandomLinePage() {
             onPickMember,
             onToggleLine,
             onAssign: assignOne,
+            onResetOne: resetOne,
           };
           return compact ? (
             <PlayerRow key={i} {...shared} />
@@ -215,9 +243,6 @@ export default function RandomLinePage() {
         <button className={styles.resetAll} onClick={resetAll}>
           전체 초기화
         </button>
-        <button className={styles.loadRoster} onClick={() => setShowLoader(true)}>
-          <FaDownload /> 불러오기
-        </button>
         <button className={styles.assignAll} onClick={assignAll}>
           한 방에 정하기
         </button>
@@ -225,9 +250,16 @@ export default function RandomLinePage() {
 
       {showLoader && (
         <RosterLoader
-          taken={players.map((p) => p.name)}
-          limit={players.filter((p) => p.name.trim() === '').length}
-          onConfirm={loadMembers}
+          present={players.map((p) => p.name)}
+          limit={
+            players.length -
+            players.filter(
+              (p) =>
+                p.name.trim() !== '' &&
+                !roster.some((m) => m.name.trim() === p.name.trim())
+            ).length
+          }
+          onConfirm={syncMembers}
           onClose={() => setShowLoader(false)}
         />
       )}

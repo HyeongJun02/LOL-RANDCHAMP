@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaDice } from 'react-icons/fa';
+import { FaDice, FaUndo } from 'react-icons/fa';
 import { LINE_NAMES, getLine } from '../../../lines';
 import LineSelector from '../../../components/common/LineSelector';
 import RosterPicker from '../../../components/common/RosterPicker';
@@ -21,6 +21,7 @@ const PlayerCard = ({
   onPickMember,
   onToggleLine,
   onAssign,
+  onResetOne,
 }) => {
   const [displayName, setDisplayName] = useState(name);
 
@@ -94,14 +95,26 @@ const PlayerCard = ({
         />
       </div>
 
-      <button
-        className={`${styles.assignButton} ${line ? styles.assignDone : ''}`}
-        onClick={() => onAssign(index)}
-        disabled={noWayOut}
-      >
-        <FaDice className={styles.dice} />
-        {noWayOut ? '갈 곳 없음' : line ? '다시 뽑기' : '뽑기'}
-      </button>
+      <div className={styles.actionRow}>
+        <button
+          className={`${styles.assignButton} ${line ? styles.assignDone : ''}`}
+          onClick={() => onAssign(index)}
+          disabled={noWayOut}
+        >
+          <FaDice className={styles.dice} />
+          {noWayOut ? '갈 곳 없음' : line ? '다시 뽑기' : '뽑기'}
+        </button>
+        {line && (
+          <button
+            className={styles.resetOne}
+            onClick={() => onResetOne(index)}
+            title="이 사람만 초기화"
+            aria-label="이 사람만 초기화"
+          >
+            <FaUndo />
+          </button>
+        )}
+      </div>
 
       <div className={styles.result} style={{ opacity: line ? 1 : 0 }}>
         {line && (

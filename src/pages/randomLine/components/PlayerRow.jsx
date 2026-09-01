@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaUndo } from 'react-icons/fa';
 import { LINE_NAMES, getLine } from '../../../lines';
 import LineSelector from '../../../components/common/LineSelector';
 import RosterPicker from '../../../components/common/RosterPicker';
@@ -18,6 +19,7 @@ const PlayerRow = ({
   onPickMember,
   onToggleLine,
   onAssign,
+  onResetOne,
 }) => {
   const line = assignedLine ? getLine(assignedLine) : null;
   const noWayOut = LINE_NAMES.every((l) => disabledLines.includes(l));
@@ -64,13 +66,25 @@ const PlayerRow = ({
         )}
       </div>
 
-      <button
-        className={`${styles.assign} ${line ? styles.assignDone : ''}`}
-        onClick={() => onAssign(index)}
-        disabled={noWayOut}
-      >
-        {noWayOut ? '갈 곳 없음' : line ? '다시' : '뽑기'}
-      </button>
+      <div className={styles.actions}>
+        <button
+          className={`${styles.assign} ${line ? styles.assignDone : ''}`}
+          onClick={() => onAssign(index)}
+          disabled={noWayOut}
+        >
+          {noWayOut ? '갈 곳 없음' : line ? '다시' : '뽑기'}
+        </button>
+        {line && (
+          <button
+            className={styles.resetOne}
+            onClick={() => onResetOne(index)}
+            title="이 사람만 초기화"
+            aria-label="이 사람만 초기화"
+          >
+            <FaUndo />
+          </button>
+        )}
+      </div>
     </div>
   );
 };

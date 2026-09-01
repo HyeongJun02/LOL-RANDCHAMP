@@ -125,15 +125,43 @@ test('불러오기로 여러 명을 한 번에 참가자로 넣는다', () => {
   expect(rows[1].querySelector('.row-div').value).toBe('1');
 });
 
-test('이미 들어간 팀원은 다시 고를 수 없다', () => {
+test('이미 들어간 팀원은 체크된 채로 뜨고, 풀면 참가자에서 빠진다', () => {
+  seedRoster([
+    { id: 'a', name: '철수', tier: 'GOLD', division: 4 },
+    { id: 'b', name: '영희', tier: 'GOLD', division: 4 },
+  ]);
+  const el = render();
+
+  click(byText(el, '불러오기'));
+  el.querySelectorAll('.loader-list input').forEach((box) => click(box));
+  click(byText(el, '완료'));
+
+  // 다시 열면 둘 다 체크되어 있다
+  click(byText(el, '불러오기'));
+  const boxes = [...el.querySelectorAll('.loader-list input')];
+  expect(boxes.map((b) => b.checked)).toEqual([true, true]);
+  expect(boxes.every((b) => b.disabled)).toBe(false);
+
+  // 하나를 풀고 완료하면 그 사람만 빠진다
+  click(boxes[0]);
+  click(byText(el, '완료'));
+
+  const names = [...el.querySelectorAll('.row-name input')].map((i) => i.value);
+  expect(names).not.toContain('철수');
+  expect(names).toContain('영희');
+});
+
+test('직접 입력한 이름은 팝업이 건드리지 않는다', () => {
   seedRoster([{ id: 'a', name: '철수', tier: 'GOLD', division: 4 }]);
   const el = render();
+
+  setValue(el.querySelectorAll('.row-name input')[0], '지나가던행인');
 
   click(byText(el, '불러오기'));
   click(el.querySelector('.loader-list input'));
   click(byText(el, '완료'));
 
-  click(byText(el, '불러오기'));
-  expect(el.querySelector('.loader-list input').disabled).toBe(true);
-  expect(el.querySelector('.loader-added')).not.toBeNull();
+  const names = [...el.querySelectorAll('.row-name input')].map((i) => i.value);
+  expect(names).toContain('지나가던행인');
+  expect(names).toContain('철수');
 });

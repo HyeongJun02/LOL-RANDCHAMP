@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaDownload } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
 import { splitTeams, MAX_PLAYERS } from './balance';
-import { mergeMembers } from '../../roster';
+import { mergeMembers, useRoster } from '../../roster';
 import RosterPicker from '../../components/common/RosterPicker';
 import CandidateModal from './CandidateModal';
 import PageHeader from '../../components/common/PageHeader';
@@ -36,6 +36,7 @@ const TeamBalance = () => {
   const [result, setResult] = useState(null);
   const [showCandidates, setShowCandidates] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const roster = useRoster();
 
   const update = (id, patch) =>
     setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
@@ -52,10 +53,25 @@ const TeamBalance = () => {
         : [...prev, { ...blankPlayer(), ...preset, id: uid() }]
     );
 
-  /* 빈 자리부터 채우고, 모자라면 행을 늘린다 */
-  const loadMembers = (members) => {
-    const next = [...players];
-    const queue = [...members];
+  /* 명단에서 직접 입력한 이름(= 명단에 없는 이름)은 팝업이 건드리지 않는다 */
+  const manualCount = entered.filter(
+    (p) => !roster.some((m) => m.name.trim() === p.name.trim())
+  ).length;
+
+  /* 팝업에서 고른 대로 맞춘다. 체크가 풀린 사람은 자리를 비우고,
+     새로 체크된 사람은 빈 자리부터 채운다 */
+  const syncMembers = (members) => {
+    const wanted = new Set(members.map((m) => m.name.trim()));
+    const rosterNames = new Set(roster.map((m) => m.name.trim()));
+
+    const next = players.map((p) => {
+      const name = p.name.trim();
+      const dropped = name !== '' && rosterNames.has(name) && !wanted.has(name);
+      return dropped ? { ...p, name: '', lock: 0 } : p;
+    });
+
+    const already = new Set(next.map((p) => p.name.trim()));
+    const queue = members.filter((m) => !already.has(m.name.trim()));
 
     for (let i = 0; i < next.length && queue.length > 0; i += 1) {
       if (next[i].name.trim() === '') {
@@ -290,9 +306,9 @@ const TeamBalance = () => {
 
       {showLoader && (
         <RosterLoader
-          taken={players.map((p) => p.name)}
-          limit={MAX_PLAYERS - entered.length}
-          onConfirm={loadMembers}
+          present={players.map((p) => p.name)}
+          limit={MAX_PLAYERS - manualCount}
+          onConfirm={syncMembers}
           onClose={() => setShowLoader(false)}
         />
       )}

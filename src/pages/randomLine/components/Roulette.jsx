@@ -3,20 +3,24 @@ import { LINES, getLine } from '../../../lines';
 import styles from './Roulette.module.css';
 
 const VISIBLE_COUNT = 3;
-const LOOP_COUNT = 40; // 5라인 × 40 = 200 아이콘, 무한 루프처럼 보이게
+const LOOP_COUNT = 40; // 5라인 × 40 = 200칸, 무한 루프처럼 보이게
+const MID = Math.floor(VISIBLE_COUNT / 2);
+const SPIN_MS = 3000;
 
 const Roulette = ({ options, selectedOption, trigger, resetTrigger }) => {
-  const [offset, setOffset] = useState(0);
+  /* 위치를 px가 아니라 '가운데 칸에 놓일 아이템 번호'로 들고 있는다.
+     그래야 칸 폭이 바뀌어도(반응형) 항상 아이콘 정중앙에 맞는다 */
+  const [landed, setLanded] = useState(0);
+  const [animating, setAnimating] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [itemWidth, setItemWidth] = useState(80);
   const viewportRef = useRef(null);
   const prevTrigger = useRef(trigger);
   const prevReset = useRef(resetTrigger);
 
-  // 실제 렌더링된 폭을 측정해서 반응형 화면에서도 정렬이 어긋나지 않게 함
   useLayoutEffect(() => {
     const el = viewportRef.current;
-    if (!el) return;
+    if (!el) return undefined;
     const measure = () => {
       const w = el.clientWidth / VISIBLE_COUNT;
       if (w > 0) setItemWidth(w);
@@ -28,11 +32,11 @@ const Roulette = ({ options, selectedOption, trigger, resetTrigger }) => {
   }, []);
 
   useEffect(() => {
-    if (resetTrigger === undefined) return;
-    if (resetTrigger === prevReset.current) return;
+    if (resetTrigger === undefined || resetTrigger === prevReset.current) return;
     prevReset.current = resetTrigger;
+    setAnimating(false);
     setSpinning(false);
-    setOffset(0);
+    setLanded(0);
   }, [resetTrigger]);
 
   useEffect(() => {
@@ -40,22 +44,35 @@ const Roulette = ({ options, selectedOption, trigger, resetTrigger }) => {
     prevTrigger.current = trigger;
     if (!selectedOption) return;
 
-    const finalIdx = options.findIndex((l) => l === selectedOption);
+    const finalIdx = options.indexOf(selectedOption);
     if (finalIdx < 0) return;
 
-    const spinRounds = 4 + Math.floor(Math.random() * 4); // 4~7바퀴
-    const totalItems = spinRounds * options.length + finalIdx;
-    const mid = Math.floor(VISIBLE_COUNT / 2);
-
-    const noise = (Math.random() - 0.5) * itemWidth * 0.5;
-    const targetOffset = (mid - totalItems) * itemWidth + noise;
-
+    /* 전환 없이 처음으로 되감은 뒤, 다음 프레임부터 목표 칸까지 돌린다 */
+    setAnimating(false);
+    setLanded(0);
     setSpinning(true);
-    setOffset(0);
-    requestAnimationFrame(() => setOffset(targetOffset));
-    const stopTimer = setTimeout(() => setSpinning(false), 3050);
-    return () => clearTimeout(stopTimer);
-  }, [trigger, selectedOption, options, itemWidth]);
+
+    const rounds = 4 + Math.floor(Math.random() * 4);
+    const target = rounds * options.length + finalIdx;
+
+    let inner;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        setAnimating(true);
+        setLanded(target);
+      });
+    });
+    const stop = setTimeout(() => {
+      setSpinning(false);
+      setAnimating(false);
+    }, SPIN_MS + 60);
+
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+      clearTimeout(stop);
+    };
+  }, [trigger, selectedOption, options]);
 
   const items = Array.from({ length: LOOP_COUNT })
     .map(() => options)
@@ -76,8 +93,10 @@ const Roulette = ({ options, selectedOption, trigger, resetTrigger }) => {
       <div
         className={styles.list}
         style={{
-          transform: `translateX(${offset}px)`,
-          transition: 'transform 3s cubic-bezier(0.08, 0.82, 0.17, 1)',
+          transform: `translateX(${(MID - landed) * itemWidth}px)`,
+          transition: animating
+            ? `transform ${SPIN_MS}ms cubic-bezier(0.08, 0.82, 0.17, 1)`
+            : 'none',
         }}
       >
         {items.map((name, i) => {
