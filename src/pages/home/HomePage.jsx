@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaDice, FaArrowRight } from 'react-icons/fa';
 import { READY_TOOLS, SOON_TOOLS } from '../../tools';
 import RosterManager from './RosterManager';
+import { usePageMeta, PAGE_META } from '../../seo';
 import './HomePage.css';
 
 /* --i 순서대로 슉슉 올라온다. 위에서 아래로 세는 값이라 순서를 바꾸면 여기도 같이 바꿀 것 */
@@ -11,19 +12,22 @@ const READY_FROM = 5;
 const SOON_FROM = READY_FROM + READY_TOOLS.length + 1;
 const ROSTER_AT = SOON_FROM + SOON_TOOLS.length;
 
-const HomePage = () => (
+const HomePage = () => {
+  usePageMeta(PAGE_META.home);
+
+  return (
   <div className="home-page">
     <section className="hero">
       <span className="home-kicker rise" style={step(0)}>
-        롤 친구 도구 모음
+        롤 내전 도구 모음
       </span>
       <FaDice className="hero-icon rise" style={step(1)} />
       <h1 className="hero-title rise" style={step(2)}>
         롤랜챔
       </h1>
       <p className="hero-subtitle rise" style={step(3)}>
-        친구들이랑 롤 할 때 필요한 잡다한 것들.{' '}
-        <strong>정하기 귀찮은 건 전부 주사위한테</strong> 맡기세요.
+        <strong>내전 팀 짜기</strong>, <strong>랜덤 챔피언 뽑기</strong>,{' '}
+        <strong>라인 분배</strong>까지. 정하기 귀찮은 건 전부 주사위한테 맡기세요.
       </p>
       <ul className="hero-badges rise" style={step(4)}>
         <li>로그인 없음</li>
@@ -83,6 +87,7 @@ const HomePage = () => (
       © {new Date().getFullYear()} 롤랜챔 · Made by @HyeongJun02
     </footer>
   </div>
-);
+  );
+};
 
 export default HomePage;

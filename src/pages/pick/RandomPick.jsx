@@ -4,6 +4,7 @@ import { FaPlus, FaTimes, FaDice, FaRedo, FaUserFriends } from 'react-icons/fa';
 import { useRoster } from '../../roster';
 import { addItems, poolOf } from './pick';
 import PageHeader from '../../components/common/PageHeader';
+import { usePageMeta, PAGE_META } from '../../seo';
 import './RandomPick.css';
 
 const ROLL_TICKS = 16;
@@ -24,6 +25,7 @@ const RandomPick = () => {
   const [rolling, setRolling] = useState(null);
   const [result, setResult] = useState(null);
   const timer = useRef(null);
+  usePageMeta(PAGE_META.pick);
 
   useEffect(() => () => clearInterval(timer.current), []);
 

@@ -1,6 +1,8 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "롤랜챔",
+  "name": "롤랜챔 - 롤 내전 팀 짜기 · 랜덤 챔피언 뽑기",
+  "description": "롤 내전 팀 짜기, 랜덤 챔피언 뽑기, 라인 분배 도구 모음",
+  "lang": "ko",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,18 +10,14 @@
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#05070d",
+  "background_color": "#05070d"
 }

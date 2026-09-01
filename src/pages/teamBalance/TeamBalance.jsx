@@ -8,6 +8,7 @@ import RosterPicker from '../../components/common/RosterPicker';
 import CandidateModal from './CandidateModal';
 import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
+import { usePageMeta, PAGE_META } from '../../seo';
 import './TeamBalance.css';
 
 const LOCKS = [
@@ -36,6 +37,7 @@ const TeamBalance = () => {
   const [result, setResult] = useState(null);
   const [showCandidates, setShowCandidates] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  usePageMeta(PAGE_META.teamBalance);
   const roster = useRoster();
 
   const update = (id, patch) =>

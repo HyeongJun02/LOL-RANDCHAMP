@@ -11,19 +11,24 @@ export const MAX_OPTIONS = 300;
 export const IGNORE_RATING = Infinity;
 
 /* 평점 차이를 로지스틱에 넣은 재미용 수치. 실측 승률이 아니다.
-   ponytail: 5대5에서 팀 전체가 한 티어 위면 약 66%가 되도록 잡은 상수.
-   평점 자체가 랭크 분포 z점수 기반이라(tiers.js) 티어별 간격이 균등하지 않다.
-   체감이 다르면 WIN_SCALE만 조정하면 된다. */
-export const WIN_SCALE = 24;
+
+   기울기는 감이 아니라 MMR 추정치에서 뽑았다.
+   사다리 폭이 아이언4 ~825 MMR ~ 다이아1 ~2175 MMR = 1350 MMR이고,
+   평점 스케일(tiers.js)로는 그 구간이 4.75z = 47.5점이다. 즉 1z(10점) ≈ 284 MMR.
+   Elo 공식(400점 차 = 10:1)에 넣으면 1z 우위의 1대1 승률이 84%,
+   그게 되도록 역산한 값이 14다.
+   MMR 추정 출처: leagueoflegendstools.com (커뮤니티 추정치, 라이엇 비공개) */
+export const WIN_SCALE = 14;
 
 /* 사람이 한 명 더 있다는 것 자체의 값.
    아이언4의 평점이 0이라고 해서 기여가 0인 건 아니다. 이 값이 없으면
    인원이 다를 때 '평점 높은 한 명'이 '평점 낮은 두 명'보다 세게 나온다.
 
-   ponytail: 18은 '골드 하나 vs 아이언 둘'이 골드 쪽 약 59%가 되게 맞춘 값이다.
-   실제 4대5가 훨씬 참혹하다는 점과는 상충하지만, 이 도구는 5대5 내전이 기본이고
-   인원이 같으면 이 값이 상쇄되어 아무 영향이 없다. */
-export const BODY_VALUE = 18;
+   ponytail: 12는 5대4(동급 실력)가 81%로 나오게 맞춘 값이다. 실제 4대5는
+   더 참혹하지만, 그만큼 올리면 '골드 하나 vs 아이언 둘'이 뒤집힌다.
+   하나의 상수로 두 상황을 다 맞출 수는 없어서 내전에서 실제로 나오는
+   5대4 쪽에 무게를 뒀다. 인원이 같으면 이 값은 완전히 상쇄된다. */
+export const BODY_VALUE = 12;
 
 export const winChance = (sumA, sizeA, sumB, sizeB) => {
   if (!sizeA || !sizeB) return 50;

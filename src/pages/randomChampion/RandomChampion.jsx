@@ -8,6 +8,7 @@ import { LANE_META, countUnclassified } from '../../champLanes';
 import { filterChampions } from './filter';
 import ResultPanel from './ResultPanel';
 import PageHeader from '../../components/common/PageHeader';
+import { usePageMeta, PAGE_META } from '../../seo';
 import './RandomChampion.css';
 
 const ROLL_TICKS = 16;
@@ -23,6 +24,7 @@ const RandomChampion = () => {
   const [picked, setPicked] = useState(null);
   const [rolling, setRolling] = useState(null);
   const timer = useRef(null);
+  usePageMeta(PAGE_META.randomChampion);
 
   useEffect(() => {
     fetchChampionData()

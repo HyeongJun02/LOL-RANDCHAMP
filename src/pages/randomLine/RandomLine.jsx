@@ -7,6 +7,7 @@ import PlayerRow from './components/PlayerRow';
 import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
 import { LINE_NAMES, randomQuote } from '../../lines';
+import { usePageMeta, PAGE_META } from '../../seo';
 import styles from './RandomLine.module.css';
 
 const SUBTITLES = [
@@ -35,6 +36,7 @@ export default function RandomLinePage() {
   const [compact, setCompact] = useState(prefersCompact);
   const [showLoader, setShowLoader] = useState(false);
   const roster = useRoster();
+  usePageMeta(PAGE_META.randomLine);
   const [subtitle] = useState(
     () => SUBTITLES[Math.floor(Math.random() * SUBTITLES.length)]
   );

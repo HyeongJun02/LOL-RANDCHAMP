@@ -117,10 +117,14 @@ describe('재미용 승률', () => {
     expect(winChance(20, 5, 0, 5)).toBe(winChance(120, 5, 100, 5));
   });
 
-  test('5대5에서 팀 전체가 한 티어 위면 약 66%', () => {
+  test('5대5에서 팀 전체가 한 티어 위면 76%', () => {
     const gold = r('GOLD', 4) * 5;
     const silver = r('SILVER', 4) * 5;
-    expect(winChance(gold, 5, silver, 5)).toBe(66);
+    expect(winChance(gold, 5, silver, 5)).toBe(76);
+  });
+
+  test('5대5에서 한 디비전 차이는 54%', () => {
+    expect(winChance(r('GOLD', 3) * 5, 5, r('GOLD', 4) * 5, 5)).toBe(54);
   });
 
   test('같은 한 티어 차이여도 아이언 쪽이 골드 쪽보다 격차가 크다', () => {
@@ -140,9 +144,14 @@ describe('재미용 승률', () => {
     const goldPlus = winChance(team(gold3, iron4), 2, iron3, 1);
 
     expect(goldPlus).toBeGreaterThan(soloGold);
-    // 골드 하나가 아이언 둘을 상대로도 유리해야 한다
-    expect(soloGold).toBeGreaterThan(50);
+    // 골드 하나면 아이언 둘을 상대로도 확실히 유리해야 한다
+    expect(soloGold).toBeGreaterThan(65);
     expect(goldPlus).toBeGreaterThan(90);
+  });
+
+  test('사람이 한 명 빈 팀은 확실히 불리하다 (5대4 동급 실력)', () => {
+    const gold = r('GOLD', 4);
+    expect(winChance(gold * 5, 5, gold * 4, 4)).toBeGreaterThan(75);
   });
 
   test('아무리 벌어져도 5~95% 안에 머문다', () => {
