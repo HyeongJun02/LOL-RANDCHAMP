@@ -32,7 +32,10 @@ const load = () => {
   roster = require('./roster');
 };
 
+/* 이 기기(익명)에 남은 값 */
 const stored = () => JSON.parse(localStorage.getItem('lrc.roster'));
+/* 화면이 보고 있는 값 */
+const shown = () => roster.getRoster();
 const names = (list) => list.map((m) => m.name).sort();
 
 beforeEach(() => {
@@ -64,7 +67,7 @@ test('로그인하면 서버 값과 이 기기 값을 합친다', async () => {
   };
   await store.setCloudUser('u1');
 
-  expect(names(stored())).toEqual(['로컬만있는사람', '서버에있는사람'].sort());
+  expect(names(shown())).toEqual(['로컬만있는사람', '서버에있는사람'].sort());
   /* 합친 결과를 서버에도 한 번 밀어 넣는다 */
   const pushed = mockUpsert.mock.calls.at(-1)[0];
   expect(pushed.user_id).toBe('u1');
@@ -83,8 +86,8 @@ test('이름이 겹치면 서버 쪽을 남긴다 (중복 생성 안 함)', asyn
   };
   await store.setCloudUser('u1');
 
-  expect(stored()).toHaveLength(1);
-  expect(stored()[0]).toMatchObject({ name: '철수', tier: 'DIAMOND' });
+  expect(shown()).toHaveLength(1);
+  expect(shown()[0]).toMatchObject({ name: '철수', tier: 'DIAMOND' });
 });
 
 test('로그인 후 수정하면 서버로 올라간다', async () => {
@@ -103,14 +106,18 @@ test('로그아웃하면 이 기기 값으로 돌아가고 서버를 안 건드�
   load();
   mockRows.current = { roster: [{ id: 'r1', name: '서버사람' }] };
   await store.setCloudUser('u1');
-  expect(stored()).toHaveLength(1);
+  expect(shown()).toHaveLength(1);
 
   await store.setCloudUser(null);
   mockUpsert.mockClear();
 
+  /* 계정 데이터는 따라오지 않는다 */
+  expect(shown()).toHaveLength(0);
+
   roster.addMember({ name: '로그아웃후추가' });
   await Promise.resolve();
   expect(mockUpsert).not.toHaveBeenCalled();
+  expect(stored()).toHaveLength(1); // 익명 저장소에는 남는다
 });
 
 test('서버 저장에 실패해도 화면 값은 남고 알림만 간다', async () => {
@@ -124,7 +131,7 @@ test('서버 저장에 실패해도 화면 값은 남고 알림만 간다', asyn
   await Promise.resolve();
   await Promise.resolve();
 
-  expect(stored()).toHaveLength(1); // 로컬에는 남아 있다
+  expect(shown()).toHaveLength(1); // 화면에는 남아 있다
   expect(onError).toHaveBeenCalled();
 });
 
@@ -158,7 +165,7 @@ describe('계정당 한도', () => {
     roster.addMember({ name: '한명더' });
 
     expect(onError).toHaveBeenCalledWith(expect.stringContaining('최대'));
-    expect(stored()).toHaveLength(MAX_ROSTER); // 안 늘었다
+    expect(shown()).toHaveLength(MAX_ROSTER); // 안 늘었다
     expect(mockUpsert).not.toHaveBeenCalled(); // 서버도 안 건드린다
   });
 
@@ -174,7 +181,7 @@ describe('계정당 한도', () => {
     roster.addMember({ name: '한명더' });
 
     expect(onError).not.toHaveBeenCalled();
-    expect(stored()).toHaveLength(MAX_ROSTER + 1);
+    expect(shown()).toHaveLength(MAX_ROSTER + 1);
   });
 
   test('로그인 안 했으면 한도가 없다', () => {
@@ -184,5 +191,66 @@ describe('계정당 한도', () => {
 
     roster.addMember({ name: '한명더' });
     expect(stored()).toHaveLength(MAX_ROSTER + 1);
+  });
+});
+
+describe('계정 사이에 데이터가 새지 않는다', () => {
+  test('로그인 중에는 이 기기의 익명 저장소를 건드리지 않는다', async () => {
+    load();
+    await store.setCloudUser('u1');
+
+    roster.addMember({ name: '내계정사람' });
+
+    /* 서버로는 갔지만 localStorage에는 안 남는다 */
+    expect(names(mockUpsert.mock.calls.at(-1)[0].roster)).toEqual(['내계정사람']);
+    expect(localStorage.getItem('lrc.roster')).toBeNull();
+  });
+
+  test('가입 전 만든 명단은 계정으로 옮기고 이 기기에서는 지운다', async () => {
+    localStorage.setItem(
+      'lrc.roster',
+      JSON.stringify([{ id: 'l1', name: '가입전에만든사람' }])
+    );
+    load();
+
+    await store.setCloudUser('u1');
+
+    /* 계정에는 들어갔고 */
+    expect(names(mockUpsert.mock.calls.at(-1)[0].roster)).toEqual(['가입전에만든사람']);
+    /* 기기에는 안 남는다 */
+    expect(localStorage.getItem('lrc.roster')).toBeNull();
+  });
+
+  test('앞사람 기록이 뒷사람 계정으로 딸려가지 않는다', async () => {
+    localStorage.setItem('lrc.roster', JSON.stringify([{ id: 'a', name: '철수' }]));
+    load();
+
+    // 철수가 로그인 -> 자기 계정으로 가져가고 기기는 비워진다
+    await store.setCloudUser('철수계정');
+    expect(names(mockUpsert.mock.calls.at(-1)[0].roster)).toEqual(['철수']);
+
+    // 로그아웃
+    await store.setCloudUser(null);
+    expect(stored()).toBeNull();
+
+    // 같은 브라우저에서 영희가 로그인
+    mockUpsert.mockClear();
+    mockRows.current = { roster: [{ id: 'b', name: '영희' }] };
+    await store.setCloudUser('영희계정');
+
+    const pushed = mockUpsert.mock.calls.at(-1)[0];
+    expect(names(pushed.roster)).toEqual(['영희']);
+    expect(names(pushed.roster)).not.toContain('철수');
+  });
+
+  test('서버 저장이 실패하면 기기 데이터를 안 지운다', async () => {
+    localStorage.setItem('lrc.roster', JSON.stringify([{ id: 'l1', name: '소중한사람' }]));
+    load();
+    store.setSyncErrorHandler(jest.fn());
+
+    mockError.upsert = { message: 'network down' };
+    await store.setCloudUser('u1');
+
+    expect(JSON.parse(localStorage.getItem('lrc.roster'))).toHaveLength(1);
   });
 });

@@ -38,7 +38,11 @@ export const createStore = ({ key, column, hydrate = (x) => x, merge, limitKind 
   const listeners = new Set();
   const notify = () => listeners.forEach((fn) => fn());
 
+  /* localStorage는 '로그인 안 한 이 기기의 작업 공간'이다.
+     로그인 중에 여기에 쓰면, 로그아웃한 뒤 다음 사람이 로그인할 때
+     앞사람 데이터가 그 계정으로 딸려 들어간다. 그래서 안 쓴다. */
   const writeLocal = () => {
+    if (userId) return;
     try {
       localStorage.setItem(key, JSON.stringify(state));
     } catch {
@@ -74,11 +78,21 @@ export const createStore = ({ key, column, hydrate = (x) => x, merge, limitKind 
   registry.push({
     column,
     get: () => state,
-    /* 로그인 직후: 서버 값과 이 기기에 있던 값을 합친다. 어느 쪽도 안 버린다 */
+    /* 로그인 직후: 서버 값과 이 기기에 있던 값을 합친다. 어느 쪽도 안 버린다.
+       (가입 전에 만들어둔 명단을 계정으로 가져오는 경우) */
     adopt: (remote) => {
       state = merge(readLocal(), hydrate(Array.isArray(remote) ? remote : []));
-      writeLocal();
       notify();
+    },
+    /* 계정으로 넘긴 뒤에는 이 기기의 익명 데이터를 지운다.
+       안 지우면 로그아웃한 다음 사람이 앞사람 기록을 보고,
+       그 사람이 로그인하면 자기 계정으로 가져가 버린다 */
+    clearLocal: () => {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        /* 못 지워도 로그인 중에는 안 읽으니 당장 새지는 않는다 */
+      }
     },
     /* 로그아웃: 이 기기의 값으로 돌아간다 */
     reset: () => {
@@ -87,8 +101,9 @@ export const createStore = ({ key, column, hydrate = (x) => x, merge, limitKind 
     },
   });
 
+  /* 다른 탭에서 익명 데이터를 고친 경우. 로그인 중이면 서버가 기준이라 무시한다 */
   window.addEventListener('storage', (e) => {
-    if (e.key !== key) return;
+    if (e.key !== key || userId) return;
     state = readLocal();
     notify();
   });
@@ -130,6 +145,9 @@ export const setCloudUser = async (id) => {
     });
     const res = await neon.from(TABLE).upsert(row);
     if (res.error) throw new Error(res.error.message);
+
+    /* 서버에 확실히 올라간 뒤에만 지운다. 실패했는데 지우면 데이터가 사라진다 */
+    registry.forEach((s) => s.clearLocal());
   } catch (e) {
     onError(e.message);
   }

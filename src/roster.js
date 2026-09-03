@@ -38,6 +38,9 @@ const store = createStore({
 
 export const useRoster = store.use;
 
+/* React 밖에서 지금 값을 읽어야 할 때 */
+export const getRoster = store.get;
+
 export const addMember = (member = {}) =>
   store.commit([
     ...store.get(),

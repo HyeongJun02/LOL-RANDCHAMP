@@ -23,6 +23,9 @@ const store = createStore({
 
 export const useMatches = store.use;
 
+/* React 밖에서 지금 값을 읽어야 할 때 */
+export const getMatches = store.get;
+
 /**
  * @param mode 'aram' | 'normal'
  * @param teamA, teamB 이름 배열 (공백 제거된 상태로 넘길 것)
