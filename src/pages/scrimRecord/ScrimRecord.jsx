@@ -1,9 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaArrowRight, FaPlus, FaTimes, FaTrophy, FaClipboardList, FaDice } from 'react-icons/fa';
+import { FaArrowRight, FaPlus, FaTimes, FaTrophy, FaClipboardList, FaDice, FaUsers } from 'react-icons/fa';
 import { getTier, tierName } from '../../tiers';
 import { statsFor, statOf } from '../../matches';
 import { loadLastSplit } from '../../lastSplit';
+import Modal from '../../components/common/Modal';
+import TeamBalance from '../teamBalance/TeamBalance';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
@@ -73,6 +75,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
   /* 더블클릭으로 같은 경기가 두 번 들어가는 걸 막는다.
      상태로 잡으면 렌더 클로저의 옛 값을 읽어서 두 번 통과한다 */
   const saving = useRef(false);
+  const [showBalancer, setShowBalancer] = useState(false);
 
   const stats = useMemo(() => statsFor(matches, mode), [matches, mode]);
   const history = useMemo(
@@ -96,16 +99,17 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
   const addSlot = (setter) => () => setter((prev) => [...prev, '']);
   const removeSlot = (setter) => (i) => setter((prev) => prev.filter((_, idx) => idx !== i));
 
-  const importSplit = () => {
-    const split = loadLastSplit();
-    if (!split) {
-      toast.error('내전 팀 짜기에서 만든 팀이 없어요. 먼저 그쪽에서 팀을 짜 주세요.');
-      return;
-    }
-    setTeamA(split.teamA);
-    setTeamB(split.teamB);
-    toast.success(`내전 팀 짜기 결과를 불러왔어요. (${formatRelative(split.at)} 생성)`);
+  /* 팝업에서 '이 팀으로 진행'을 누르면 그대로 옮겨 담는다.
+     예전에는 팀 짜기 페이지에 다녀와서 '가져오기'를 눌러야 했다 */
+  const applyTeams = (a, b) => {
+    setTeamA(a);
+    setTeamB(b);
+    setShowBalancer(false);
+    toast.success('짠 팀을 그대로 가져왔어요.');
   };
+
+  /* 다른 기기/탭에서 짜둔 게 있으면 팝업을 열 때 이어서 보여준다 */
+  const lastSplit = loadLastSplit();
 
   const clearTeams = () => {
     setTeamA(blankTeam());
@@ -187,9 +191,18 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
       {canEdit && (
         <>
           <div className="sr-toolbar">
-            <button className="ghost-btn" onClick={importSplit}>
-              <FaArrowRight /> 방금 짠 팀 가져오기
+            <button className="ghost-btn" onClick={() => setShowBalancer(true)}>
+              <FaUsers /> 내전 팀 짜기
             </button>
+            {lastSplit && (
+              <button
+                className="ghost-btn"
+                onClick={() => applyTeams(lastSplit.teamA, lastSplit.teamB)}
+                title={`${formatRelative(lastSplit.at)} 짠 팀`}
+              >
+                <FaArrowRight /> 방금 짠 팀 ({formatRelative(lastSplit.at)})
+              </button>
+            )}
             <button className="ghost-btn" onClick={clearTeams}>
               팀 비우기
             </button>
@@ -218,6 +231,8 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
             />
           </div>
 
+          {/* 승리 기록과 또또 열기는 여기서 고르는 두 갈래다.
+              또또가 구석의 작은 버튼이면 이런 게 있는 줄도 모른다 */}
           <div className="win-buttons">
             <button className="win-btn team-blue" onClick={() => recordWin('A')}>
               <FaTrophy /> 1팀 승리
@@ -225,14 +240,26 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
             <button className="win-btn team-red" onClick={() => recordWin('B')}>
               <FaTrophy /> 2팀 승리
             </button>
-          </div>
-
-          {onOpenBetting && (
-            <div className="sr-toolbar">
-              <button className="ghost-btn" onClick={openBetting}>
-                <FaDice /> 또또 열기 (배팅 받고 나중에 결과 넣기)
+            {onOpenBetting && (
+              <button className="win-btn bet-open" onClick={openBetting}>
+                <FaDice /> 또또 열기
               </button>
-            </div>
+            )}
+          </div>
+          {onOpenBetting && (
+            <p className="sr-bet-hint">
+              또또를 열면 결과를 나중에 넣습니다. 그 사이에 다들 끼꼬를 걸 수 있어요.
+            </p>
+          )}
+
+          {showBalancer && (
+            <Modal
+              title="내전 팀 짜기"
+              desc="여기서 팀을 짠 다음 '이 팀으로 내전 진행하기'를 누르면 그대로 옮겨집니다."
+              onClose={() => setShowBalancer(false)}
+            >
+              <TeamBalance embedded matches={matches} onUseTeams={applyTeams} />
+            </Modal>
           )}
         </>
       )}

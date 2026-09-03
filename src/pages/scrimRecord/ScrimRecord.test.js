@@ -126,12 +126,11 @@ test('수정 권한이 없으면 입력과 삭제가 아예 안 보인다', asyn
   expect(el.querySelector('.board-list li').textContent).toContain('철수');
 });
 
-test('내전 팀 짜기 결과가 없으면 안내만 하고 팀을 바꾸지 않는다', async () => {
+test('짜둔 팀이 없으면 가져오기 버튼 자체를 안 보여준다', () => {
+  /* 눌러봐야 '없어요' 소리만 듣는 버튼은 안 띄우는 편이 낫다 */
   const el = render();
-  await click(byText(el, 'button', '방금 짠 팀 가져오기'));
-
-  const filled = [...el.querySelectorAll('.sr-row input')].filter((i) => i.value !== '');
-  expect(filled).toHaveLength(0);
+  expect(byText(el, 'button', '방금 짠 팀')).toBeUndefined();
+  expect(byText(el, 'button', '내전 팀 짜기')).toBeDefined();
 });
 
 test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', async () => {
@@ -141,7 +140,7 @@ test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', async (
   );
   const el = render();
 
-  await click(byText(el, 'button', '방금 짠 팀 가져오기'));
+  await click(byText(el, 'button', '방금 짠 팀'));
 
   const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
   const aNames = [...teamAPanel.querySelectorAll('.sr-row input')].map((i) => i.value);

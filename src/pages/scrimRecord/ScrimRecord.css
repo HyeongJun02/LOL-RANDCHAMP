@@ -90,11 +90,13 @@
 
 /* ---------- 승리 버튼 ---------- */
 
+/* 승리 기록과 또또 열기는 여기서 고르는 갈래라 나란히 둔다.
+   전보다 낮췄다 - 세 개가 되면서 예전 높이로는 화면을 다 먹는다 */
 .win-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
 }
 
 .win-btn {
@@ -103,14 +105,14 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.9rem;
+  padding: 0.65rem;
   border: none;
-  border-radius: 12px;
+  border-radius: 11px;
   background: color-mix(in srgb, var(--team) 18%, transparent);
   border: 1px solid color-mix(in srgb, var(--team) 45%, transparent);
   color: var(--team);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 800;
   cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease;
@@ -118,6 +120,18 @@
 
 .win-btn.team-red {
   --team: var(--gg-red);
+}
+
+/* 또또도 같은 크기로. 구석의 작은 버튼이면 이런 게 있는 줄도 모른다 */
+.win-btn.bet-open {
+  --team: var(--gg-gold);
+}
+
+.sr-bet-hint {
+  margin: 0 0 1.5rem;
+  font-size: 0.75rem;
+  color: #6b7a94;
+  text-align: center;
 }
 
 .win-btn:hover {

@@ -48,7 +48,10 @@ const TierBadge = ({ player }) => {
 /* matches를 넘기면 '평점 기준'에 내전 포인트가 함께 뜬다.
    전적은 이제 방 안에만 있어서, 로그인 없이 여는 이 화면에는 넘어올 게 없다.
    방 안에서 이 화면을 띄우게 되면 그때 방의 경기 목록을 넘기면 된다 */
-const TeamBalance = ({ matches = [] }) => {
+/* embedded: 방 안에서 팝업으로 띄울 때. 페이지 껍데기와 문서 제목을 건드리지 않는다
+   onUseTeams: 주면 결과 아래에 '이 팀으로 내전 진행하기'가 붙는다.
+   방에서 팀을 짠 다음 이름을 손으로 옮겨 적는 일이 없어진다 */
+const TeamBalance = ({ matches = [], embedded = false, onUseTeams }) => {
   const [players, setPlayers] = useState(() =>
     Array.from({ length: 10 }, blankPlayer)
   );
@@ -58,7 +61,7 @@ const TeamBalance = ({ matches = [] }) => {
   const [showLoader, setShowLoader] = useState(false);
   const [ratingMode, setRatingMode] = useState('tier');
   const [scrimMode, setScrimMode] = useState('normal');
-  usePageMeta(PAGE_META.teamBalance);
+  usePageMeta(embedded ? undefined : PAGE_META.teamBalance);
   const roster = useRoster();
 
   const scrimStats = useMemo(() => statsFor(matches, scrimMode), [matches, scrimMode]);
@@ -193,11 +196,13 @@ const TeamBalance = ({ matches = [] }) => {
   );
 
   return (
-    <div className="page tb-page">
-      <PageHeader
-        title="내전 팀 짜기"
-        sub="티어로 평점을 매겨 양 팀이 최대한 비슷해지게 나눕니다. 10명 안 채워도 됩니다."
-      />
+    <div className={embedded ? 'tb-embedded' : 'page tb-page'}>
+      {!embedded && (
+        <PageHeader
+          title="내전 팀 짜기"
+          sub="티어로 평점을 매겨 양 팀이 최대한 비슷해지게 나눕니다. 10명 안 채워도 됩니다."
+        />
+      )}
 
       <div className="tb-layout">
         <section className="tb-panel">
@@ -382,6 +387,19 @@ const TeamBalance = ({ matches = [] }) => {
 
           {result && (
             <div className="tb-result">
+              {onUseTeams && (
+                <button
+                  className="tb-use-teams"
+                  onClick={() =>
+                    onUseTeams(
+                      result.teamA.map((p) => p.name),
+                      result.teamB.map((p) => p.name)
+                    )
+                  }
+                >
+                  이 팀으로 내전 진행하기
+                </button>
+              )}
               <div className="result-summary">
                 평점 차이 <strong>{result.diff}</strong>
                 {result.diff !== result.bestDiff && (

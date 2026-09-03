@@ -12,8 +12,11 @@ const swap = (selector, attr, value) => {
 };
 
 /* SPA라 라우트가 바뀌어도 문서 제목은 그대로다. 페이지마다 직접 갈아준다 */
-export const usePageMeta = ({ title, description, path }) => {
+/* meta 없이 부르면(팝업 안에 끼워 넣은 화면 등) 아무것도 안 건드린다.
+   페이지가 아닌데 제목을 덮어쓰면 뒤에 있는 진짜 페이지 제목이 사라진다 */
+export const usePageMeta = ({ title, description, path } = {}) => {
   useEffect(() => {
+    if (!title) return;
     const url = `${SITE_URL}${path}`;
     document.title = title;
     swap('meta[name="description"]', 'content', description);

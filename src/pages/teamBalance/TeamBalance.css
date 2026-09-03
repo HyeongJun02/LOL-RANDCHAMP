@@ -618,3 +618,40 @@
   line-height: 1.45;
   color: #5b6b85;
 }
+
+/* ---------- 팝업으로 띄울 때 ---------- */
+/* 방 안에서 팀을 짤 때 쓴다. 페이지 여백 없이 모달 안쪽에 딱 맞춘다 */
+
+.tb-embedded {
+  --page-width: none;
+}
+
+.tb-embedded .tb-layout {
+  grid-template-columns: 1fr;
+}
+
+.tb-embedded .tb-side {
+  position: static;
+}
+
+/* 팀이 나왔으면 이걸 누르는 게 다음 순서다. 제일 눈에 띄어야 한다 */
+.tb-use-teams {
+  width: 100%;
+  margin-bottom: 0.7rem;
+  padding: 0.7rem;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
+  color: #06111f;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 22px -10px rgba(200, 170, 110, 0.9);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.tb-use-teams:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
