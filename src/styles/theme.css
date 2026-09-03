@@ -1,5 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
 
+/* padding과 border를 폭 안에 포함시킨다.
+
+   이게 없으면 `width: 100%`나 `flex-basis: 100%`에 padding을 준 요소가
+   전부 부모보다 넓어져 모바일에서 가로 스크롤이 생긴다.
+   실제로 순위표 전적 칸(.board-record / .season-record)이 그랬다.
+   지우지 말 것. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 :root {
   --gg-gold: #c8aa6e;
   --gg-gold-light: #f0d99a;
