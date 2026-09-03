@@ -371,14 +371,13 @@
 
 /* ---------- 내전 포인트 배지 (팀 분배 / 내전 기록지 공용) ---------- */
 
-/* +12 / -3 처럼 자릿수가 달라도 줄마다 오른쪽이 맞도록 */
+/* +12 / -3 처럼 자릿수가 달라도 칸 폭이 같고, 안에서는 가운데 정렬 */
 .scrim-badge {
   flex: none;
   min-width: 2.7rem;
-  text-align: center;
-  flex: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.22rem;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;

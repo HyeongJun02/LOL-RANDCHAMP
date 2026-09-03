@@ -207,7 +207,7 @@
   flex: none;
   display: flex;
   align-items: baseline;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.35rem;
   min-width: 6.4rem;
   font-size: 0.75rem;

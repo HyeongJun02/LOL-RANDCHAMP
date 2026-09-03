@@ -127,12 +127,13 @@
   white-space: nowrap;
 }
 
+/* 폭을 고정한 칸은 안에서 가운데로 모은다.
+   한쪽으로 붙이면 자릿수가 적은 줄만 빈 공간이 커져 들쭉날쭉해 보인다 */
 .season-record {
   flex: none;
   display: flex;
   align-items: baseline;
-  justify-content: flex-end;
-  /* 자릿수가 달라도 줄마다 오른쪽 끝이 맞도록 폭을 잡아둔다 */
+  justify-content: center;
   min-width: 7.5rem;
   gap: 0.35rem;
   font-size: 0.78rem;
