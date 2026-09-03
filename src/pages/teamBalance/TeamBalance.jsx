@@ -1,16 +1,18 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaDownload } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
 import { splitTeams, MAX_PLAYERS, winChance, IGNORE_RATING } from './balance';
 import { mergeMembers, useRoster } from '../../roster';
-import { useMatches, statsFor, pointsOf, POINTS } from '../../matches';
+import { useMatches, statsFor, pointsOf, statOf } from '../../matches';
 import { saveLastSplit } from '../../lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import CandidateModal from './CandidateModal';
 import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
+import RosterLoadButton from '../../components/common/RosterLoadButton';
+import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './TeamBalance.css';
 
@@ -174,7 +176,12 @@ const TeamBalance = () => {
               <span className="team-player">{p.name}</span>
               <span className="li-badges">
                 <TierBadge player={p} />
-                {showScrim && <ScrimBadge points={pointsOf(scrimStats, p.name)} />}
+                {showScrim && (
+                  <ScrimBadge
+                    points={pointsOf(scrimStats, p.name)}
+                    stat={statOf(scrimStats, p.name)}
+                  />
+                )}
               </span>
             </li>
           ))}
@@ -197,9 +204,7 @@ const TeamBalance = () => {
               <span className="panel-count">{entered.length}명</span>
             </h2>
             <div className="panel-head-actions">
-              <button className="ghost-btn" onClick={() => setShowLoader(true)}>
-                <FaDownload /> 불러오기
-              </button>
+              <RosterLoadButton onClick={() => setShowLoader(true)} />
               <button className="ghost-btn" onClick={saveToRoster}>
                 <FaBookmark /> 명단에 저장
               </button>
@@ -219,7 +224,10 @@ const TeamBalance = () => {
                       onChange={(e) => update(p.id, { name: e.target.value })}
                     />
                     {showScrim && p.name.trim() !== '' && (
-                      <ScrimBadge points={pointsOf(scrimStats, p.name)} />
+                      <ScrimBadge
+                        points={pointsOf(scrimStats, p.name)}
+                        stat={statOf(scrimStats, p.name)}
+                      />
                     )}
                     <RosterPicker
                       taken={players.filter((x) => x.id !== p.id).map((x) => x.name)}
@@ -332,8 +340,9 @@ const TeamBalance = () => {
                 <p className="range-hint">
                   내전 기록지에 쌓인 {scrimMode === 'aram' ? '칼바람' : '일반'} 내전 승패를
                   {ratingMode === 'points' ? ' 평점 대신' : ' 티어 평점에 더해'} 반영합니다.
-                  승 1회당 {`+${POINTS.WIN}`}점, 패 1회당 {POINTS.LOSS}점.
+                  센 팀을 이길수록 많이 오르고, 판수가 적으면 조심스럽게 반영합니다.
                 </p>
+                <ScrimPointsHelp />
               </>
             )}
           </div>

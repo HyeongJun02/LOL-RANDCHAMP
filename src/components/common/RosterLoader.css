@@ -129,3 +129,44 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* 모든 탭에서 같은 모양이어야 한다. 여기 한 곳만 고치면 전부 따라온다 */
+.roster-load-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 170, 110, 0.35);
+  background: rgba(200, 170, 110, 0.1);
+  color: var(--gg-gold-light);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.roster-load-btn:hover:not(:disabled) {
+  background: rgba(200, 170, 110, 0.18);
+  border-color: rgba(200, 170, 110, 0.6);
+}
+
+.roster-load-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------- 정렬 ---------- */
+
+.loader-sort {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.loader-sort .seg-tabs {
+  flex: 1;
+}

@@ -96,7 +96,7 @@ test('기록 삭제 버튼을 누르면 전적에서 사라진다', () => {
 
 test('내전 팀 짜기 결과가 없으면 안내만 하고 팀을 바꾸지 않는다', () => {
   const el = render();
-  click(byText(el, 'button', '내전 팀 짜기에서 불러오기'));
+  click(byText(el, 'button', '방금 짠 팀 가져오기'));
 
   const filled = [...el.querySelectorAll('.sr-row input')].filter((i) => i.value !== '');
   expect(filled).toHaveLength(0);
@@ -109,7 +109,7 @@ test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', () => {
   );
   const el = render();
 
-  click(byText(el, 'button', '내전 팀 짜기에서 불러오기'));
+  click(byText(el, 'button', '방금 짠 팀 가져오기'));
 
   const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
   const aNames = [...teamAPanel.querySelectorAll('.sr-row input')].map((i) => i.value);

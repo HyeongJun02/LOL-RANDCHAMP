@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaDownload, FaPlus, FaTimes, FaTrophy, FaClipboardList } from 'react-icons/fa';
+import { FaArrowRight, FaPlus, FaTimes, FaTrophy, FaClipboardList } from 'react-icons/fa';
 import { useRoster } from '../../roster';
 import { getTier, tierName } from '../../tiers';
-import { useMatches, addMatch, removeMatch, statsFor } from '../../matches';
+import { useMatches, addMatch, removeMatch, statsFor, statOf } from '../../matches';
 import { loadLastSplit } from '../../lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
+import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import PageHeader from '../../components/common/PageHeader';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './ScrimRecord.css';
@@ -150,7 +151,7 @@ const ScrimRecord = () => {
 
       <div className="sr-toolbar">
         <button className="ghost-btn" onClick={importSplit}>
-          <FaDownload /> 내전 팀 짜기에서 불러오기
+          <FaArrowRight /> 방금 짠 팀 가져오기
         </button>
         <button className="ghost-btn" onClick={clearTeams}>
           팀 비우기
@@ -212,7 +213,7 @@ const ScrimRecord = () => {
                           {tierName(member)}
                         </span>
                       )}
-                      <ScrimBadge points={r.points} />
+                      <ScrimBadge points={r.points} stat={statOf(stats, r.name)} />
                     </div>
                     <span className="board-record">
                       {r.wins}승 {r.losses}패 · {Math.round((r.wins / r.games) * 100)}%
@@ -223,6 +224,7 @@ const ScrimRecord = () => {
             })}
           </ul>
         )}
+        <ScrimPointsHelp />
       </section>
 
       <section className="sr-history">

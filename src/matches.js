@@ -32,34 +32,92 @@ export const addMatch = ({ mode, teamA, teamB, winner }) =>
 export const removeMatch = (id) =>
   store.commit(store.get().filter((m) => m.id !== id));
 
-/* 승 1회 = +WIN, 패 1회 = +LOSS(음수). tiers.js 평점 눈금(티어 하나가 대략 6~7점,
-   디비전 하나가 1~2점)에 맞춰 승 1회를 디비전 하나 정도로 잡았다. */
-export const POINTS = { WIN: 2, LOSS: -2 };
+/* ------------------------------------------------------------------
+   내전 포인트
 
-/* mode 하나만 필터링해 이름별 승/패/포인트를 모은다. 인원 변동 있는 내전도
-   그냥 이름 문자열로 집계하므로 로스터에 없는 손님 이름도 잡힌다. */
+   그냥 승 +2 / 패 -2로 세면 누구와 붙었는지가 통째로 무시된다.
+   아이언 팀을 이긴 다이아와 다이아 팀을 이긴 아이언이 같은 점수를 받고,
+   판수만 많이 채워도 점수가 오른다.
+
+   그래서 Elo 방식으로 센다. 경기를 시간순으로 훑으면서, 그 시점의 양 팀
+   평균 포인트로 예상 승률을 구하고 '예상보다 잘한 만큼'만 준다.
+     변화량 = K × (실제결과 − 예상승률)
+   이길 게 뻔했던 승리는 거의 안 오르고, 질 것 같던 팀이 이기면 크게 오른다.
+
+   여기에 판수 보정을 얹는다. 2판 2승이 100판 60승보다 위로 가면 곤란하니,
+   판수가 적으면 결과를 0쪽으로 끌어당긴다(베이지안 스무딩).
+     표시점수 = 누적 × 판수 / (판수 + PRIOR_GAMES)
+   ------------------------------------------------------------------ */
+
+/* 한 판으로 움직일 수 있는 최대 점수.
+   체스 Elo가 K/SCALE ≈ 8%인 걸 참고해 3으로 잡았다. 이보다 크면
+   한 판 결과에 순위가 출렁이고, 작으면 판수가 쌓여도 잘 안 갈린다. */
+export const K_FACTOR = 3;
+/* 포인트 차이를 승률로 바꾸는 축척. tiers.js 눈금과 같은 크기로 맞췄다 */
+export const ELO_SCALE = 14;
+/* 판수가 이만큼 쌓여야 결과를 절반쯤 믿는다 */
+export const PRIOR_GAMES = 3;
+
+const clean = (names) => [...new Set((names || []).map((n) => String(n).trim()).filter(Boolean))];
+
+/* mode 하나만 필터링해 이름별 승/패/포인트를 모은다.
+   로스터에 없는 손님 이름도 그냥 문자열로 집계된다. */
 export const statsFor = (list, mode) => {
   const stats = new Map();
-
-  const bump = (name, field, delta) => {
-    const key = name.trim();
-    if (!key) return;
-    if (!stats.has(key)) stats.set(key, { wins: 0, losses: 0, points: 0 });
-    const s = stats.get(key);
-    s[field] += 1;
-    s.points += delta;
+  const ensure = (name) => {
+    if (!stats.has(name)) stats.set(name, { wins: 0, losses: 0, games: 0, raw: 0, points: 0 });
+    return stats.get(name);
   };
 
   list
     .filter((m) => m.mode === mode)
+    .slice()
+    .sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0))
     .forEach((m) => {
-      const winners = m.winner === 'A' ? m.teamA : m.teamB;
-      const losers = m.winner === 'A' ? m.teamB : m.teamA;
-      winners.forEach((name) => bump(name, 'wins', POINTS.WIN));
-      losers.forEach((name) => bump(name, 'losses', POINTS.LOSS));
+      const teamA = clean(m.teamA);
+      const teamB = clean(m.teamB);
+      if (teamA.length === 0 || teamB.length === 0) return;
+
+      const avg = (team) => team.reduce((sum, n) => sum + ensure(n).raw, 0) / team.length;
+      const expectedA = 1 / (1 + 10 ** (-(avg(teamA) - avg(teamB)) / ELO_SCALE));
+      const aWon = m.winner === 'A';
+      /* A가 얻는 만큼 B가 잃는다 */
+      const gain = K_FACTOR * ((aWon ? 1 : 0) - expectedA);
+
+      const apply = (team, delta, won) =>
+        team.forEach((name) => {
+          const s = ensure(name);
+          s.raw += delta;
+          s.games += 1;
+          s[won ? 'wins' : 'losses'] += 1;
+        });
+
+      apply(teamA, gain, aWon);
+      apply(teamB, -gain, !aWon);
     });
+
+  /* 판수가 적으면 0쪽으로 당긴다 */
+  stats.forEach((s) => {
+    s.points = Math.round(((s.raw * s.games) / (s.games + PRIOR_GAMES)) * 10) / 10;
+  });
 
   return stats;
 };
 
+/* 배지 툴팁에서 '어떻게 이 점수가 나왔는지' 풀어주려면 항목 전체가 필요하다 */
+export const statOf = (stats, name) => stats.get(String(name).trim()) || null;
+
 export const pointsOf = (stats, name) => stats.get(String(name).trim())?.points || 0;
+
+/* 이름별 내전 참여 횟수. 모드 구분 없이 전부 센다.
+   명단을 '많이 같이 한 순'으로 정렬할 때 쓴다 */
+export const gameCountsOf = (list) => {
+  const counts = new Map();
+  list.forEach((m) => {
+    [...(m.teamA || []), ...(m.teamB || [])].forEach((name) => {
+      const key = String(name).trim();
+      if (key) counts.set(key, (counts.get(key) || 0) + 1);
+    });
+  });
+  return counts;
+};

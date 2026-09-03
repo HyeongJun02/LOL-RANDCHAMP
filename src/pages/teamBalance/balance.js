@@ -74,7 +74,8 @@ export const splitTeams = (players, randomness = 0, rng = Math.random) => {
 
   const limit = 1 << n;
   const full = limit - 1;
-  const diffOf = (sumA) => Math.abs(total - 2 * sumA);
+  /* 내전 포인트가 소수라 그대로 두면 3.4000000000000004 같은 값이 화면에 나온다 */
+  const diffOf = (sumA) => Math.round(Math.abs(total - 2 * sumA) * 10) / 10;
 
   /* 유효한 조합을 모은다. 상보 마스크는 1팀/2팀 이름표만 바뀐 같은 조합이므로 한 번만 센다.
      (고정이 걸려 있으면 둘 중 하나만 유효하니 자연히 한 번만 남는다) */

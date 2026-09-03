@@ -70,8 +70,11 @@ test('저장된 팀원 명단을 통째로 불러온다', () => {
   );
   const el = render();
   click(byText(el, '명단 불러오기'));
+  // 다른 탭과 같은 팝업. Modal은 body로 포탈된다
+  document.querySelectorAll('.loader-list input').forEach((box) => click(box));
+  click(byText(document.body, '완료'));
 
-  expect(texts(el, '.pick-items li')).toEqual(['철수', '영희']);
+  expect(texts(el, '.pick-items li').sort()).toEqual(['영희', '철수']);
 });
 
 test('뽑으면 항목 중 하나가 결과로 나오고 기록에 남는다', () => {

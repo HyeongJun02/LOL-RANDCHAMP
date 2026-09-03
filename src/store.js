@@ -44,7 +44,11 @@ export const createStore = ({ key, column, hydrate = (x) => x, merge }) => {
 
   const push = async () => {
     if (!userId || !isNeonConfigured) return;
-    const { error } = await neon.from(TABLE).upsert({ user_id: userId, [column]: state });
+    const { error } = await neon.from(TABLE).upsert({
+      user_id: userId,
+      [column]: state,
+      updated_at: new Date().toISOString(),
+    });
     if (error) throw new Error(error.message);
   };
 
@@ -108,7 +112,7 @@ export const setCloudUser = async (id) => {
     registry.forEach((s) => s.adopt(data?.[s.column]));
 
     /* 합친 결과를 한 번에 밀어 넣는다 */
-    const row = { user_id: id };
+    const row = { user_id: id, updated_at: new Date().toISOString() };
     registry.forEach((s) => {
       row[s.column] = s.get();
     });

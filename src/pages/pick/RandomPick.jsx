@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { FaPlus, FaTimes, FaDice, FaRedo, FaUserFriends } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaDice, FaRedo } from 'react-icons/fa';
 import { useRoster } from '../../roster';
 import { addItems, poolOf } from './pick';
+import RosterLoader from '../../components/common/RosterLoader';
+import RosterLoadButton from '../../components/common/RosterLoadButton';
 import PageHeader from '../../components/common/PageHeader';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './RandomPick.css';
@@ -25,6 +27,7 @@ const RandomPick = () => {
   const [rolling, setRolling] = useState(null);
   const [result, setResult] = useState(null);
   const timer = useRef(null);
+  const [showLoader, setShowLoader] = useState(false);
   usePageMeta(PAGE_META.pick);
 
   useEffect(() => () => clearInterval(timer.current), []);
@@ -41,13 +44,12 @@ const RandomPick = () => {
     setDraft('');
   };
 
-  const loadRoster = () => {
-    const next = addItems(items, roster.map((m) => m.name).join('\n'));
-    if (next.length === items.length) {
-      toast.error('명단에서 더 넣을 이름이 없어요.');
-      return;
-    }
-    setItems(next);
+  /* 다른 탭과 같은 규칙: 체크한 사람만 남기고, 직접 입력한 항목은 건드리지 않는다 */
+  const syncFromRoster = (members) => {
+    const rosterNames = new Set(roster.map((m) => m.name.trim()));
+    const typed = items.filter((it) => !rosterNames.has(it));
+    const picked = members.map((m) => m.name.trim()).filter(Boolean);
+    setItems([...new Set([...typed, ...picked])]);
   };
 
   const clearAll = () => {
@@ -105,9 +107,10 @@ const RandomPick = () => {
           </div>
 
           <div className="pick-presets">
-            <button className="ghost-btn" onClick={loadRoster} disabled={roster.length === 0}>
-              <FaUserFriends /> 명단 불러오기
-            </button>
+            <RosterLoadButton
+              onClick={() => setShowLoader(true)}
+              disabled={roster.length === 0}
+            />
             {PRESETS.map((p) => (
               <button
                 key={p.label}
@@ -194,6 +197,14 @@ const RandomPick = () => {
           )}
         </aside>
       </div>
+
+      {showLoader && (
+        <RosterLoader
+          present={items}
+          onConfirm={syncFromRoster}
+          onClose={() => setShowLoader(false)}
+        />
+      )}
     </div>
   );
 };

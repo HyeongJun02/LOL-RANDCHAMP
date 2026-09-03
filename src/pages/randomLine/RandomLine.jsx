@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useRoster } from '../../roster';
-import { FaThLarge, FaListUl, FaDownload } from 'react-icons/fa';
+import { FaThLarge, FaListUl } from 'react-icons/fa';
 import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
 import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
+import RosterLoadButton from '../../components/common/RosterLoadButton';
 import { LINE_NAMES, randomQuote } from '../../lines';
 import { usePageMeta, PAGE_META } from '../../seo';
 import styles from './RandomLine.module.css';
@@ -197,9 +198,7 @@ export default function RandomLinePage() {
     <div className={`page ${styles.container}`}>
       <PageHeader title="라인 랜덤 분배" sub={subtitle}>
         <div className={styles.headActions}>
-          <button className={styles.loadRoster} onClick={() => setShowLoader(true)}>
-            <FaDownload /> 불러오기
-          </button>
+          <RosterLoadButton onClick={() => setShowLoader(true)} />
 
           <div className={styles.viewToggle} role="group" aria-label="보기 방식">
             <button

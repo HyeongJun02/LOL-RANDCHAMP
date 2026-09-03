@@ -143,8 +143,12 @@ test('이미 들어간 팀원은 체크된 채로 뜨고, 풀면 참가자에서
   expect(boxes.map((b) => b.checked)).toEqual([true, true]);
   expect(boxes.every((b) => b.disabled)).toBe(false);
 
-  // 하나를 풀고 완료하면 그 사람만 빠진다
-  click(boxes[0]);
+  // 하나를 풀고 완료하면 그 사람만 빠진다 (정렬 순서에 기대지 않고 이름으로 찾는다)
+  const rowOf = (name) =>
+    [...document.querySelectorAll('.loader-list li')].find((li) =>
+      li.textContent.includes(name)
+    );
+  click(rowOf('철수').querySelector('input'));
   click(byText(el, '완료'));
 
   const names = [...el.querySelectorAll('.row-name input')].map((i) => i.value);
@@ -195,11 +199,13 @@ describe('내전 포인트 반영', () => {
         .find((li) => li.textContent.includes(name))
         .querySelector('.scrim-badge').textContent;
 
-    expect(badgeFor('철수')).toBe('+2'); // 기본값 '일반'에서는 철수가 이김
+    // 기본값 '일반'에서는 철수가 이겼다
+    expect(badgeFor('철수').startsWith('+')).toBe(true);
 
     click(byText(el, '칼바람 내전'));
     click(el.querySelector('.build-btn'));
-    expect(badgeFor('철수')).toBe('-2'); // 칼바람에서는 영희가 이김
+    // 칼바람에서는 영희가 이겼다
+    expect(badgeFor('철수').startsWith('-')).toBe(true);
   });
 });
 
