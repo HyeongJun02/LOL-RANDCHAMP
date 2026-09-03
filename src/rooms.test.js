@@ -56,7 +56,16 @@ jest.mock('./neon', () => ({
   isNeonConfigured: true,
 }));
 
-const { toMatches, addScrimByNames, feedLine, feedParts, killMarket, capOf } = require('./rooms');
+const {
+  toMatches,
+  addScrimByNames,
+  feedLine,
+  feedParts,
+  killMarket,
+  capOf,
+  winningSelection,
+  KILL_LINES,
+} = require('./rooms');
 
 beforeEach(() => {
   calls.length = 0;
@@ -348,4 +357,41 @@ test('경기 테이블 쓰기는 회수돼 있다', () => {
 
 test('한 사람이 한 방에서 두 참가자에 묶일 수 없다 (참여 포인트 이중 수령)', () => {
   expect(sql).toContain('create unique index if not exists room_players_one_account');
+});
+
+
+/* ---------- 또또 정답 판정 ---------- */
+/* 화면 세 군데(선택지 색·내 배팅·참여자 목록)가 이 함수 하나를 본다.
+   여기가 틀리면 '적중'이라고 초록으로 칠해놓고 돈은 반대쪽에 준다 */
+
+const settled = (extra) => ({ status: 'settled', winner: 'A', ...extra });
+
+test('정산 전에는 정답이 없다', () => {
+  expect(winningSelection({ status: 'betting', winner: 'A' }, 'winner')).toBeNull();
+  expect(winningSelection({ status: 'locked', winner: 'A' }, 'winner')).toBeNull();
+});
+
+test('승리팀은 winner 그대로', () => {
+  expect(winningSelection(settled({ winner: 'B' }), 'winner')).toBe('B');
+});
+
+test('퍼블은 참가자 id를 문자열로 (선택지 값과 같은 타입이어야 비교된다)', () => {
+  expect(winningSelection(settled({ first_blood_player_id: 42 }), 'first_blood')).toBe('42');
+});
+
+test('총 킬은 기준선보다 크면 오버, 작으면 언더', () => {
+  const line = KILL_LINES[0];
+  const market = killMarket(line);
+  expect(winningSelection(settled({ total_kills: line + 1 }), market)).toBe('over');
+  expect(winningSelection(settled({ total_kills: line - 1 }), market)).toBe('under');
+});
+
+test('결과를 안 넣은 마켓은 정답이 없다 (전액 환불되는 경우)', () => {
+  const market = killMarket(KILL_LINES[0]);
+  expect(winningSelection(settled({ total_kills: null }), market)).toBeNull();
+  expect(winningSelection(settled({ first_blood_player_id: null }), 'first_blood')).toBeNull();
+});
+
+test('킬 기준선은 하나만 연다 (여러 개면 언더·오버를 여러 번 걸 수 있다)', () => {
+  expect(KILL_LINES).toHaveLength(1);
 });

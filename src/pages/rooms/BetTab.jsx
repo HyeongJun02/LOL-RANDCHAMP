@@ -4,6 +4,7 @@ import { FaLock, FaCheck, FaUndo } from 'react-icons/fa';
 import {
   KILL_LINES,
   killMarket,
+  winningSelection,
   marketLabel,
   capOf,
   agreeFairplay,
@@ -97,6 +98,7 @@ const BetTab = ({
 
   const cartRows = Object.entries(cart);
   const cartTotal = cartRows.reduce((sum, [, v]) => sum + (Number(v.amount) || 0), 0);
+  const overBalance = cartTotal > (me?.points ?? 0);
 
   const submit = (scrim) =>
     guard(async () => {
@@ -202,30 +204,65 @@ const BetTab = ({
     </div>
   );
 
+  /* 이 선택지에 건 사람들. 정산이 끝났으면 각자 얼마를 벌고 잃었는지까지.
+     "누가 어디에 걸었나"를 눈으로 보는 게 또또의 절반이다 */
+  const bettorsOn = (scrim, market, selection) =>
+    bets.filter((b) => b.scrim_id === scrim.id && b.market === market && b.selection === selection);
+
   const Option = ({ scrim, market, selection, label }) => {
     const p = poolOf(scrim.id, market, selection);
     const mine = myBets(scrim.id).find((b) => b.market === market);
     const taken = Boolean(mine);
     const picked = cart[market]?.selection === selection;
     const open = scrim.status === 'betting';
+    const settled = scrim.status === 'settled';
+
+    const answer = winningSelection(scrim, market);
+    const won = settled && answer === selection;
+    const lost = settled && answer != null && answer !== selection;
+    const isMine = mine?.selection === selection;
+    const on = bettorsOn(scrim, market, selection);
 
     return (
-      <button
-        type="button"
-        className={`bet-opt ${picked ? 'picked' : ''} ${
-          mine?.selection === selection ? 'mine' : ''
-        }`}
-        disabled={!open || taken}
-        onClick={() => pick(market, selection)}
-      >
-        <span className="bet-opt-label">{label}</span>
-        {p?.odds != null && <em className="bet-odds">{Number(p.odds).toFixed(2)}배</em>}
-      </button>
+      <div className={`bet-opt-wrap ${settled ? 'is-settled' : ''}`}>
+        <button
+          type="button"
+          className={`bet-opt ${picked ? 'picked' : ''} ${isMine ? 'mine' : ''} ${
+            won ? 'won' : ''
+          } ${lost ? 'lost' : ''}`}
+          disabled={!open || taken}
+          onClick={() => pick(market, selection)}
+        >
+          <span className="bet-opt-label">
+            {label}
+            {isMine && <em className="bet-mine-tag">내 배팅</em>}
+            {won && <em className="bet-win-tag">적중</em>}
+          </span>
+          {/* 마감 뒤에는 내가 고른 것만이 아니라 전부 보여준다.
+              다른 쪽이 얼마였는지 모르면 내 배당이 좋은 건지도 모른다 */}
+          {p?.odds != null && <em className="bet-odds">{Number(p.odds).toFixed(2)}배</em>}
+        </button>
+
+        {settled && on.length > 0 && (
+          <ul className="bet-opt-bettors">
+            {on.map((b) => (
+              <li key={b.id}>
+                <span className="bet-bettor">{memberName.get(b.user_id) || '알 수 없음'}</span>
+                <span className="bet-bettor-amt">{num(b.amount)}</span>
+                <span className={`kkiko-delta ${b.payout > 0 ? 'plus' : 'minus'}`}>
+                  {b.payout > 0 ? `+${num(b.payout - b.amount)}` : `-${num(b.amount)}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     );
   };
 
   const Markets = ({ scrim }) => {
     const roster = [...(scrim.team_a || []), ...(scrim.team_b || [])];
+    const fixedFb = (roster.length * 0.85).toFixed(2);
     return (
       <>
         <div className="bet-market">
@@ -242,9 +279,9 @@ const BetTab = ({
         <div className="bet-market">
           <h4>
             {marketLabel('first_blood')}
-            <em>고정 {(roster.length * 0.85).toFixed(2)}배</em>
+            <em>고정 {fixedFb}배</em>
           </h4>
-          <div className="bet-opts">
+          <div className="bet-opts bet-opts-grid">
             {roster.map((id) => (
               <Option
                 key={id}
@@ -263,18 +300,24 @@ const BetTab = ({
           return (
             <div className="bet-market" key={market}>
               <h4>
-                {marketLabel(market)}
+                총 킬 <strong className="bet-line">{line}</strong>
                 <em>고정 1.98배</em>
               </h4>
               <div className="bet-opts">
-                <Option scrim={scrim} market={market} selection="over" label={`오버 (${line} 초과)`} />
+                <Option
+                  scrim={scrim}
+                  market={market}
+                  selection="over"
+                  label={`오버 · ${line} 초과`}
+                />
                 <Option
                   scrim={scrim}
                   market={market}
                   selection="under"
-                  label={`언더 (${line} 미만)`}
+                  label={`언더 · ${line} 미만`}
                 />
               </div>
+              <p className="rooms-hint">둘 중 하나만 고를 수 있어요.</p>
             </div>
           );
         })}
@@ -308,35 +351,20 @@ const BetTab = ({
               </span>
               <span className="kkiko-when">{num(b.amount)} 끼꼬</span>
               {b.odds != null && <em className="bet-odds">{Number(b.odds).toFixed(2)}배</em>}
+              {/* 아직 결과 전이면 '맞으면 얼마 버는지'를 보여준다.
+                  배당만 적혀 있으면 매번 머리로 곱해야 한다 */}
+              {b.payout == null && b.odds != null && (
+                <span className="bet-if-win">적중 시 +{num(Math.floor(b.amount * b.odds) - b.amount)}</span>
+              )}
               {b.payout != null && (
                 <span className={`kkiko-delta ${b.payout > 0 ? 'plus' : 'minus'}`}>
-                  {b.payout > 0 ? `+${num(b.payout)}` : `-${num(b.amount)}`}
+                  {b.payout > 0 ? `+${num(b.payout - b.amount)}` : `-${num(b.amount)}`}
                 </span>
               )}
             </li>
           ))}
         </ul>
       </div>
-    );
-  };
-
-  const Results = ({ scrim }) => {
-    const rows = bets.filter((b) => b.scrim_id === scrim.id);
-    if (rows.length === 0) return null;
-    return (
-      <ul className="bet-list">
-        {rows.map((b) => (
-          <li key={b.id}>
-            <span className="rooms-name">{memberName.get(b.user_id) || '알 수 없음'}</span>
-            <span className="kkiko-when">
-              {marketLabel(b.market)} · {num(b.amount)}
-            </span>
-            <span className={`kkiko-delta ${b.payout > 0 ? 'plus' : 'minus'}`}>
-              {b.payout > 0 ? `+${num(b.payout - b.amount)}` : `-${num(b.amount)}`}
-            </span>
-          </li>
-        ))}
-      </ul>
     );
   };
 
@@ -401,14 +429,24 @@ const BetTab = ({
                   />
                 </div>
               ))}
-              <div className="bet-cart-foot">
+              <div className={`bet-cart-foot ${overBalance ? 'is-over' : ''}`}>
                 <span>
                   총 <strong>{num(cartTotal)}</strong> 끼꼬 · 잔액 {num(me?.points)}
                 </span>
-                <button className="ghost-btn" onClick={() => submit(activeScrim)}>
+                <button
+                  className="ghost-btn"
+                  onClick={() => submit(activeScrim)}
+                  disabled={overBalance}
+                >
                   배팅 완료
                 </button>
               </div>
+              {/* '배팅 완료'를 눌러야 모자란 걸 알려주면 늦다 */}
+              {overBalance && (
+                <p className="bet-over-msg">
+                  잔액보다 {num(cartTotal - (me?.points ?? 0))} 끼꼬 더 걸었어요.
+                </p>
+              )}
               <p className="rooms-hint">
                 담은 것들은 각각 따로 걸립니다. 배당을 곱하는 조합이 아닙니다.
               </p>
@@ -491,7 +529,9 @@ const BetTab = ({
             {num(s.bet_total)} 끼꼬
             {s.undo_count > 0 && ` · 정산 ${s.undo_count}번 되돌림`}
           </p>
-          <Results scrim={s} />
+          {/* 배팅할 때와 같은 화면을 그대로 다시 보여준다. 적중한 칸은 초록,
+              각 칸 아래에 누가 걸어서 얼마를 벌고 잃었는지 붙는다 */}
+          <Markets scrim={s} />
           {isOwner && (
             <button className="ghost-btn bet-action" onClick={() => undo(s)}>
               <FaUndo /> 정산 되돌리기

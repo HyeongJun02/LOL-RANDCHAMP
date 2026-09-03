@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../rooms';
 import { MAX_ROOMS } from '../../limits';
 import PageHeader from '../../components/common/PageHeader';
+import NicknameGate from '../../components/rooms/NicknameGate';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './Rooms.css';
 
@@ -85,6 +86,9 @@ const RoomList = () => {
   return (
     <div className="page">
       <PageHeader title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다." />
+
+      {/* 이름을 안 정했으면 여기서 막는다 */}
+      {me && !me.nickname && <NicknameGate onSaved={reloadMe} />}
 
       <div className="rooms-me">
         {nick === null ? (

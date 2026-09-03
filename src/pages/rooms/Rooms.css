@@ -899,3 +899,132 @@
   background: rgba(200, 170, 110, 0.35);
   border-radius: 10px;
 }
+
+/* ---------- 또또: 선택지 · 결과 ---------- */
+
+/* 선택지 하나 + 그 밑에 붙는 참여자 목록을 한 덩어리로 묶는다 */
+.bet-opt-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bet-opt-wrap .bet-opt {
+  width: 100%;
+}
+
+/* 퍼블은 사람 수만큼 칸이 생겨서 따로 좁게 깐다 */
+.bet-opts-grid {
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+}
+
+.bet-opt-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.bet-mine-tag,
+.bet-win-tag {
+  flex: none;
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+.bet-mine-tag {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.16);
+}
+
+.bet-win-tag {
+  color: #06111f;
+  background: var(--gg-green);
+}
+
+/* 정산 뒤: 맞은 칸은 초록, 틀린 칸은 눌러앉힌다.
+   내가 고른 칸은 disabled여도 흐려지지 않게 따로 살린다 */
+.bet-opt.won {
+  border-color: var(--gg-green);
+  background: rgba(74, 222, 128, 0.14);
+  color: #dcfce7;
+  opacity: 1;
+}
+
+.bet-opt.lost {
+  opacity: 0.45;
+}
+
+.bet-opt.won.mine {
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.35);
+}
+
+.bet-opt.mine.lost {
+  opacity: 0.75;
+  border-color: rgba(249, 115, 98, 0.5);
+}
+
+/* 누가 걸었는지 - 선택지 바로 밑에 붙어야 어디에 건 건지 안 헷갈린다 */
+.bet-opt-bettors {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0.45rem;
+  display: grid;
+  gap: 0.15rem;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.bet-opt-bettors li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+}
+
+.bet-bettor {
+  flex: 1;
+  min-width: 0;
+  color: #cbd5e1;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bet-bettor-amt {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.bet-line {
+  color: var(--gg-gold-light);
+  font-size: 1.05em;
+}
+
+/* 아직 결과 전 - 맞으면 얼마 버는지 */
+.bet-if-win {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #7dd3fc;
+  white-space: nowrap;
+}
+
+/* 잔액을 넘겼을 때. 누르고 나서야 알려주면 늦다 */
+.bet-cart-foot.is-over strong {
+  color: var(--gg-red);
+}
+
+.bet-over-msg {
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(249, 115, 98, 0.45);
+  background: rgba(249, 115, 98, 0.12);
+  color: #fca5a5;
+  font-size: 0.76rem;
+  font-weight: 700;
+}

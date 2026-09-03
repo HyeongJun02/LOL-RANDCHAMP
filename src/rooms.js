@@ -265,7 +265,11 @@ const useFetch = (fetcher, enabled = true) => {
       return;
     }
     const mine = (seq.current += 1);
-    setState((s) => ({ ...s, loading: true }));
+    /* 이미 보여줄 게 있으면 loading을 켜지 않는다.
+       켜면 화면이 통째로 스켈레톤으로 바뀌면서 그 아래 컴포넌트가 언마운트되고,
+       담고 있던 배팅이나 입력 중이던 값이 날아간다. 남이 배팅할 때마다
+       (version이 올라 폴링이 돈다) 내 화면이 초기화되던 게 이것 때문이다 */
+    setState((s) => ({ ...s, loading: s.data === null }));
     try {
       const data = await fetcher();
       if (seq.current === mine) setState({ loading: false, data, error: null });
@@ -395,6 +399,9 @@ export const useRoom = (roomId, userId) => {
       }))
       .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]),
     myRole: members.find((m) => m.user_id === userId)?.role || null,
+    /* 이름을 정했는지. members의 nickname은 '이름 없음'으로 채워져 있어
+       안 정한 것과 구분이 안 된다. 원본 프로필을 그대로 본다 */
+    myNickname: profileOf.get(userId)?.nickname || null,
   };
 };
 
@@ -406,13 +413,29 @@ export const canEdit = (role) => role === 'owner' || role === 'admin';
 
 /* ---------- 또또 (배팅) ---------- */
 
-/* 킬 기준선. 45.5를 중심으로 위아래 하나씩. 무승부가 없도록 전부 .5다.
-   기준선 하나가 곧 마켓 하나 - 각각 따로 걸고 따로 정산된다 */
-export const KILL_LINES = [39.5, 45.5, 51.5];
+/* 킬 기준선. 무승부가 없도록 .5로 끊는다.
+   기준선 하나가 곧 마켓 하나라, 셋을 다 열면 언더·오버를 세 번 걸 수 있어
+   '어디에 건 건지' 자체가 헷갈렸다. 하나만 남긴다 */
+export const KILL_LINES = [45.5];
 export const killMarket = (line) => `kills_${line}`;
 export const killLineOf = (market) => Number(market.split('_')[1]);
 
 export const isKillMarket = (market) => market.startsWith('kills_');
+
+/* 정산이 끝난 경기에서 이 마켓의 정답이 무엇이었는지.
+   화면 세 곳(선택지 색, 내 배팅, 참여자 목록)이 같은 기준을 봐야 해서
+   한 군데서만 판단한다. 결과를 안 넣은 마켓은 null(=전액 환불) */
+export const winningSelection = (scrim, market) => {
+  if (!scrim || scrim.status !== 'settled') return null;
+  if (market === 'winner') return scrim.winner ?? null;
+  if (market === 'first_blood')
+    return scrim.first_blood_player_id == null ? null : String(scrim.first_blood_player_id);
+  if (isKillMarket(market)) {
+    if (scrim.total_kills == null) return null;
+    return scrim.total_kills > killLineOf(market) ? 'over' : 'under';
+  }
+  return null;
+};
 
 /* 고정 배당 마켓의 1인 상한. sql/setup.sql의 place_bets와 같아야 한다 */
 export const BET_CAP = { first_blood: 2000, kills: 3000 };

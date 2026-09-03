@@ -45,6 +45,7 @@ import FeedTab from './FeedTab';
 import { useDialog } from '../../components/common/Dialog';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
+import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelLine, SkelRows } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './Rooms.css';
@@ -419,8 +420,19 @@ const Room = () => {
   const { user, loading: authLoading } = useAuth();
   usePageMeta(PAGE_META.rooms);
 
-  const { room, players, matches, scrims, activeScrim, members, myRole, loading, error, reload } =
-    useRoom(roomId, user?.id);
+  const {
+    room,
+    players,
+    matches,
+    scrims,
+    activeScrim,
+    members,
+    myRole,
+    myNickname,
+    loading,
+    error,
+    reload,
+  } = useRoom(roomId, user?.id);
   const [tab, setTab] = useState('record');
 
   const editable = canEditRole(myRole);
@@ -469,6 +481,9 @@ const Room = () => {
 
   return (
     <div className="page room-page">
+      {/* 링크로 바로 들어온 사람도 여기서 걸린다 */}
+      {!myNickname && <NicknameGate onSaved={reload} />}
+
       <header className="room-hero">
         <div className="room-hero-left">
           <Link className="room-back" to="/rooms" title="방 목록으로">
