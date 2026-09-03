@@ -44,15 +44,23 @@ const builder = (table) => {
   return self;
 };
 
+const rpcCalls = [];
 jest.mock('./neon', () => ({
-  neon: { from: (t) => builder(t), rpc: jest.fn() },
+  neon: {
+    from: (t) => builder(t),
+    rpc: (fn, args) => {
+      rpcCalls.push({ fn, args });
+      return Promise.resolve({ data: null, error: null });
+    },
+  },
   isNeonConfigured: true,
 }));
 
-const { toMatches, addScrimByNames, feedLine } = require('./rooms');
+const { toMatches, addScrimByNames, feedLine, killMarket, capOf } = require('./rooms');
 
 beforeEach(() => {
   calls.length = 0;
+  rpcCalls.length = 0;
   responses = {};
 });
 
@@ -120,14 +128,15 @@ describe('addScrimByNames', () => {
     });
 
     expect(calls.filter((c) => c.table === 'room_players')).toHaveLength(0);
-    const [scrim] = calls.filter((c) => c.table === 'scrims');
-    expect(scrim.payload).toEqual({
-      room_id: 7,
-      mode: 'aram',
-      team_a: [1],
-      team_b: [2],
-      winner: 'B',
-    });
+    /* 경기는 테이블 직접 쓰기가 아니라 함수로만 들어간다.
+       열어두면 경기를 찍어내는 것만으로 참여 포인트를 무한히 만들 수 있다 */
+    expect(calls.filter((c) => c.table === 'scrims')).toHaveLength(0);
+    expect(rpcCalls).toEqual([
+      {
+        fn: 'record_scrim',
+        args: { p_room: 7, p_mode: 'aram', p_team_a: [1], p_team_b: [2], p_winner: 'B' },
+      },
+    ]);
   });
 
   /* 손님으로 한 판 뛴 사람도 참가자로 등록해야 다음부터 전적이 한 사람으로 모인다 */
@@ -145,9 +154,7 @@ describe('addScrimByNames', () => {
 
     const [added] = calls.filter((c) => c.table === 'room_players');
     expect(added.payload).toEqual([{ room_id: 7, name: '지훈' }]);
-
-    const [scrim] = calls.filter((c) => c.table === 'scrims');
-    expect(scrim.payload.team_a).toEqual([1, 50]);
+    expect(rpcCalls[0].args.p_team_a).toEqual([1, 50]);
   });
 
   test('같은 새 이름이 양쪽에 여러 번 나와도 한 번만 등록한다', async () => {
@@ -224,4 +231,100 @@ test('돈이 걸린 표는 RLS가 켜져 있다', () => {
   ['profiles', 'rooms', 'room_members', 'room_players', 'scrims', 'hall_of_fame'].forEach((t) => {
     expect(sql).toContain(`alter table public.${t} enable row level security;`);
   });
+});
+
+/* ---------- 또또 ---------- */
+/* 여기가 시스템에서 제일 복잡하다. 트랜잭션이 깨지면 끼꼬가 사라지거나
+   두 배로 생긴다. 실행해볼 수 없으니 무너지면 조용히 잘못되는 것들을 잡아둔다 */
+
+const fnBody = (name) => {
+  const from = sql.indexOf(`function public.${name}`);
+  return sql.slice(from, sql.indexOf('$fn$;', from));
+};
+
+test('마켓 이름과 상한이 앱과 DB에서 같다', () => {
+  expect(killMarket(45.5)).toBe('kills_45.5');
+  expect(capOf('first_blood')).toBe(2000);
+  expect(capOf(killMarket(45.5))).toBe(3000);
+  expect(capOf('winner')).toBeNull();
+
+  const body = fnBody('place_bets');
+  expect(body).toContain("when b->>'market' = 'first_blood' then 2000");
+  expect(body).toContain("when b->>'market' like 'kills%' then 3000");
+});
+
+test('배팅도 잔액 확인과 차감을 한 문장으로 한다', () => {
+  const body = fnBody('place_bets');
+  expect(body).toMatch(
+    /update profiles set points = points - total\s+where user_id = me and points >= total;/
+  );
+  expect(body).toContain('if not found then');
+});
+
+test('승부 조작 동의 없이는 못 건다', () => {
+  expect(fnBody('place_bets')).toContain('agreed_fairplay_at from profiles');
+});
+
+/* 배당은 총 풀 ÷ 적중 쪽 풀. 많이 걸린 쪽이 낮은 배당을 가져가고,
+   나간 만큼만 들어오는 제로섬이라 끼꼬가 늘지 않는다 */
+test('승리팀 배당은 패리뮤추얼이다', () => {
+  const body = fnBody('lock_betting');
+  expect(body).toContain('round(pool::numeric / total_amount, 2)');
+  /* 아무도 안 건 선택지는 나누기가 안 된다. null로 두고 정산 때 환불한다 */
+  expect(body).toContain('case when total_amount = 0 then null');
+});
+
+test('퍼블은 인원 × 0.85, 언더오버는 1.98 고정', () => {
+  const body = fnBody('lock_betting');
+  expect(body).toContain('round(n * 0.85, 2)');
+  expect(body).toContain('set odds = 1.98');
+});
+
+/* 네트워크 재시도로 두 번 불려도 두 번 지급되면 안 된다 */
+test('이미 정산된 경기에 다시 불러도 아무 일이 없다', () => {
+  expect(fnBody('settle_scrim')).toContain("if s.status = 'settled' then return; end if;");
+});
+
+test('적중한 쪽에 아무도 안 걸었으면 그 마켓은 통째로 환불한다', () => {
+  const body = fnBody('settle_scrim');
+  expect(body).toContain('winner_void := not exists');
+  expect(body).toContain('when b.market = \'winner\' and winner_void then b.amount');
+  expect(body).toContain('when b.market = \'first_blood\' and fb_void then b.amount');
+});
+
+/* 두 번째 되돌리기가 첫 번째로 이미 취소한 지급까지 또 뒤집으면
+   그만큼 끼꼬가 사라진다 */
+test('되돌리기는 아직 안 뒤집은 줄만 고른다', () => {
+  const body = fnBody('unsettle_scrim');
+  expect(body).toContain('reversed_at is null');
+  expect(body).toContain('set reversed_at = now()');
+});
+
+test('되돌리기는 방장만, 되돌린 사실은 피드에 남는다', () => {
+  const body = fnBody('unsettle_scrim');
+  expect(body).toContain('is_room_owner');
+  expect(body).toContain("'settle_undone'");
+});
+
+test('같은 마켓에 두 선택지를 걸 수 없다', () => {
+  expect(sql).toContain('unique (scrim_id, user_id, market)');
+});
+
+test('배당은 마감 전에는 안 보인다', () => {
+  const from = sql.indexOf('create policy pools_read');
+  expect(sql.slice(from, sql.indexOf(';', from))).toContain("s.status <> 'betting'");
+});
+
+test('남의 배팅은 정산된 뒤에만 보인다', () => {
+  const from = sql.indexOf('create policy bets_read');
+  expect(sql.slice(from, sql.indexOf('));', from))).toContain("s.status = 'settled'");
+});
+
+/* 경기 직접 insert를 열어두면 찍어내는 것만으로 참여 포인트가 무한히 생긴다 */
+test('경기 테이블 쓰기는 회수돼 있다', () => {
+  expect(sql).toContain('revoke insert, update, delete on public.scrims from authenticated;');
+});
+
+test('한 사람이 한 방에서 두 참가자에 묶일 수 없다 (참여 포인트 이중 수령)', () => {
+  expect(sql).toContain('create unique index if not exists room_players_one_account');
 });

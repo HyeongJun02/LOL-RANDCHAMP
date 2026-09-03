@@ -11,6 +11,7 @@ import {
   updateRoomPlayer,
   removeRoomPlayer,
   addScrimByNames,
+  openBettingByNames,
   removeScrim,
   renameRoom,
   getJoinCode,
@@ -25,6 +26,7 @@ import { TIERS, DIVISIONS, getTier } from '../../tiers';
 import { MAX_ROOM_PLAYERS } from '../../limits';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
+import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
 import FeedTab from './FeedTab';
 import PageHeader from '../../components/common/PageHeader';
@@ -34,6 +36,7 @@ import './Rooms.css';
 const TABS = [
   { key: 'record', label: '기록' },
   { key: 'season', label: '정산' },
+  { key: 'bet', label: '또또' },
   { key: 'kkiko', label: '끼꼬' },
   { key: 'feed', label: '피드' },
   { key: 'settings', label: '설정' },
@@ -318,16 +321,19 @@ const Room = () => {
   const { user, loading: authLoading } = useAuth();
   usePageMeta(PAGE_META.rooms);
 
-  const { room, players, matches, members, myRole, loading, error, reload } = useRoom(
-    roomId,
-    user?.id
-  );
+  const { room, players, matches, scrims, activeScrim, members, myRole, loading, error, reload } =
+    useRoom(roomId, user?.id);
   const [tab, setTab] = useState('record');
 
   const editable = canEditRole(myRole);
 
   const record = async (m) => {
     await addScrimByNames({ ...m, roomId, players });
+    reload();
+  };
+
+  const openBet = async (m) => {
+    await openBettingByNames({ ...m, roomId, players });
     reload();
   };
 
@@ -382,9 +388,23 @@ const Room = () => {
           canEdit={editable}
           onAdd={record}
           onRemove={unrecord}
+          onOpenBetting={editable ? openBet : undefined}
         />
       )}
       {tab === 'season' && <Season matches={matches} players={players} />}
+      {tab === 'bet' && (
+        <BetTab
+          scrims={scrims}
+          activeScrim={activeScrim}
+          players={players}
+          members={members}
+          myId={user.id}
+          canEdit={editable}
+          isOwner={myRole === 'owner'}
+          version={room.version}
+          onChanged={reload}
+        />
+      )}
       {tab === 'kkiko' && (
         <KkikoTab roomId={roomId} members={members} myId={user.id} onChanged={reload} />
       )}

@@ -103,6 +103,18 @@ export const feedLine = (log) => {
   switch (log.type) {
     case 'transfer':
       return `${p.from} → ${p.to} 에게 ${num(p.amount)} 끼꼬를 보냈습니다`;
+    case 'betting_open':
+      return `${p.mode === 'aram' ? '칼바람' : '일반'} ${p.size}인 경기가 열렸습니다. 배팅 시작`;
+    case 'betting_locked':
+      return `배팅이 마감되었습니다 (${p.people}명 · ${num(p.total)} 끼꼬)`;
+    case 'settled':
+      return (
+        `${p.winner === 'A' ? '1팀' : '2팀'} 승리` +
+        (p.kills == null ? '' : ` · 총 킬 ${p.kills}`) +
+        (p.bet_total ? ` · 또또 ${num(p.bet_total)} 끼꼬 정산` : '')
+      );
+    case 'settle_undone':
+      return `방장이 정산을 되돌렸습니다 (${p.count}번째)`;
     default:
       return log.type;
   }
@@ -132,25 +144,24 @@ export const removeRoomPlayer = async (id) => {
 };
 
 /* ---------- 경기 ---------- */
+/* 경기에 참여 포인트가 붙으면서 직접 insert를 열어둘 수 없게 됐다.
+   열어두면 경기를 찍어내는 것만으로 끼꼬를 무한히 만들 수 있다 */
 
-export const addScrim = async ({ roomId, mode, teamA, teamB, winner }) => {
-  if (!isNeonConfigured) throw new Error(NOT_READY);
-  return unwrap(
-    await neon
-      .from('scrims')
-      .insert({ room_id: roomId, mode, team_a: teamA, team_b: teamB, winner })
-  );
-};
+export const addScrim = ({ roomId, mode, teamA, teamB, winner }) =>
+  rpc('record_scrim', {
+    p_room: roomId,
+    p_mode: mode,
+    p_team_a: teamA,
+    p_team_b: teamB,
+    p_winner: winner,
+  });
 
-export const removeScrim = async (id) => {
-  if (!isNeonConfigured) throw new Error(NOT_READY);
-  return unwrap(await neon.from('scrims').delete().eq('id', id));
-};
+export const removeScrim = (id) => rpc('delete_scrim', { p_scrim: id });
 
 /* 기록지는 이름을 손으로 친다. 명단에 없는 이름이 나오면 참가자로 먼저
    등록하고 그 id로 경기를 남긴다. 그래야 손님으로 한 판 뛴 사람도
    다음부터 이름을 골라 쓸 수 있고, 전적이 한 사람으로 모인다 */
-export const addScrimByNames = async ({ roomId, mode, teamA, teamB, winner, players }) => {
+const toIds = async (roomId, teamA, teamB, players) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
 
   const idOf = new Map(players.map((p) => [p.name, p.id]));
@@ -166,13 +177,17 @@ export const addScrimByNames = async ({ roomId, mode, teamA, teamB, winner, play
     (rows || []).forEach((r) => idOf.set(r.name, r.id));
   }
 
-  return addScrim({
-    roomId,
-    mode,
-    teamA: teamA.map((n) => idOf.get(n)),
-    teamB: teamB.map((n) => idOf.get(n)),
-    winner,
-  });
+  return [teamA.map((n) => idOf.get(n)), teamB.map((n) => idOf.get(n))];
+};
+
+export const addScrimByNames = async ({ roomId, mode, teamA, teamB, winner, players }) => {
+  const [a, b] = await toIds(roomId, teamA, teamB, players);
+  return addScrim({ roomId, mode, teamA: a, teamB: b, winner });
+};
+
+export const openBettingByNames = async ({ roomId, mode, teamA, teamB, players }) => {
+  const [a, b] = await toIds(roomId, teamA, teamB, players);
+  return openBetting(roomId, mode, a, b);
 };
 
 /* scrims는 이름 대신 room_players.id를 담는다. 이름은 여기서 붙인다.
@@ -184,6 +199,7 @@ export const toMatches = (scrims = [], players = []) => {
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
   const names = (ids) => (ids || []).map((id) => nameOf.get(id)).filter(Boolean);
   return scrims
+    .filter((s) => s.winner === 'A' || s.winner === 'B')
     .map((s) => ({
       id: s.id,
       mode: s.mode,
@@ -269,7 +285,8 @@ const ROOM_SELECT =
   'id,name,owner_id,version,created_at,' +
   'room_members(user_id,role,joined_at),' +
   'room_players(id,name,tier,division,linked_user_id),' +
-  'scrims(id,mode,team_a,team_b,winner,played_at)';
+  'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +
+  'first_blood_player_id,bet_total,bet_count,undo_count,locked_at)';
 
 /* 탭이 보일 때만, 30초마다. 실시간 구독이 없어 폴링이 불가피한데
    방 전체를 매번 읽으면 그게 곧 부하다. version 한 컬럼만 보고
@@ -282,7 +299,7 @@ export const useRoom = (roomId, userId) => {
       await neon.from('rooms').select(ROOM_SELECT).eq('id', roomId).maybeSingle()
     );
     if (!room) throw new Error('방을 찾을 수 없어요. 나갔거나 삭제된 방입니다.');
-    const profiles = unwrap(await neon.from('profiles').select('user_id,nickname,points'));
+    const profiles = unwrap(await neon.from('profiles').select('user_id,nickname,points,agreed_fairplay_at'));
     return { room, profiles: profiles || [] };
   }, [roomId]);
 
@@ -318,11 +335,16 @@ export const useRoom = (roomId, userId) => {
   const players = room?.room_players || [];
   const profileOf = new Map((data?.profiles || []).map((p) => [p.user_id, p]));
 
+  const scrims = room?.scrims || [];
+
   return {
     room,
     loading,
     error,
     reload,
+    scrims,
+    /* 아직 안 끝난 배팅 경기는 방에 하나뿐이다 (open_betting이 막는다) */
+    activeScrim: scrims.find((s) => s.status === 'betting' || s.status === 'locked') || null,
     players: [...players].sort((a, b) => a.name.localeCompare(b.name, 'ko')),
     matches: toMatches(room?.scrims, players),
     members: members
@@ -330,6 +352,7 @@ export const useRoom = (roomId, userId) => {
         ...m,
         nickname: profileOf.get(m.user_id)?.nickname || '이름 없음',
         points: profileOf.get(m.user_id)?.points ?? 0,
+        agreed: Boolean(profileOf.get(m.user_id)?.agreed_fairplay_at),
       }))
       .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]),
     myRole: members.find((m) => m.user_id === userId)?.role || null,
@@ -341,3 +364,61 @@ const ROLE_ORDER = { owner: 0, admin: 1, member: 2 };
 export const ROLE_LABEL = { owner: '방장', admin: '부방장', member: '멤버' };
 
 export const canEdit = (role) => role === 'owner' || role === 'admin';
+
+/* ---------- 또또 (배팅) ---------- */
+
+/* 킬 기준선. 45.5를 중심으로 위아래 하나씩. 무승부가 없도록 전부 .5다.
+   기준선 하나가 곧 마켓 하나 - 각각 따로 걸고 따로 정산된다 */
+export const KILL_LINES = [39.5, 45.5, 51.5];
+export const killMarket = (line) => `kills_${line}`;
+export const killLineOf = (market) => Number(market.split('_')[1]);
+
+export const isKillMarket = (market) => market.startsWith('kills_');
+
+/* 고정 배당 마켓의 1인 상한. sql/setup.sql의 place_bets와 같아야 한다 */
+export const BET_CAP = { first_blood: 2000, kills: 3000 };
+
+export const capOf = (market) =>
+  market === 'first_blood' ? BET_CAP.first_blood : isKillMarket(market) ? BET_CAP.kills : null;
+
+export const marketLabel = (market) => {
+  if (market === 'winner') return '승리팀';
+  if (market === 'first_blood') return '퍼스트 블러드';
+  if (isKillMarket(market)) return `총 킬 ${killLineOf(market)}`;
+  return market;
+};
+
+export const agreeFairplay = () => rpc('agree_fairplay');
+
+export const openBetting = (roomId, mode, teamA, teamB) =>
+  rpc('open_betting', {
+    p_room: roomId,
+    p_mode: mode,
+    p_team_a: teamA,
+    p_team_b: teamB,
+  });
+
+export const placeBets = (scrimId, bets) =>
+  rpc('place_bets', { p_scrim: scrimId, p_bets: bets });
+
+export const lockBetting = (scrimId) => rpc('lock_betting', { p_scrim: scrimId });
+
+export const settleScrim = (scrimId, winner, totalKills, firstBloodPlayerId) =>
+  rpc('settle_scrim', {
+    p_scrim: scrimId,
+    p_winner: winner,
+    p_total_kills: totalKills,
+    p_first_blood: firstBloodPlayerId,
+  });
+
+export const unsettleScrim = (scrimId) => rpc('unsettle_scrim', { p_scrim: scrimId });
+
+/* 배당과 배팅은 방을 열 때마다 통째로 받으면 안 된다. 경기가 1000개까지
+   쌓이므로 지금 화면에 띄울 몇 경기 것만 골라 받는다 */
+export const fetchBetting = async (scrimIds) => {
+  if (!isNeonConfigured || scrimIds.length === 0) return { pools: [], bets: [] };
+  const list = `(${scrimIds.join(',')})`;
+  const pools = unwrap(await neon.from('bet_pools').select('*').filter('scrim_id', 'in', list));
+  const bets = unwrap(await neon.from('bets').select('*').filter('scrim_id', 'in', list));
+  return { pools: pools || [], bets: bets || [] };
+};

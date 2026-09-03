@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaArrowRight, FaPlus, FaTimes, FaTrophy, FaClipboardList } from 'react-icons/fa';
+import { FaArrowRight, FaPlus, FaTimes, FaTrophy, FaClipboardList, FaDice } from 'react-icons/fa';
 import { getTier, tierName } from '../../tiers';
 import { statsFor, statOf } from '../../matches';
 import { loadLastSplit } from '../../lastSplit';
@@ -66,7 +66,7 @@ const formatRelative = (ts) => {
    matches: rooms.js가 이름을 붙여 넘겨준 경기 목록
    players: 방 참가자 명단 (티어 배지와 이름 고르기에 쓴다)
    canEdit: 방장·부방장만 true. 나머지는 보기만 한다 */
-const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRemove }) => {
+const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRemove, onOpenBetting }) => {
   const [mode, setMode] = useState('normal');
   const [teamA, setTeamA] = useState(blankTeam);
   const [teamB, setTeamB] = useState(blankTeam);
@@ -130,6 +130,31 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     try {
       await onAdd({ mode, teamA: a, teamB: b, winner });
       toast.success(`${winner === 'A' ? '1팀' : '2팀'} 승리! 기록했어요.`);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      saving.current = false;
+    }
+  };
+
+  /* 팀 짜는 화면을 또또용으로 한 번 더 만들 이유가 없다. 같은 패널에서 연다 */
+  const openBetting = async () => {
+    if (saving.current) return;
+    const a = teamA.map((n) => n.trim()).filter(Boolean);
+    const b = teamB.map((n) => n.trim()).filter(Boolean);
+    if (a.length === 0 || b.length === 0) {
+      toast.error('양 팀 모두 최소 1명은 있어야 해요.');
+      return;
+    }
+    const overlap = a.find((n) => b.includes(n));
+    if (overlap) {
+      toast.error(`'${overlap}' 님이 양 팀에 모두 있어요.`);
+      return;
+    }
+    saving.current = true;
+    try {
+      await onOpenBetting({ mode, teamA: a, teamB: b });
+      toast.success('또또를 열었어요. 또또 탭에서 배팅을 받습니다.');
     } catch (e) {
       toast.error(e.message);
     } finally {
@@ -201,6 +226,14 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
               <FaTrophy /> 2팀 승리
             </button>
           </div>
+
+          {onOpenBetting && (
+            <div className="sr-toolbar">
+              <button className="ghost-btn" onClick={openBetting}>
+                <FaDice /> 또또 열기 (배팅 받고 나중에 결과 넣기)
+              </button>
+            </div>
+          )}
         </>
       )}
 

@@ -666,3 +666,488 @@ grant execute on function
   public.is_room_admin(bigint),
   public.is_room_owner(bigint)
 to authenticated;
+
+
+-- ============================================================
+-- 6. 또또 (배팅)
+-- ============================================================
+-- 여기서부터 경기는 돈이 걸린 물건이다. 그래서 scrims에 대한 클라이언트
+-- 직접 쓰기를 회수하고 전부 함수로만 만든다. 경기를 직접 넣을 수 있으면
+-- 참여 포인트를 무한히 찍을 수 있다.
+
+alter table public.scrims add column if not exists status text not null default 'settled';
+alter table public.scrims add column if not exists total_kills int;
+alter table public.scrims add column if not exists first_blood_player_id bigint;
+alter table public.scrims add column if not exists undo_count int not null default 0;
+alter table public.scrims add column if not exists bet_total bigint not null default 0;
+alter table public.scrims add column if not exists bet_count int not null default 0;
+alter table public.scrims add column if not exists locked_at timestamptz;
+alter table public.scrims add column if not exists settled_at timestamptz;
+
+alter table public.scrims drop constraint if exists scrims_status_chk;
+alter table public.scrims add constraint scrims_status_chk
+  check (status in ('betting', 'locked', 'settled'));
+
+create index if not exists scrims_room_status on public.scrims (room_id, status);
+
+-- 한 사람이 한 방에서 두 참가자에 묶이면 참여 포인트를 두 번 받는다
+create unique index if not exists room_players_one_account
+  on public.room_players (room_id, linked_user_id)
+  where linked_user_id is not null;
+
+-- 되돌리기가 같은 줄을 두 번 뒤집지 않게 표시해 둔다
+alter table public.point_ledger add column if not exists reversed_at timestamptz;
+
+revoke insert, update, delete on public.scrims from authenticated;
+drop policy if exists scrims_admin_write on public.scrims;
+
+
+-- 마켓별 집계. 배당을 구하려면 "이 선택지에 총 얼마"가 필요한데, 매번 bets를
+-- SUM하면 배팅이 쌓일수록 느려진다. 걸 때 이 한 줄만 고치면 배당 조회는
+-- 항상 한 줄 읽기다.
+create table if not exists public.bet_pools (
+  scrim_id     bigint not null references public.scrims(id) on delete cascade,
+  market       text   not null,
+  selection    text   not null,
+  total_amount bigint not null default 0,
+  bet_count    int    not null default 0,
+  odds         numeric(6, 2),
+  primary key (scrim_id, market, selection)
+);
+
+create table if not exists public.bets (
+  id         bigint generated always as identity primary key,
+  scrim_id   bigint not null references public.scrims(id) on delete cascade,
+  room_id    bigint not null references public.rooms(id) on delete cascade,
+  user_id    text   not null,
+  market     text   not null,
+  selection  text   not null,
+  amount     int    not null check (amount > 0),
+  odds       numeric(6, 2),
+  payout     int,
+  created_at timestamptz not null default now(),
+  -- 같은 마켓에 두 선택지를 걸 수 없다 (1팀 승리와 2팀 승리를 같이 못 건다)
+  unique (scrim_id, user_id, market)
+);
+create index if not exists bets_scrim on public.bets (scrim_id);
+create index if not exists bets_user on public.bets (user_id, created_at desc);
+
+alter table public.bet_pools enable row level security;
+alter table public.bets enable row level security;
+
+grant select on public.bet_pools to authenticated;
+grant select on public.bets to authenticated;
+
+-- 배당은 마감 전까지 안 보인다. 실시간으로 보이면 마감 직전에 유리한 쪽으로
+-- 몰리는 눈치싸움이 되고, 늦게 거는 사람이 항상 유리해진다.
+drop policy if exists pools_read on public.bet_pools;
+create policy pools_read on public.bet_pools
+  for select to authenticated
+  using (exists (
+    select 1 from public.scrims s
+     where s.id = scrim_id and s.status <> 'betting' and public.is_room_member(s.room_id)
+  ));
+
+-- 정산 전에는 내 배팅만. 정산되면 전원에게 공개된다 (그게 재미고, 억제 장치다)
+drop policy if exists bets_read on public.bets;
+create policy bets_read on public.bets
+  for select to authenticated
+  using (
+    public.is_room_member(room_id)
+    and (
+      user_id = auth.user_id()
+      or exists (select 1 from public.scrims s where s.id = scrim_id and s.status = 'settled')
+    )
+  );
+
+
+-- 승부 조작 동의. 한 번만 받는다.
+create or replace function public.agree_fairplay()
+returns void language sql security definer set search_path = public as $fn$
+  update profiles set agreed_fairplay_at = now()
+   where user_id = auth.user_id() and agreed_fairplay_at is null;
+$fn$;
+
+
+-- 경기에 참여한 사람에게 승 1500 / 패 1000.
+-- 계정에 연결된 참가자만 받는다 (설정 탭에서 연결한다).
+create or replace function public.award_participation(p_scrim bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare s scrims;
+begin
+  select * into s from scrims where id = p_scrim;
+  if s.winner is null then return; end if;
+
+  with sides as (
+    select jsonb_array_elements_text(s.team_a)::bigint as pid, 'A' as side
+    union all
+    select jsonb_array_elements_text(s.team_b)::bigint, 'B'
+  ),
+  paid as (
+    select rp.linked_user_id as uid,
+           case when sides.side = s.winner then 1500 else 1000 end as amt
+      from sides
+      join room_players rp on rp.id = sides.pid
+     where rp.linked_user_id is not null
+  ),
+  ins as (
+    insert into point_ledger (user_id, room_id, delta, reason, ref_id)
+    select uid, s.room_id, amt, 'scrim', p_scrim from paid
+    returning user_id, delta
+  )
+  update profiles pr set points = pr.points + x.d
+    from (select user_id, sum(delta) d from ins group by user_id) x
+   where pr.user_id = x.user_id;
+end; $fn$;
+
+
+-- 기록 탭에서 바로 남기는 경기. 배팅 없이 결과만 넣는다.
+create or replace function public.record_scrim(
+  p_room bigint, p_mode text, p_team_a jsonb, p_team_b jsonb, p_winner text)
+returns bigint language plpgsql security definer set search_path = public as $fn$
+declare sid bigint; n int;
+begin
+  perform public.roll_season();
+  if not public.is_room_admin(p_room) then
+    raise exception '방장과 부방장만 기록을 남길 수 있어요.';
+  end if;
+  if p_winner not in ('A', 'B') then
+    raise exception '이긴 팀을 골라주세요.';
+  end if;
+
+  select count(*) into n from scrims where room_id = p_room;
+  if n >= 1000 then
+    raise exception '한 방에 최대 1000경기까지 남길 수 있어요. 오래된 기록을 지워주세요.';
+  end if;
+
+  insert into scrims (room_id, mode, team_a, team_b, winner, status, settled_at)
+    values (p_room, p_mode, p_team_a, p_team_b, p_winner, 'settled', now())
+    returning id into sid;
+
+  perform public.award_participation(sid);
+  return sid;
+end; $fn$;
+
+
+-- 배팅용 경기를 연다. 결과는 아직 없다.
+create or replace function public.open_betting(
+  p_room bigint, p_mode text, p_team_a jsonb, p_team_b jsonb)
+returns bigint language plpgsql security definer set search_path = public as $fn$
+declare sid bigint; n int;
+begin
+  perform public.roll_season();
+  if not public.is_room_admin(p_room) then
+    raise exception '방장과 부방장만 배팅을 열 수 있어요.';
+  end if;
+  if exists (select 1 from scrims where room_id = p_room and status in ('betting', 'locked')) then
+    raise exception '아직 끝나지 않은 배팅 경기가 있어요. 그것부터 정산해 주세요.';
+  end if;
+
+  select count(*) into n from scrims where room_id = p_room;
+  if n >= 1000 then
+    raise exception '한 방에 최대 1000경기까지 남길 수 있어요.';
+  end if;
+
+  insert into scrims (room_id, mode, team_a, team_b, status)
+    values (p_room, p_mode, p_team_a, p_team_b, 'betting')
+    returning id into sid;
+
+  perform public.log_room(p_room, 'betting_open', jsonb_build_object(
+    'scrim', sid, 'mode', p_mode,
+    'size', jsonb_array_length(p_team_a) + jsonb_array_length(p_team_b)));
+  return sid;
+end; $fn$;
+
+
+-- 장바구니에 담은 것들을 한 번에. 조합 배당이 아니라 독립 배팅 여러 건이다.
+-- 하나라도 막히면 전부 안 들어간다.
+create or replace function public.place_bets(p_scrim bigint, p_bets jsonb)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare
+  me    text := auth.user_id();
+  s     scrims;
+  total bigint;
+  b     jsonb;
+  cap   int;
+begin
+  perform public.roll_season();
+
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
+  if not public.is_room_member(s.room_id) then
+    raise exception '이 방의 멤버가 아니에요.';
+  end if;
+  if s.status <> 'betting' then
+    raise exception '지금은 배팅할 수 없어요. 이미 마감됐습니다.';
+  end if;
+  if (select agreed_fairplay_at from profiles where user_id = me) is null then
+    raise exception '배팅에 신경쓰지 않고 경기를 진행하겠다는 동의가 먼저예요.';
+  end if;
+  if jsonb_array_length(coalesce(p_bets, '[]'::jsonb)) = 0 then
+    raise exception '담은 배팅이 없어요.';
+  end if;
+
+  -- 고정 배당 마켓은 시스템이 지급을 책임진다. 한 사람이 크게 걸면
+  -- 손실이 커지므로 마켓별로 상한을 둔다.
+  for b in select * from jsonb_array_elements(p_bets) loop
+    if (b->>'amount')::int <= 0 then
+      raise exception '배팅 금액은 1 이상이어야 해요.';
+    end if;
+    cap := case
+      when b->>'market' = 'first_blood' then 2000
+      when b->>'market' like 'kills%' then 3000
+      else null
+    end;
+    if cap is not null and (b->>'amount')::int > cap then
+      raise exception '이 항목은 한 번에 % 끼꼬까지 걸 수 있어요.', cap;
+    end if;
+  end loop;
+
+  select sum((x->>'amount')::int) into total from jsonb_array_elements(p_bets) x;
+
+  -- 잔액 확인과 차감을 한 문장으로. 갈라놓으면 두 요청이 같은 잔액을 보고
+  -- 둘 다 통과해서 가진 것보다 많이 걸 수 있다.
+  update profiles set points = points - total
+   where user_id = me and points >= total;
+  if not found then
+    raise exception '끼꼬가 모자라요.';
+  end if;
+
+  begin
+    insert into bets (scrim_id, room_id, user_id, market, selection, amount)
+    select p_scrim, s.room_id, me, x->>'market', x->>'selection', (x->>'amount')::int
+      from jsonb_array_elements(p_bets) x;
+  exception when unique_violation then
+    raise exception '같은 항목에는 한 번만 걸 수 있어요. 이미 건 항목이 있습니다.';
+  end;
+
+  insert into bet_pools (scrim_id, market, selection, total_amount, bet_count)
+  select p_scrim, x->>'market', x->>'selection', (x->>'amount')::int, 1
+    from jsonb_array_elements(p_bets) x
+  on conflict (scrim_id, market, selection) do update
+    set total_amount = bet_pools.total_amount + excluded.total_amount,
+        bet_count    = bet_pools.bet_count + excluded.bet_count;
+
+  update scrims
+     set bet_total = bet_total + total,
+         bet_count = (select count(distinct user_id) from bets where scrim_id = p_scrim)
+   where id = p_scrim;
+
+  -- 개별 배팅은 피드에 안 남긴다. 그게 로그 쓰기의 대부분이고,
+  -- 정산 때 요약 한 줄이면 볼 건 다 본다.
+  insert into point_ledger (user_id, room_id, delta, reason, ref_id)
+  values (me, s.room_id, -total, 'bet', p_scrim);
+end; $fn$;
+
+
+-- 게임 시작. 여기서 배당이 확정되고 공개된다.
+create or replace function public.lock_betting(p_scrim bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare s scrims; pool bigint; n int;
+begin
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
+  if not public.is_room_admin(s.room_id) then
+    raise exception '방장과 부방장만 마감할 수 있어요.';
+  end if;
+  if s.status <> 'betting' then raise exception '이미 마감된 경기예요.'; end if;
+
+  -- 승리팀은 패리뮤추얼. 많이 걸린 쪽이 낮은 배당을 가져가고,
+  -- 나간 만큼만 들어오는 제로섬이라 끼꼬 총량이 늘지 않는다.
+  select coalesce(sum(total_amount), 0) into pool
+    from bet_pools where scrim_id = p_scrim and market = 'winner';
+
+  update bet_pools
+     set odds = case when total_amount = 0 then null
+                     else round(pool::numeric / total_amount, 2) end
+   where scrim_id = p_scrim and market = 'winner';
+
+  -- 퍼블은 고정 배당. 공정값(인원 n배)보다 낮게 잡아서 이 자체가
+  -- 끼꼬 소각 장치가 된다.
+  n := jsonb_array_length(s.team_a) + jsonb_array_length(s.team_b);
+  update bet_pools set odds = round(n * 0.85, 2)
+   where scrim_id = p_scrim and market = 'first_blood';
+
+  update bet_pools set odds = 1.98
+   where scrim_id = p_scrim and market like 'kills%';
+
+  update scrims set status = 'locked', locked_at = now() where id = p_scrim;
+
+  perform public.log_room(s.room_id, 'betting_locked', jsonb_build_object(
+    'scrim', p_scrim, 'people', s.bet_count, 'total', s.bet_total));
+end; $fn$;
+
+
+-- 실제 경기 결과를 넣고 한 번에 정산한다.
+-- 중간에 하나라도 실패하면 전부 되돌아간다. 절반만 지급되는 상황이 없어야 한다.
+create or replace function public.settle_scrim(
+  p_scrim bigint, p_winner text, p_total_kills int, p_first_blood bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare
+  s           scrims;
+  winner_void boolean;
+  fb_void     boolean;
+  kills_void  boolean;
+begin
+  perform public.roll_season();
+
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
+  if not public.is_room_admin(s.room_id) then
+    raise exception '방장과 부방장만 결과를 넣을 수 있어요.';
+  end if;
+  -- 이미 정산된 경기에 다시 불러도 아무 일이 없어야 한다.
+  -- 네트워크 재시도로 두 번 지급되는 사고를 막는다.
+  if s.status = 'settled' then return; end if;
+  if s.status <> 'locked' then
+    raise exception '배팅을 먼저 마감해 주세요.';
+  end if;
+  if p_winner not in ('A', 'B') then raise exception '이긴 팀을 골라주세요.'; end if;
+
+  update scrims
+     set winner = p_winner, total_kills = p_total_kills,
+         first_blood_player_id = p_first_blood,
+         status = 'settled', settled_at = now()
+   where id = p_scrim
+   returning * into s;
+
+  -- 적중한 쪽에 아무도 안 걸었으면 그 마켓은 통째로 환불이다.
+  -- 결과를 안 넣은 항목(총 킬, 퍼블)도 마찬가지.
+  winner_void := not exists (
+    select 1 from bet_pools
+     where scrim_id = p_scrim and market = 'winner'
+       and selection = p_winner and total_amount > 0);
+  fb_void := p_first_blood is null;
+  kills_void := p_total_kills is null;
+
+  update bets b
+     set odds = p.odds,
+         payout = case
+           when b.market = 'winner' and winner_void then b.amount
+           when b.market = 'first_blood' and fb_void then b.amount
+           when b.market like 'kills%' and kills_void then b.amount
+           when b.market = 'winner' and b.selection = p_winner
+             then floor(b.amount * p.odds)::int
+           when b.market = 'first_blood' and b.selection = p_first_blood::text
+             then floor(b.amount * p.odds)::int
+           when b.market like 'kills%' and (
+                (b.selection = 'over' and p_total_kills > split_part(b.market, '_', 2)::numeric)
+             or (b.selection = 'under' and p_total_kills < split_part(b.market, '_', 2)::numeric))
+             then floor(b.amount * p.odds)::int
+           else 0
+         end
+    from bet_pools p
+   where b.scrim_id = p_scrim
+     and p.scrim_id = b.scrim_id and p.market = b.market and p.selection = b.selection;
+
+  with paid as (
+    select user_id, sum(payout)::int as amt
+      from bets where scrim_id = p_scrim and payout > 0 group by user_id
+  ),
+  ins as (
+    insert into point_ledger (user_id, room_id, delta, reason, ref_id)
+    select user_id, s.room_id, amt, 'payout', p_scrim from paid
+    returning user_id, delta
+  )
+  update profiles pr set points = pr.points + x.d
+    from (select user_id, sum(delta) d from ins group by user_id) x
+   where pr.user_id = x.user_id;
+
+  perform public.award_participation(p_scrim);
+
+  perform public.log_room(s.room_id, 'settled', jsonb_build_object(
+    'scrim', p_scrim, 'winner', p_winner,
+    'kills', p_total_kills, 'bet_total', s.bet_total));
+end; $fn$;
+
+
+-- 결과를 잘못 넣는 일은 반드시 생긴다. 지급을 전부 뒤집고 마감 직후로 돌린다.
+-- 방장이 결과를 바꿔 배팅을 흔들 수도 있으므로, 되돌린 사실을 피드에 남겨
+-- 모두에게 보이게 한다.
+create or replace function public.unsettle_scrim(p_scrim bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare s scrims;
+begin
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
+  if not public.is_room_owner(s.room_id) then
+    raise exception '방장만 정산을 되돌릴 수 있어요.';
+  end if;
+  if s.status <> 'settled' then raise exception '아직 정산되지 않은 경기예요.'; end if;
+  if s.locked_at is null then
+    raise exception '배팅 없이 남긴 기록은 되돌릴 게 없어요. 지우고 다시 남겨 주세요.';
+  end if;
+
+  -- 아직 안 뒤집은 줄만 고른다. 안 그러면 두 번째 되돌리기가
+  -- 첫 번째로 이미 취소한 지급까지 또 뒤집는다.
+  with back as (
+    update point_ledger set reversed_at = now()
+     where ref_id = p_scrim and reversed_at is null
+       and reason in ('payout', 'scrim')
+    returning user_id, delta
+  ),
+  ins as (
+    insert into point_ledger (user_id, room_id, delta, reason, ref_id, reversed_at)
+    select user_id, s.room_id, -delta, 'undo', p_scrim, now() from back
+    returning user_id, delta
+  )
+  update profiles pr set points = pr.points + x.d
+    from (select user_id, sum(delta) d from ins group by user_id) x
+   where pr.user_id = x.user_id;
+
+  update bets set payout = null, odds = null where scrim_id = p_scrim;
+
+  update scrims
+     set winner = null, total_kills = null, first_blood_player_id = null,
+         status = 'locked', settled_at = null, undo_count = undo_count + 1
+   where id = p_scrim;
+
+  perform public.log_room(s.room_id, 'settle_undone', jsonb_build_object(
+    'scrim', p_scrim, 'count', s.undo_count + 1));
+end; $fn$;
+
+
+create or replace function public.delete_scrim(p_scrim bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare s scrims;
+begin
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then return; end if;
+  if not public.is_room_admin(s.room_id) then
+    raise exception '방장과 부방장만 기록을 지울 수 있어요.';
+  end if;
+  if exists (select 1 from bets where scrim_id = p_scrim) then
+    raise exception '배팅이 걸린 경기는 지울 수 없어요. 기록으로 남깁니다.';
+  end if;
+
+  -- 참여 포인트를 준 경기라면 되돌려놓고 지운다
+  with back as (
+    update point_ledger set reversed_at = now()
+     where ref_id = p_scrim and reversed_at is null and reason = 'scrim'
+    returning user_id, delta
+  ),
+  ins as (
+    insert into point_ledger (user_id, room_id, delta, reason, ref_id, reversed_at)
+    select user_id, s.room_id, -delta, 'undo', p_scrim, now() from back
+    returning user_id, delta
+  )
+  update profiles pr set points = pr.points + x.d
+    from (select user_id, sum(delta) d from ins group by user_id) x
+   where pr.user_id = x.user_id;
+
+  delete from scrims where id = p_scrim;
+end; $fn$;
+
+
+revoke execute on function public.award_participation(bigint) from public;
+
+grant execute on function
+  public.agree_fairplay(),
+  public.record_scrim(bigint, text, jsonb, jsonb, text),
+  public.open_betting(bigint, text, jsonb, jsonb),
+  public.place_bets(bigint, jsonb),
+  public.lock_betting(bigint),
+  public.settle_scrim(bigint, text, int, bigint),
+  public.unsettle_scrim(bigint),
+  public.delete_scrim(bigint)
+to authenticated;
