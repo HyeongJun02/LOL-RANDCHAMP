@@ -6,6 +6,7 @@ import { statsFor, statOf } from '../../matches';
 import { loadLastSplit } from '../../lastSplit';
 import Modal from '../../components/common/Modal';
 import TeamBalance from '../teamBalance/TeamBalance';
+import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
@@ -76,6 +77,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
      상태로 잡으면 렌더 클로저의 옛 값을 읽어서 두 번 통과한다 */
   const saving = useRef(false);
   const [showBalancer, setShowBalancer] = useState(false);
+  const [showBetOpen, setShowBetOpen] = useState(false);
 
   const stats = useMemo(() => statsFor(matches, mode), [matches, mode]);
   const history = useMemo(
@@ -142,7 +144,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
   };
 
   /* 팀 짜는 화면을 또또용으로 한 번 더 만들 이유가 없다. 같은 패널에서 연다 */
-  const openBetting = async () => {
+  const openBetting = async (closeSeconds = null) => {
     if (saving.current) return;
     const a = teamA.map((n) => n.trim()).filter(Boolean);
     const b = teamB.map((n) => n.trim()).filter(Boolean);
@@ -157,8 +159,13 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     }
     saving.current = true;
     try {
-      await onOpenBetting({ mode, teamA: a, teamB: b });
-      toast.success('또또를 열었어요. 또또 탭에서 배팅을 받습니다.');
+      await onOpenBetting({ mode, teamA: a, teamB: b, closeSeconds });
+      setShowBetOpen(false);
+      toast.success(
+        closeSeconds
+          ? `또또를 열었어요. ${Math.round(closeSeconds / 60) || 1}분 뒤 자동으로 마감됩니다.`
+          : '또또를 열었어요. 마감은 직접 눌러야 합니다.'
+      );
     } catch (e) {
       toast.error(e.message);
     } finally {
@@ -241,7 +248,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
               <FaTrophy /> 2팀 승리
             </button>
             {onOpenBetting && (
-              <button className="win-btn bet-open" onClick={openBetting}>
+              <button className="win-btn bet-open" onClick={() => setShowBetOpen(true)}>
                 <FaDice /> 또또 열기
               </button>
             )}
@@ -250,6 +257,16 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
             <p className="sr-bet-hint">
               또또를 열면 결과를 나중에 넣습니다. 그 사이에 다들 끼꼬를 걸 수 있어요.
             </p>
+          )}
+
+          {showBetOpen && (
+            <BetOpenModal
+              onClose={() => setShowBetOpen(false)}
+              onOpen={openBetting}
+              playerCount={
+                teamA.filter((n) => n.trim()).length + teamB.filter((n) => n.trim()).length
+              }
+            />
           )}
 
           {showBalancer && (

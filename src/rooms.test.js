@@ -64,7 +64,8 @@ const {
   killMarket,
   capOf,
   winningSelection,
-  KILL_LINES,
+  killLineFor,
+  killLineOfScrim,
 } = require('./rooms');
 
 beforeEach(() => {
@@ -380,18 +381,94 @@ test('퍼블은 참가자 id를 문자열로 (선택지 값과 같은 타입이�
 });
 
 test('총 킬은 기준선보다 크면 오버, 작으면 언더', () => {
-  const line = KILL_LINES[0];
+  const line = killLineFor(6);
   const market = killMarket(line);
   expect(winningSelection(settled({ total_kills: line + 1 }), market)).toBe('over');
   expect(winningSelection(settled({ total_kills: line - 1 }), market)).toBe('under');
 });
 
 test('결과를 안 넣은 마켓은 정답이 없다 (전액 환불되는 경우)', () => {
-  const market = killMarket(KILL_LINES[0]);
+  const market = killMarket(killLineFor(6));
   expect(winningSelection(settled({ total_kills: null }), market)).toBeNull();
   expect(winningSelection(settled({ first_blood_player_id: null }), 'first_blood')).toBeNull();
 });
 
-test('킬 기준선은 하나만 연다 (여러 개면 언더·오버를 여러 번 걸 수 있다)', () => {
-  expect(KILL_LINES).toHaveLength(1);
+/* ---------- 킬 기준선 ---------- */
+/* 칼바람 6명에서 45.5가 반반이었다. 8명이면 킬도 그만큼 더 나오니
+   같은 값을 쓰면 오버가 거의 확정이 된다 */
+
+test('인원에 따라 기준선이 올라간다 (6명 45.5 · 8명 60.5)', () => {
+  expect(killLineFor(6)).toBe(45.5);
+  expect(killLineFor(8)).toBe(60.5);
+  expect(killLineFor(10)).toBe(75.5);
+});
+
+test('기준선은 항상 .5로 끊긴다 (무승부가 없어야 한다)', () => {
+  for (let n = 2; n <= 20; n += 1) {
+    expect(killLineFor(n) % 1).toBe(0.5);
+  }
+});
+
+test('인원이 늘면 기준선도 반드시 같이 오른다', () => {
+  for (let n = 2; n < 20; n += 1) {
+    expect(killLineFor(n + 1)).toBeGreaterThan(killLineFor(n));
+  }
+});
+
+test('경기의 기준선은 배팅을 열 때 박힌 팀에서 계산한다', () => {
+  const scrim = { team_a: [1, 2, 3], team_b: [4, 5, 6] };
+  expect(killLineOfScrim(scrim)).toBe(45.5);
+  /* 팀이 비어 있어도 터지지 않는다 */
+  expect(killLineOfScrim({})).toBe(45.5);
+  expect(killLineOfScrim(null)).toBe(45.5);
+});
+
+test('기준선이 그대로 마켓 이름이 되고, 다시 읽어도 같은 값이다', () => {
+  const line = killLineFor(8);
+  expect(killMarket(line)).toBe('kills_60.5');
+  const scrim = {
+    status: 'settled',
+    team_a: [1, 2, 3, 4],
+    team_b: [5, 6, 7, 8],
+    total_kills: 61,
+  };
+  expect(winningSelection(scrim, killMarket(killLineOfScrim(scrim)))).toBe('over');
+});
+
+
+/* ---------- 배팅 마감 시각 · 퍼블 배당 (SQL 계약) ---------- */
+
+test('마감 시각은 서버가 정한다 (브라우저 시계를 믿으면 사람마다 마감이 달라진다)', () => {
+  const body = sql.slice(sql.indexOf('function public.open_betting'));
+  expect(body).toContain('now() + make_interval');
+});
+
+test('시간이 지나면 status가 betting이어도 더 못 건다', () => {
+  const body = sql.slice(
+    sql.indexOf('function public.place_bets'),
+    sql.indexOf('function public.lock_betting')
+  );
+  expect(body).toContain('betting_closes_at is not null and now() >= s.betting_closes_at');
+});
+
+test('시간이 지난 뒤에는 방장이 아니어도 마감할 수 있다 (방장이 자리를 비워도 배당이 열려야 한다)', () => {
+  const body = sql.slice(sql.indexOf('function public.lock_betting'));
+  expect(body).toContain('if not expired and not public.is_room_admin');
+  /* 대신 시간이 안 됐으면 여전히 방장만 */
+  expect(body).toContain('expired and not public.is_room_member');
+});
+
+test('인자를 늘린 open_betting은 옛 4인자 버전을 먼저 지운다 (안 지우면 호출이 모호해진다)', () => {
+  const drop = sql.indexOf('drop function if exists public.open_betting(bigint, text, jsonb, jsonb)');
+  expect(drop).toBeGreaterThan(-1);
+  expect(drop).toBeLessThan(sql.indexOf('create or replace function public.open_betting'));
+  expect(sql).toContain('public.open_betting(bigint, text, jsonb, jsonb, int)');
+});
+
+test('퍼블 배당은 티어가 낮을수록 높다 (전원 같으면 낮은 티어에 걸 이유가 없다)', () => {
+  const body = sql.slice(sql.indexOf('function public.lock_betting'));
+  /* 골드(인덱스 3)를 1.00으로 두고 한 칸당 2% */
+  expect(body).toContain('(3 - coalesce(t.idx, 3)) * 0.02');
+  /* 조인에서 빠진 선택지도 배당이 비지 않게 채운다 */
+  expect(body).toContain("market = 'first_blood' and odds is null");
 });

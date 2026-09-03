@@ -682,6 +682,8 @@ alter table public.scrims add column if not exists undo_count int not null defau
 alter table public.scrims add column if not exists bet_total bigint not null default 0;
 alter table public.scrims add column if not exists bet_count int not null default 0;
 alter table public.scrims add column if not exists locked_at timestamptz;
+-- 배팅 자동 마감 시각. null이면 방장이 직접 닫을 때까지 열려 있다
+alter table public.scrims add column if not exists betting_closes_at timestamptz;
 alter table public.scrims add column if not exists settled_at timestamptz;
 
 alter table public.scrims drop constraint if exists scrims_status_chk;
@@ -830,10 +832,18 @@ end; $fn$;
 
 
 -- 배팅용 경기를 연다. 결과는 아직 없다.
+-- 인자를 늘리면 옛 함수가 그대로 남아 오버로드가 된다. PostgREST가 어느
+-- 것을 부를지 못 골라서 ambiguous 오류를 낸다. 먼저 지운다.
+drop function if exists public.open_betting(bigint, text, jsonb, jsonb);
+
+-- p_close_seconds: 몇 초 뒤에 자동으로 마감할지. null이면 방장이 직접 닫는다.
+-- 마감 시각을 서버가 정해서 내려줘야 한다. 각자 브라우저 시계로 재면
+-- 시계가 몇 초씩 어긋난 사람들 사이에서 '누구는 됐고 누구는 안 되는' 일이 생긴다.
 create or replace function public.open_betting(
-  p_room bigint, p_mode text, p_team_a jsonb, p_team_b jsonb)
+  p_room bigint, p_mode text, p_team_a jsonb, p_team_b jsonb,
+  p_close_seconds int default null)
 returns bigint language plpgsql security definer set search_path = public as $fn$
-declare sid bigint; n int;
+declare sid bigint; n int; closes timestamptz;
 begin
   perform public.roll_season();
   if not public.is_room_admin(p_room) then
@@ -848,13 +858,21 @@ begin
     raise exception '한 방에 최대 1000경기까지 남길 수 있어요.';
   end if;
 
-  insert into scrims (room_id, mode, team_a, team_b, status)
-    values (p_room, p_mode, p_team_a, p_team_b, 'betting')
+  if p_close_seconds is not null then
+    if p_close_seconds < 30 or p_close_seconds > 3600 then
+      raise exception '배팅 시간은 30초에서 60분 사이로 정해주세요.';
+    end if;
+    closes := now() + make_interval(secs => p_close_seconds);
+  end if;
+
+  insert into scrims (room_id, mode, team_a, team_b, status, betting_closes_at)
+    values (p_room, p_mode, p_team_a, p_team_b, 'betting', closes)
     returning id into sid;
 
   perform public.log_room(p_room, 'betting_open', jsonb_build_object(
     'scrim', sid, 'mode', p_mode,
-    'size', jsonb_array_length(p_team_a) + jsonb_array_length(p_team_b)));
+    'size', jsonb_array_length(p_team_a) + jsonb_array_length(p_team_b),
+    'closes_at', closes));
   return sid;
 end; $fn$;
 
@@ -879,6 +897,11 @@ begin
   end if;
   if s.status <> 'betting' then
     raise exception '지금은 배팅할 수 없어요. 이미 마감됐습니다.';
+  end if;
+  -- 시간이 다 됐으면 status가 아직 betting이어도 더 받지 않는다.
+  -- 누군가 lock_betting을 부르기 전까지의 틈을 여기서 막는다
+  if s.betting_closes_at is not null and now() >= s.betting_closes_at then
+    raise exception '배팅 시간이 끝났어요.';
   end if;
   if (select agreed_fairplay_at from profiles where user_id = me) is null then
     raise exception '배팅에 신경쓰지 않고 경기를 진행하겠다는 동의가 먼저예요.';
@@ -943,14 +966,23 @@ end; $fn$;
 -- 게임 시작. 여기서 배당이 확정되고 공개된다.
 create or replace function public.lock_betting(p_scrim bigint)
 returns void language plpgsql security definer set search_path = public as $fn$
-declare s scrims; pool bigint; n int;
+declare s scrims; pool bigint; n int; expired boolean;
 begin
   select * into s from scrims where id = p_scrim;
   if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
-  if not public.is_room_admin(s.room_id) then
+  if s.status <> 'betting' then raise exception '이미 마감된 경기예요.'; end if;
+
+  expired := s.betting_closes_at is not null and now() >= s.betting_closes_at;
+
+  -- 시간이 다 된 뒤에는 아무 멤버나 닫을 수 있다. 방장만 닫게 두면
+  -- 방장이 화면을 안 보고 있을 때 아무도 배당을 못 보는 상태로 멈춘다.
+  -- (실제로 닫는 건 시간을 본 첫 사람의 브라우저다)
+  if not expired and not public.is_room_admin(s.room_id) then
     raise exception '방장과 부방장만 마감할 수 있어요.';
   end if;
-  if s.status <> 'betting' then raise exception '이미 마감된 경기예요.'; end if;
+  if expired and not public.is_room_member(s.room_id) then
+    raise exception '이 방의 멤버가 아니에요.';
+  end if;
 
   -- 승리팀은 패리뮤추얼. 많이 걸린 쪽이 낮은 배당을 가져가고,
   -- 나간 만큼만 들어오는 제로섬이라 끼꼬 총량이 늘지 않는다.
@@ -964,9 +996,31 @@ begin
 
   -- 퍼블은 고정 배당. 공정값(인원 n배)보다 낮게 잡아서 이 자체가
   -- 끼꼬 소각 장치가 된다.
+  --
+  -- 여기에 티어 보정을 얹는다. 퍼블은 잘하는 사람이 딸 확률이 높은데
+  -- 배당이 전원 같으면 아무도 낮은 티어에 걸 이유가 없다. 티어 한 칸당
+  -- 2%씩, 골드를 1.00으로 두고 아래로 갈수록 조금 높인다.
+  -- 명단에서 지워진 참가자(조회 실패)는 보정 없이 기본값을 쓴다.
   n := jsonb_array_length(s.team_a) + jsonb_array_length(s.team_b);
+  update bet_pools bp
+     set odds = round(
+           n * 0.85 * (1 + (3 - coalesce(t.idx, 3)) * 0.02),
+           2)
+    from (
+      select rp.id,
+             array_position(
+               array['IRON','BRONZE','SILVER','GOLD','PLATINUM',
+                     'EMERALD','DIAMOND','MASTER','GRANDMASTER'],
+               rp.tier) - 1 as idx
+        from room_players rp
+    ) t
+   where bp.scrim_id = p_scrim
+     and bp.market = 'first_blood'
+     and t.id = bp.selection::bigint;
+
+  -- 위 조인에서 빠진 선택지(명단에서 지워진 참가자)는 기본값으로 채운다
   update bet_pools set odds = round(n * 0.85, 2)
-   where scrim_id = p_scrim and market = 'first_blood';
+   where scrim_id = p_scrim and market = 'first_blood' and odds is null;
 
   update bet_pools set odds = 1.98
    where scrim_id = p_scrim and market like 'kills%';
@@ -1144,7 +1198,7 @@ revoke execute on function public.award_participation(bigint) from public;
 grant execute on function
   public.agree_fairplay(),
   public.record_scrim(bigint, text, jsonb, jsonb, text),
-  public.open_betting(bigint, text, jsonb, jsonb),
+  public.open_betting(bigint, text, jsonb, jsonb, int),
   public.place_bets(bigint, jsonb),
   public.lock_betting(bigint),
   public.settle_scrim(bigint, text, int, bigint),

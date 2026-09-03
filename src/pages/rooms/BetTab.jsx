@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaLock, FaCheck, FaUndo } from 'react-icons/fa';
 import {
-  KILL_LINES,
+  killLineOfScrim,
   killMarket,
   winningSelection,
   marketLabel,
@@ -15,6 +15,7 @@ import {
   fetchBetting,
 } from '../../rooms';
 import { useDialog } from '../../components/common/Dialog';
+import BetTimer from './BetTimer';
 
 const num = (n) => Number(n || 0).toLocaleString();
 
@@ -155,6 +156,23 @@ const BetTab = ({
       load();
     });
 
+  /* 시간이 다 되면 화면을 보고 있는 사람이 대신 마감을 남긴다.
+     방장만 닫을 수 있게 두면 방장이 딴 데 보고 있을 때 아무도 배당을
+     못 보는 상태로 멈춘다. 서버가 시간을 다시 확인하니 아무나 불러도 안전하다.
+     여러 명이 동시에 불러도 두 번째부터는 '이미 마감' 오류라 조용히 넘긴다 */
+  const autoLock = useCallback(
+    async (scrimId) => {
+      try {
+        await lockBetting(scrimId);
+      } catch {
+        /* 남이 먼저 닫았거나 아직 서버 시계로는 안 됐다. 폴링이 곧 따라온다 */
+      }
+      onChanged();
+      load();
+    },
+    [onChanged, load]
+  );
+
   const [winner, setWinner] = useState('');
   const [kills, setKills] = useState('');
   const [fb, setFb] = useState('');
@@ -279,8 +297,12 @@ const BetTab = ({
         <div className="bet-market">
           <h4>
             {marketLabel('first_blood')}
-            <em>고정 {fixedFb}배</em>
+            <em>기본 {fixedFb}배</em>
           </h4>
+          <p className="rooms-hint">
+            티어가 낮을수록 배당이 조금 높습니다 (한 티어당 2%). 마감 때 사람별 배당이
+            공개됩니다.
+          </p>
           <div className="bet-opts bet-opts-grid">
             {roster.map((id) => (
               <Option
@@ -295,7 +317,7 @@ const BetTab = ({
           <p className="rooms-hint">한 번에 {num(capOf('first_blood'))} 끼꼬까지.</p>
         </div>
 
-        {KILL_LINES.map((line) => {
+        {[killLineOfScrim(scrim)].map((line) => {
           const market = killMarket(line);
           return (
             <div className="bet-market" key={market}>
@@ -390,12 +412,27 @@ const BetTab = ({
             <Team ids={activeScrim.team_b || []} label="2팀" />
           </div>
 
-          <p className="rooms-hint">
-            {activeScrim.bet_count}명 참여 · 총 {num(activeScrim.bet_total)} 끼꼬
-            {activeScrim.status === 'betting'
-              ? ' · 배당은 마감 때 공개됩니다'
-              : ' · 배당이 확정됐습니다'}
-          </p>
+          {/* 방장이 '다 걸었나?'만 보고 마감할 수 있어야 한다.
+              누가 어디에 걸었는지는 마감 전까지 여전히 안 보인다 */}
+          <div className="bet-progress">
+            <span className="bet-done-count">
+              <strong>{activeScrim.bet_count}</strong>명 배팅 완료
+            </span>
+            <span className="bet-progress-total">총 {num(activeScrim.bet_total)} 끼꼬</span>
+            <span className="bet-progress-note">
+              {activeScrim.status === 'betting'
+                ? '배당은 마감 때 공개됩니다'
+                : '배당이 확정됐습니다'}
+            </span>
+          </div>
+
+          {activeScrim.status === 'betting' && activeScrim.betting_closes_at && (
+            <BetTimer
+              closesAt={activeScrim.betting_closes_at}
+              openedAt={activeScrim.played_at}
+              onExpire={() => autoLock(activeScrim.id)}
+            />
+          )}
 
           {activeScrim.status === 'betting' && !me?.agreed && (
             <div className="bet-consent">

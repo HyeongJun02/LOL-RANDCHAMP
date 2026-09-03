@@ -224,9 +224,16 @@ export const addScrimByNames = async ({ roomId, mode, teamA, teamB, winner, play
   return addScrim({ roomId, mode, teamA: a, teamB: b, winner });
 };
 
-export const openBettingByNames = async ({ roomId, mode, teamA, teamB, players }) => {
+export const openBettingByNames = async ({
+  roomId,
+  mode,
+  teamA,
+  teamB,
+  players,
+  closeSeconds = null,
+}) => {
   const [a, b] = await toIds(roomId, teamA, teamB, players);
-  return openBetting(roomId, mode, a, b);
+  return openBetting(roomId, mode, a, b, closeSeconds);
 };
 
 /* scrims는 이름 대신 room_players.id를 담는다. 이름은 여기서 붙인다.
@@ -413,10 +420,27 @@ export const canEdit = (role) => role === 'owner' || role === 'admin';
 
 /* ---------- 또또 (배팅) ---------- */
 
-/* 킬 기준선. 무승부가 없도록 .5로 끊는다.
-   기준선 하나가 곧 마켓 하나라, 셋을 다 열면 언더·오버를 세 번 걸 수 있어
-   '어디에 건 건지' 자체가 헷갈렸다. 하나만 남긴다 */
-export const KILL_LINES = [45.5];
+/* 킬 기준선.
+
+   인원에 따라 달라진다. 칼바람 6명(3대3)에서 45.5가 반반이었는데,
+   8명이면 킬도 그만큼 더 나오니 같은 45.5로 두면 오버가 거의 확정이다.
+   6명 45.5 · 8명 60.5로 잡으면 인당 7.5킬이라, 그 비율을 그대로 쓴다.
+   무승부가 없도록 .5로 끊는다.
+
+   기준선 하나가 곧 마켓 하나다. 여러 개를 열면 언더·오버를 여러 번 걸 수
+   있어서 '어디에 건 건지' 자체가 헷갈리므로 경기마다 하나만 연다. */
+export const KILLS_PER_PLAYER = 7.5;
+
+export const killLineFor = (playerCount) => {
+  const n = Number(playerCount) || 0;
+  if (n === 0) return 45.5;
+  return Math.round(KILLS_PER_PLAYER * n) + 0.5;
+};
+
+/* 이 경기의 기준선. team_a/team_b는 배팅을 열 때 박혀서 그 뒤에 명단이
+   바뀌어도 흔들리지 않는다. 그래서 언제 계산해도 같은 마켓 이름이 나온다 */
+export const killLineOfScrim = (scrim) =>
+  killLineFor((scrim?.team_a?.length || 0) + (scrim?.team_b?.length || 0));
 export const killMarket = (line) => `kills_${line}`;
 export const killLineOf = (market) => Number(market.split('_')[1]);
 
@@ -452,12 +476,13 @@ export const marketLabel = (market) => {
 
 export const agreeFairplay = () => rpc('agree_fairplay');
 
-export const openBetting = (roomId, mode, teamA, teamB) =>
+export const openBetting = (roomId, mode, teamA, teamB, closeSeconds = null) =>
   rpc('open_betting', {
     p_room: roomId,
     p_mode: mode,
     p_team_a: teamA,
     p_team_b: teamB,
+    p_close_seconds: closeSeconds,
   });
 
 export const placeBets = (scrimId, bets) =>
