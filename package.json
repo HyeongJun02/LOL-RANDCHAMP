@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@neondatabase/neon-js": "^0.7.0-beta",
     "axios": "^1.7.9",
     "cra-template": "1.2.0",
     "react": "^19.0.0",

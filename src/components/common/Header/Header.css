@@ -150,3 +150,78 @@
     padding: 0.5rem 0.55rem;
   }
 }
+
+/* ---------- 로그인 / 계정 ---------- */
+
+.header-auth {
+  flex: none;
+}
+
+.login-btn {
+  padding: 0.42rem 0.9rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
+  color: #06111f;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.login-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.4rem 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--gg-panel-border);
+}
+
+.user-icon {
+  font-size: 1.1rem;
+  color: var(--gg-gold);
+}
+
+.user-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e6ecf7;
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #7d8ba3;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.user-signout:hover {
+  color: var(--gg-red);
+  background: rgba(249, 115, 98, 0.14);
+}
+
+@media (max-width: 560px) {
+  .user-name {
+    display: none;
+  }
+}

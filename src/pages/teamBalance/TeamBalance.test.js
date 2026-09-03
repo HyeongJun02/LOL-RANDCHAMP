@@ -60,8 +60,9 @@ const setValue = (el, value) => {
   return act(() => el.dispatchEvent(new Event('change', { bubbles: true })));
 };
 
+/* 팝업은 이제 document.body로 포탈되어 el 밖에 그려지므로 document 전체에서 찾는다 */
 const byText = (el, text) =>
-  [...el.querySelectorAll('button')].find((b) => b.textContent.includes(text));
+  [...document.querySelectorAll('button')].find((b) => b.textContent.includes(text));
 
 const buildWith = (names) => {
   const el = render();
@@ -74,19 +75,19 @@ const buildWith = (names) => {
 test('후보 버튼을 누르면 모든 조합이 팝업으로 뜬다', () => {
   const el = buildWith(['가', '나', '다', '라']);
 
-  expect(el.querySelector('.modal-backdrop')).toBeNull();
+  expect(document.querySelector('.modal-backdrop')).toBeNull();
   click(el.querySelector('.result-cands'));
 
   // 서로 다른 4명을 2:2로 나누는 방법 3가지
-  expect(el.querySelectorAll('.cand-card')).toHaveLength(3);
-  expect(el.querySelectorAll('.cand-card.is-current')).toHaveLength(1);
+  expect(document.querySelectorAll('.cand-card')).toHaveLength(3);
+  expect(document.querySelectorAll('.cand-card.is-current')).toHaveLength(1);
 });
 
 test('팝업에서 다른 조합을 고르면 결과가 그 조합으로 바뀐다', () => {
   const el = buildWith(['가', '나', '다', '라']);
   click(el.querySelector('.result-cands'));
 
-  const other = [...el.querySelectorAll('.cand-card')].find(
+  const other = [...document.querySelectorAll('.cand-card')].find(
     (c) => !c.classList.contains('is-current')
   );
   const expected = [...other.querySelectorAll('.cand-team.blue li')].map((li) =>
@@ -95,7 +96,7 @@ test('팝업에서 다른 조합을 고르면 결과가 그 조합으로 바뀐�
 
   click(other);
 
-  expect(el.querySelector('.modal-backdrop')).toBeNull();
+  expect(document.querySelector('.modal-backdrop')).toBeNull();
   const team1 = [...el.querySelectorAll('.team-card:not(.team-red) .team-player')].map(
     (s) => s.textContent
   );
@@ -113,10 +114,10 @@ test('불러오기로 여러 명을 한 번에 참가자로 넣는다', () => {
   const el = render();
 
   click(byText(el, '불러오기'));
-  el.querySelectorAll('.loader-list input').forEach((box) => click(box));
+  document.querySelectorAll('.loader-list input').forEach((box) => click(box));
   click(byText(el, '완료'));
 
-  expect(el.querySelector('.modal-backdrop')).toBeNull();
+  expect(document.querySelector('.modal-backdrop')).toBeNull();
 
   const rows = [...el.querySelectorAll('.player-row')];
   expect(rows[0].querySelector('.row-name input').value).toBe('철수');
@@ -133,12 +134,12 @@ test('이미 들어간 팀원은 체크된 채로 뜨고, 풀면 참가자에서
   const el = render();
 
   click(byText(el, '불러오기'));
-  el.querySelectorAll('.loader-list input').forEach((box) => click(box));
+  document.querySelectorAll('.loader-list input').forEach((box) => click(box));
   click(byText(el, '완료'));
 
   // 다시 열면 둘 다 체크되어 있다
   click(byText(el, '불러오기'));
-  const boxes = [...el.querySelectorAll('.loader-list input')];
+  const boxes = [...document.querySelectorAll('.loader-list input')];
   expect(boxes.map((b) => b.checked)).toEqual([true, true]);
   expect(boxes.every((b) => b.disabled)).toBe(false);
 
@@ -209,7 +210,7 @@ test('직접 입력한 이름은 팝업이 건드리지 않는다', () => {
   setValue(el.querySelectorAll('.row-name input')[0], '지나가던행인');
 
   click(byText(el, '불러오기'));
-  click(el.querySelector('.loader-list input'));
+  click(document.querySelector('.loader-list input'));
   click(byText(el, '완료'));
 
   const names = [...el.querySelectorAll('.row-name input')].map((i) => i.value);

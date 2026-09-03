@@ -31,8 +31,9 @@ const setValue = (el, value) => {
   return act(() => el.dispatchEvent(new Event('change', { bubbles: true })));
 };
 
+/* 팝업은 document.body로 포탈되어 el 밖에 그려지므로 document 전체에서 찾는다 */
 const byText = (el, text) =>
-  [...el.querySelectorAll('button')].find((b) => b.textContent.includes(text));
+  [...document.querySelectorAll('button')].find((b) => b.textContent.includes(text));
 
 beforeEach(() => {
   localStorage.clear();
@@ -146,7 +147,7 @@ test('불러오기로 넣으면 이름과 못 가는 라인이 함께 들어간�
   click(byText(el, '한눈에'));
 
   click(byText(el, '불러오기'));
-  el.querySelectorAll('.loader-list input').forEach((box) => click(box));
+  document.querySelectorAll('.loader-list input').forEach((box) => click(box));
   click(byText(el, '완료'));
 
   const rows = [...el.querySelectorAll('.rowWrapper .row')];
@@ -172,7 +173,7 @@ test('자리보다 많이 고를 수 없다', () => {
   const el = render();
 
   click(byText(el, '불러오기'));
-  const boxes = [...el.querySelectorAll('.loader-list input')];
+  const boxes = [...document.querySelectorAll('.loader-list input')];
   boxes.slice(0, 5).forEach((box) => click(box));
 
   // 자리가 5개뿐이라 6번째부터는 잠긴다
@@ -206,13 +207,13 @@ test('체크를 풀면 참가자에서 빠지고 밴도 지워진다', () => {
   click(byText(el, '한눈에'));
 
   click(byText(el, '불러오기'));
-  click(el.querySelector('.loader-list input'));
+  click(document.querySelector('.loader-list input'));
   click(byText(el, '완료'));
   expect(el.querySelector('.rowWrapper .nameInput').value).toBe('철수');
   expect(el.querySelectorAll('.banned')).toHaveLength(1);
 
   click(byText(el, '불러오기'));
-  click(el.querySelector('.loader-list input'));
+  click(document.querySelector('.loader-list input'));
   click(byText(el, '완료'));
 
   expect(el.querySelector('.rowWrapper .nameInput').value).toBe('');
