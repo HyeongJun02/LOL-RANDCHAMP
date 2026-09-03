@@ -343,7 +343,8 @@
 
 .result-panel {
   position: sticky;
-  top: calc(var(--header-h, 80px) + 0.6rem);
+  /* 헤더 + sticky 필터 바 아래에 서야 안 가려진다 (둘 다 실측값) */
+  top: calc(var(--header-h, 80px) + var(--champ-filters-h, 120px) + 0.6rem);
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
@@ -573,6 +574,14 @@
 /* ---------- 반응형 ---------- */
 
 @media (max-width: 900px) {
+  /* 헤더가 두 줄인데 필터까지 붙으면 화면 절반이 고정 영역이 된다.
+     좁은 화면에선 그냥 같이 스크롤되게 둔다 */
+  .champ-filters {
+    position: static;
+    background: none;
+    backdrop-filter: none;
+  }
+
   .champ-layout {
     grid-template-columns: 1fr;
   }

@@ -52,6 +52,16 @@ export const TOOLS = [
     accent: 'teal',
   },
 
+  {
+    to: '/season',
+    category: 'record',
+    name: '시즌 정산',
+    title: '내전 시즌 정산',
+    desc: '9월, 10월처럼 달마다 끊어서 승률과 포인트 순위를 낸다. 매달 0에서 다시 시작.',
+    icon: <FaTrophy />,
+    accent: 'gold',
+  },
+
   /* ---------- 준비 중 ---------- */
   {
     name: '랜덤 밴픽',
@@ -66,13 +76,6 @@ export const TOOLS = [
     desc: '아이템 여섯 칸을 통째로 뽑는다. 이걸로 이겨보라는 벌칙용.',
     icon: <FaGem />,
     accent: 'blue',
-  },
-  {
-    name: '시즌 정산',
-    title: '내전 시즌 정산',
-    desc: '기간을 잘라 승률과 포인트 순위를 낸다. 이번 달 1등이 누구인지.',
-    icon: <FaTrophy />,
-    accent: 'gold',
   },
   {
     name: '챔피언 전적',

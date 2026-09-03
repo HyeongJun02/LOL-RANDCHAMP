@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import toast from 'react-hot-toast';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 import { fetchChampionData, championIcon } from '../../services/api';
@@ -24,7 +24,22 @@ const RandomChampion = () => {
   const [picked, setPicked] = useState(null);
   const [rolling, setRolling] = useState(null);
   const timer = useRef(null);
+  const filtersRef = useRef(null);
   usePageMeta(PAGE_META.randomChampion);
+
+  /* 필터 바도 sticky라, 결과 패널이 그 밑으로 들어가면 가려진다.
+     높이를 재서 결과 패널이 그만큼 아래에 서게 한다.
+     필터 줄이 늘어나도 알아서 따라온다 */
+  useLayoutEffect(() => {
+    const el = filtersRef.current;
+    if (!el) return undefined;
+    const apply = () =>
+      el.parentElement?.style.setProperty('--champ-filters-h', `${el.offsetHeight}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     fetchChampionData()
@@ -92,7 +107,7 @@ const RandomChampion = () => {
       />
 
       {/* 챔피언이 173명이라 그리드가 길다. 스크롤해도 필터가 따라온다 */}
-      <div className="champ-filters">
+      <div className="champ-filters" ref={filtersRef}>
         <div className="champ-toolbar">
         <div className="search-box">
           <FaSearch className="search-icon" />

@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaDice, FaRedo } from 'react-icons/fa';
 import { useRoster } from '../../roster';
 import { addItems, poolOf } from './pick';
-import { ROLL_MS, rollDelay } from '../../rollTiming';
+import Reel from './Reel';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
 import PageHeader from '../../components/common/PageHeader';
@@ -16,19 +16,37 @@ const PRESETS = [
   { label: '예 / 아니오', items: ['예', '아니오'] },
 ];
 
+const SKIP_KEY = 'lrc.pickSkipAnim';
+
+const readSkip = () => {
+  try {
+    return localStorage.getItem(SKIP_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
 const RandomPick = () => {
   const roster = useRoster();
   const [items, setItems] = useState([]);
   const [draft, setDraft] = useState('');
   const [drawn, setDrawn] = useState([]);
   const [exclude, setExclude] = useState(false);
-  const [rolling, setRolling] = useState(null);
   const [result, setResult] = useState(null);
-  const timer = useRef(null);
+  /* seq가 바뀔 때마다 릴이 한 번 돈다. spin이 있으면 도는 중 */
+  const [spin, setSpin] = useState(null);
+  const [skipAnim, setSkipAnim] = useState(readSkip);
   const [showLoader, setShowLoader] = useState(false);
   usePageMeta(PAGE_META.pick);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const toggleSkip = (on) => {
+    setSkipAnim(on);
+    try {
+      localStorage.setItem(SKIP_KEY, on ? '1' : '0');
+    } catch {
+      /* 저장 못 해도 이번 세션에선 동작한다 */
+    }
+  };
 
   const pool = poolOf(items, drawn, exclude);
 
@@ -56,36 +74,30 @@ const RandomPick = () => {
     setResult(null);
   };
 
+  const settle = (final) => {
+    setSpin(null);
+    setResult(final);
+    setDrawn((prev) => [...prev, final]);
+  };
+
   const draw = () => {
-    if (timer.current) return;
+    if (spin) return;
     if (pool.length === 0) {
       toast.error(items.length === 0 ? '항목을 먼저 넣어주세요.' : '남은 항목이 없어요.');
       return;
     }
 
+    /* 당첨은 먼저 정하고, 릴은 거기로 흘러가기만 한다 */
+    const final = pool[Math.floor(Math.random() * pool.length)];
+    if (skipAnim) {
+      setResult(final);
+      setDrawn((prev) => [...prev, final]);
+      return;
+    }
+
     setResult(null);
-    const pick = () => pool[Math.floor(Math.random() * pool.length)];
-    const startedAt = Date.now();
-
-    /* 챔피언 뽑기와 같은 연출. 끝으로 갈수록 느려져야 뽑는 맛이 난다 */
-    const step = () => {
-      const progress = (Date.now() - startedAt) / ROLL_MS;
-      if (progress >= 1) {
-        timer.current = null;
-        const final = pick();
-        setRolling(null);
-        setResult(final);
-        setDrawn((prev) => [...prev, final]);
-        return;
-      }
-      setRolling(pick());
-      timer.current = setTimeout(step, rollDelay(progress));
-    };
-
-    timer.current = setTimeout(step, 0);
+    setSpin({ winner: final, pool, seq: Date.now() });
   };
-
-  const shown = rolling || result;
 
   return (
     <div className="page pick-page">
@@ -158,13 +170,18 @@ const RandomPick = () => {
         </section>
 
         <aside className="pick-side">
-          <div className={`pick-stage ${rolling ? 'is-rolling' : ''}`}>
-            {shown ? (
+          <div className={`pick-stage ${spin ? 'is-rolling' : ''}`}>
+            {spin ? (
+              <Reel
+                pool={spin.pool}
+                winner={spin.winner}
+                seq={spin.seq}
+                onDone={() => settle(spin.winner)}
+              />
+            ) : result ? (
               <>
-                <span className="pick-result">{shown}</span>
-                {result && !rolling && (
-                  <span key={`flash-${result}`} className="result-flash" aria-hidden="true" />
-                )}
+                <span className="pick-result">{result}</span>
+                <span key={`flash-${result}`} className="result-flash" aria-hidden="true" />
               </>
             ) : (
               <span className="pick-idle">
@@ -173,9 +190,9 @@ const RandomPick = () => {
             )}
           </div>
 
-          <button className="draw-btn" onClick={draw} disabled={!!rolling}>
-            {result && !rolling ? <FaRedo /> : <FaDice className="draw-dice" />}
-            {rolling ? '뽑는 중...' : result ? '다시 뽑기' : '뽑기'}
+          <button className="draw-btn" onClick={draw} disabled={!!spin}>
+            {result && !spin ? <FaRedo /> : <FaDice className="draw-dice" />}
+            {spin ? '뽑는 중...' : result ? '다시 뽑기' : '뽑기'}
             <span className="draw-pool">{pool.length}개 중</span>
           </button>
 
@@ -187,6 +204,16 @@ const RandomPick = () => {
             />
             뽑은 항목 제외
             <span>순서 정하기나 여러 명 뽑을 때</span>
+          </label>
+
+          <label className="pick-toggle">
+            <input
+              type="checkbox"
+              checked={skipAnim}
+              onChange={(e) => toggleSkip(e.target.checked)}
+            />
+            연출 건너뛰기
+            <span>여러 번 돌릴 때 기다리지 않게</span>
           </label>
 
           {drawn.length > 0 && (

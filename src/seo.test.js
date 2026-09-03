@@ -1,4 +1,19 @@
+import fs from 'fs';
+import path from 'path';
 import { PAGE_META, SITE_URL } from './seo';
+
+const read = (rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8');
+
+/* 하드코딩하면 페이지를 추가할 때마다 이 테스트만 고치게 된다.
+   실제 파일에서 읽어 비교해야 '라우트는 늘렸는데 SEO를 빼먹은' 걸 잡는다 */
+const routePaths = () =>
+  [...read('App.js').matchAll(/<Route\s+path="([^"]+)"/g)].map((m) => m[1]).sort();
+
+const sitemapPaths = () =>
+  [...read('../public/sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((m) => new URL(m[1]).pathname)
+    .map((p) => (p === '/' ? '/' : p.replace(/\/$/, '')))
+    .sort();
 
 const pages = Object.entries(PAGE_META);
 
@@ -28,16 +43,13 @@ test('페이지마다 제목이 서로 다르다 (중복 제목은 색인에서 
   expect(new Set(descs).size).toBe(descs.length);
 });
 
-test('경로가 App.js 라우트와 일치한다', () => {
-  const paths = pages.map(([, m]) => m.path).sort();
-  expect(paths).toEqual([
-    '/',
-    '/pick',
-    '/random-champion',
-    '/random-line',
-    '/scrim-record',
-    '/team-balance',
-  ]);
+test('모든 라우트에 제목·설명이 있다', () => {
+  const metaPaths = pages.map(([, m]) => m.path).sort();
+  expect(metaPaths).toEqual(routePaths());
+});
+
+test('모든 라우트가 sitemap에 들어 있다', () => {
+  expect(sitemapPaths()).toEqual(routePaths());
 });
 
 test('노리는 검색어가 실제로 문구에 들어 있다', () => {

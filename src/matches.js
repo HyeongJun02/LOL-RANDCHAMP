@@ -121,3 +121,23 @@ export const gameCountsOf = (list) => {
   });
   return counts;
 };
+
+/* ---------- 월별 정산 ---------- */
+
+/* 'YYYY-MM'. 로컬 시각 기준 (내전은 우리 동네 밤에 한다) */
+export const monthKeyOf = (playedAt) => {
+  const d = new Date(playedAt || 0);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+/* 기록이 있는 달만, 최신 순으로 */
+export const monthsOf = (list) =>
+  [...new Set(list.map((m) => monthKeyOf(m.playedAt)))].sort().reverse();
+
+export const inMonth = (list, monthKey) =>
+  list.filter((m) => monthKeyOf(m.playedAt) === monthKey);
+
+export const monthLabel = (monthKey) => {
+  const [y, m] = String(monthKey).split('-');
+  return `${y}년 ${Number(m)}월`;
+};

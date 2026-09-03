@@ -29,8 +29,23 @@ const byText = (el, text) =>
 
 const texts = (el, sel) => [...el.querySelectorAll(sel)].map((n) => n.textContent.trim());
 
-/* 뽑기 애니메이션이 끝날 때까지 타이머를 돌린다 */
-const finishRoll = () => act(() => jest.advanceTimersByTime(2000));
+/* 릴이 다 돌 때까지 (rAF + 전환 종료 타이머) */
+const finishRoll = () => act(() => jest.advanceTimersByTime(4000));
+
+/* '연출 건너뛰기'를 켜면 릴 없이 즉시 확정된다. 뽑기 로직만 볼 때 쓴다 */
+const skipAnimation = (el) => {
+  const box = [...el.querySelectorAll('.pick-toggle')].find((l) =>
+    l.textContent.includes('연출 건너뛰기')
+  );
+  act(() => box.querySelector('input').click());
+};
+
+const toggleExclude = (el) => {
+  const box = [...el.querySelectorAll('.pick-toggle')].find((l) =>
+    l.textContent.includes('뽑은 항목 제외')
+  );
+  act(() => box.querySelector('input').click());
+};
 
 beforeEach(() => {
   localStorage.clear();
@@ -81,8 +96,8 @@ test('뽑으면 항목 중 하나가 결과로 나오고 기록에 남는다', (
   const el = render();
   addItems(el, '가, 나, 다');
 
+  skipAnimation(el);
   click(byText(el, '뽑기'));
-  finishRoll();
 
   const result = el.querySelector('.pick-result').textContent;
   expect(['가', '나', '다']).toContain(result);
@@ -92,13 +107,11 @@ test('뽑으면 항목 중 하나가 결과로 나오고 기록에 남는다', (
 test('뽑은 항목 제외를 켜면 같은 게 다시 안 나오고, 다 뽑으면 후보가 0이 된다', () => {
   const el = render();
   addItems(el, '가, 나, 다');
-  act(() => {
-    el.querySelector('.pick-toggle input').click();
-  });
+  skipAnimation(el);
+  toggleExclude(el);
 
   for (let i = 0; i < 3; i += 1) {
     click(byText(el, '뽑기'));
-    finishRoll();
   }
 
   expect(texts(el, '.pick-history li').sort()).toEqual(['가', '나', '다']);
@@ -111,4 +124,40 @@ test('항목이 없으면 뽑아도 결과가 안 나온다', () => {
   finishRoll();
 
   expect(el.querySelector('.pick-result')).toBeNull();
+});
+
+test('연출을 켜면 릴이 돌고, 다 돌아야 결과가 확정된다', () => {
+  const el = render();
+  addItems(el, '가, 나, 다');
+
+  click(byText(el, '뽑기'));
+  expect(el.querySelector('.reel')).not.toBeNull();
+  expect(el.querySelector('.pick-result')).toBeNull(); // 아직 확정 전
+
+  finishRoll();
+
+  expect(el.querySelector('.reel')).toBeNull();
+  expect(['가', '나', '다']).toContain(el.querySelector('.pick-result').textContent);
+});
+
+test('연출을 끄면 릴 없이 바로 나온다', () => {
+  const el = render();
+  addItems(el, '가, 나, 다');
+  skipAnimation(el);
+
+  click(byText(el, '뽑기'));
+  expect(el.querySelector('.reel')).toBeNull();
+  expect(el.querySelector('.pick-result')).not.toBeNull();
+});
+
+test('연출 설정은 다시 들어와도 유지된다', () => {
+  skipAnimation(render());
+  expect(localStorage.getItem('lrc.pickSkipAnim')).toBe('1');
+
+  document.body.innerHTML = '';
+  const again = render();
+  const box = [...again.querySelectorAll('.pick-toggle')].find((l) =>
+    l.textContent.includes('연출 건너뛰기')
+  );
+  expect(box.querySelector('input').checked).toBe(true);
 });

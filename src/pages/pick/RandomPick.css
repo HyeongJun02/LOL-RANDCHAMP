@@ -313,3 +313,57 @@
     animation: none;
   }
 }
+
+/* ---------- 세로 릴 ---------- */
+
+.reel {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  /* 위아래로 흐려져서 가운데 칸에 눈이 간다 */
+  mask-image: linear-gradient(180deg, transparent, #000 28%, #000 72%, transparent);
+}
+
+.reel-track {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+.reel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.25rem;
+  color: #7d8ba3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 멈춘 뒤 가운데 칸만 살아난다 */
+.reel-item.is-hit {
+  color: #fff7e0;
+  text-shadow: 0 0 18px rgba(200, 170, 110, 0.55);
+}
+
+.reel-line {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  top: 50%;
+  height: 46px;
+  transform: translateY(-50%);
+  border-top: 1px solid rgba(200, 170, 110, 0.35);
+  border-bottom: 1px solid rgba(200, 170, 110, 0.35);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reel-track {
+    transition: none !important;
+  }
+}

@@ -56,6 +56,12 @@ export const PAGE_META = {
     description:
       '이름이나 항목을 넣고 하나 뽑는 랜덤 뽑기. 두 개만 넣으면 동전 던지기, 사람 이름을 넣으면 벌칙 당첨자나 픽 순서 정하기로 쓸 수 있습니다.',
   },
+  season: {
+    path: '/season',
+    title: '내전 시즌 정산 - 월별 승률·순위 | 롤랜챔',
+    description:
+      '롤 내전 월별 정산. 9월, 10월처럼 달마다 끊어서 승패와 내전 포인트 순위를 냅니다. 매달 0에서 다시 시작합니다.',
+  },
   scrimRecord: {
     path: '/scrim-record',
     title: '내전 기록지 - 롤 내전 전적 관리 | 롤랜챔',

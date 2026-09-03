@@ -11,6 +11,7 @@ import RandomLinePage from './pages/randomLine/RandomLine';
 import TeamBalance from './pages/teamBalance/TeamBalance';
 import RandomPick from './pages/pick/RandomPick';
 import ScrimRecord from './pages/scrimRecord/ScrimRecord';
+import Season from './pages/season/Season';
 
 /* 저장소 모듈은 UI를 몰라야 해서 실패 알림만 여기서 꽂아준다 */
 setSyncErrorHandler(() =>
@@ -47,6 +48,7 @@ const App = () => {
             <Route path="/team-balance" element={<TeamBalance />} />
             <Route path="/pick" element={<RandomPick />} />
             <Route path="/scrim-record" element={<ScrimRecord />} />
+          <Route path="/season" element={<Season />} />
           </Routes>
         </Router>
       </AuthProvider>
