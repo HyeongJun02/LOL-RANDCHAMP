@@ -171,15 +171,13 @@
   gap: 0.35rem;
 }
 
-/* 순위+이름+배지를 한 줄, 전적 텍스트를 그 아래 한 줄로 고정한다.
-   전에는 grid 한 줄에 다 욱여넣어서 폭이 좁으면 점수 배지만 다음 줄로
-   떨어져 나갔다 — 배지는 flex:none이라 절대 줄바꿈되지 않고,
-   대신 이름 쪽이 말줄임표로 줄어든다 */
+/* 한 줄에 다 넣는다. 두 줄이면 사람 수만큼 세로가 길어져 훑기 힘들다.
+   flex라 티어 배지가 없는 사람(로스터 미등록)이 섞여도 안 흔들린다 */
 .board-list li {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.6rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid var(--gg-panel-border);
@@ -187,31 +185,17 @@
 
 .board-rank {
   flex: none;
-  width: 1.4rem;
-  font-size: 0.8rem;
+  width: 1.3rem;
+  font-size: 0.78rem;
   font-weight: 800;
   color: #6b7a94;
   text-align: center;
 }
 
-.board-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.board-top {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .board-name {
   flex: 1;
   min-width: 0;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 700;
   color: #e6ecf7;
   overflow: hidden;
@@ -219,12 +203,13 @@
   white-space: nowrap;
 }
 
-.board-top .scrim-badge {
-  font-size: 0.76rem;
-  padding: 0.22rem 0.6rem;
-}
-
 .board-record {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  min-width: 6.4rem;
   font-size: 0.75rem;
   color: #93a5c4;
   white-space: nowrap;
@@ -284,5 +269,26 @@
   .sr-teams,
   .win-buttons {
     grid-template-columns: 1fr;
+  }
+}
+
+.board-record em {
+  font-style: normal;
+  font-weight: 800;
+  color: #cbd5e5;
+}
+
+@media (max-width: 480px) {
+  /* 아주 좁으면 전적만 아랫줄로 */
+  .board-list li {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+
+  .board-record {
+    flex: 1 0 100%;
+    justify-content: flex-start;
+    min-width: 0;
+    padding-left: 1.8rem;
   }
 }

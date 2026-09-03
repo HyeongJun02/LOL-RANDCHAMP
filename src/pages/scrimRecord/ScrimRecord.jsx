@@ -202,23 +202,20 @@ const ScrimRecord = () => {
               return (
                 <li key={r.name}>
                   <span className="board-rank">{i + 1}</span>
-                  <div className="board-main">
-                    <div className="board-top">
-                      <span className="board-name">{r.name}</span>
-                      {member && (
-                        <span
-                          className="tier-badge"
-                          style={{ '--tier': getTier(member.tier).color }}
-                        >
-                          {tierName(member)}
-                        </span>
-                      )}
-                      <ScrimBadge points={r.points} stat={statOf(stats, r.name)} />
-                    </div>
-                    <span className="board-record">
-                      {r.wins}승 {r.losses}패 · {Math.round((r.wins / r.games) * 100)}%
+                  <span className="board-name">{r.name}</span>
+                  {member && (
+                    <span
+                      className="tier-badge"
+                      style={{ '--tier': getTier(member.tier).color }}
+                    >
+                      {tierName(member)}
                     </span>
-                  </div>
+                  )}
+                  <span className="board-record">
+                    {r.wins}승 {r.losses}패
+                    <em>{Math.round((r.wins / r.games) * 100)}%</em>
+                  </span>
+                  <ScrimBadge points={r.points} stat={statOf(stats, r.name)} />
                 </li>
               );
             })}

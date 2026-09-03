@@ -327,3 +327,29 @@ export const lastSeenOf = (list, mode) => {
     });
   return out;
 };
+
+/* 전적은 이름을 문자열로 들고 있다(로스터 id와 묶여 있지 않다).
+   그래서 명단에서 이름을 바꾸면 여기서도 같이 갈아줘야
+   같은 사람이 두 명으로 갈라지지 않는다.
+   바뀐 경기 수를 돌려준다. */
+export const renamePlayer = (before, after) => {
+  const from = String(before).trim();
+  const to = String(after).trim();
+  if (!from || !to || from === to) return 0;
+
+  let touched = 0;
+  const swap = (team) => (team || []).map((n) => (String(n).trim() === from ? to : n));
+
+  const next = store.get().map((m) => {
+    const teamA = swap(m.teamA);
+    const teamB = swap(m.teamB);
+    const changed =
+      teamA.some((n, i) => n !== m.teamA[i]) || teamB.some((n, i) => n !== m.teamB[i]);
+    if (!changed) return m;
+    touched += 1;
+    return { ...m, teamA, teamB };
+  });
+
+  if (touched > 0) store.commit(next);
+  return touched;
+};
