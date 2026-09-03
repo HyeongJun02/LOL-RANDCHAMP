@@ -1151,3 +1151,15 @@ grant execute on function
   public.unsettle_scrim(bigint),
   public.delete_scrim(bigint)
 to authenticated;
+
+
+-- ============================================================
+-- 마지막: Data API에 스키마를 다시 읽으라고 알린다
+-- ============================================================
+-- Data API(PostgREST)는 시작할 때 스키마를 한 번 읽어서 캐시해 둔다.
+-- 그래서 표를 새로 만들어도 캐시에 없으면
+--   Could not find the table 'public.rooms' in the schema cache
+-- 라고 나온다. 표는 멀쩡히 있는데 API 쪽이 아직 모르는 것이다.
+--
+-- 이 스크립트를 고쳐서 다시 돌릴 때마다 이 줄이 마지막에 있어야 한다.
+notify pgrst, 'reload schema';
