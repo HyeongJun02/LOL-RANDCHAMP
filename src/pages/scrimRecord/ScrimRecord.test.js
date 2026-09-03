@@ -31,6 +31,10 @@ const setValue = (el, value) => {
 const byText = (el, tag, text) =>
   [...el.querySelectorAll(tag)].find((b) => b.textContent.includes(text));
 
+/* 기록은 모듈 적재 때 읽으므로 render() 전에 심어야 한다 */
+const seedMatches = (list) =>
+  localStorage.setItem('lrc.matches', JSON.stringify(list));
+
 beforeEach(() => {
   localStorage.clear();
   document.body.innerHTML = '';
@@ -116,4 +120,32 @@ test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', () => {
   const bNames = [...teamBPanel.querySelectorAll('.sr-row input')].map((i) => i.value);
   expect(aNames).toEqual(expect.arrayContaining(['가', '나']));
   expect(bNames).toEqual(expect.arrayContaining(['다', '라']));
+});
+
+test('팀 패널의 이름 옆에 그 사람 승률이 뜬다', () => {
+  seedMatches([
+    { id: 'm1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
+    { id: 'm2', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 2 },
+    { id: 'm3', mode: 'normal', teamA: ['영희'], teamB: ['철수'], winner: 'A', playedAt: 3 },
+  ]);
+  const el = render();
+
+  const firstInput = el.querySelectorAll('.sr-row input')[0];
+  setValue(firstInput, '철수');
+
+  const row = firstInput.closest('.sr-row');
+  const rate = row.querySelector('.sr-winrate');
+  expect(rate.textContent).toBe('67%'); // 3판 2승
+  expect(rate.getAttribute('title')).toBe('3판 2승 1패');
+  expect(rate.classList.contains('hot')).toBe(true);
+});
+
+test('기록이 없는 이름에는 승률을 안 보여준다', () => {
+  seedMatches([]);
+  const el = render();
+
+  const firstInput = el.querySelectorAll('.sr-row input')[0];
+  setValue(firstInput, '처음온사람');
+
+  expect(firstInput.closest('.sr-row').querySelector('.sr-winrate')).toBeNull();
 });

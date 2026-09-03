@@ -1,115 +1,102 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaDice, FaArrowRight } from 'react-icons/fa';
-import { GRID_TOOLS, SPOTLIGHT_TOOL, SOON_TOOLS } from '../../tools';
+import { TOOL_SECTIONS, SOON_TOOLS } from '../../tools';
 import RosterManager from './RosterManager';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './HomePage.css';
 
-/* --i 순서대로 슉슉 올라온다. 위에서 아래로 세는 값이라 순서를 바꾸면 여기도 같이 바꿀 것 */
+/* --i 순서대로 올라온다. 섹션 개수가 바뀌어도 알아서 이어지도록 계산해서 넘긴다 */
 const step = (i) => ({ '--i': i });
-const READY_FROM = 5;
-const SPOTLIGHT_FROM = READY_FROM + GRID_TOOLS.length + 1;
-const SOON_FROM = SPOTLIGHT_FROM + (SPOTLIGHT_TOOL ? 1 : 0) + 1;
-const ROSTER_AT = SOON_FROM + SOON_TOOLS.length;
+const HERO_STEPS = 4;
+
+const ToolCard = ({ tool, delay }) => (
+  <Link
+    to={tool.to}
+    className={`feature-card rise accent-${tool.accent}`}
+    style={step(delay)}
+  >
+    <span className="feature-icon">{tool.icon}</span>
+    <h3 className="feature-title">{tool.title}</h3>
+    <p className="feature-desc">{tool.desc}</p>
+    <span className="feature-cta">
+      시작하기 <FaArrowRight />
+    </span>
+  </Link>
+);
 
 const HomePage = () => {
   usePageMeta(PAGE_META.home);
 
+  /* 섹션마다 제목 1 + 카드 n 만큼 순번을 먹는다 */
+  let cursor = HERO_STEPS;
+  const sections = TOOL_SECTIONS.map((s) => {
+    const at = { title: cursor, cards: cursor + 1 };
+    cursor += 1 + s.tools.length;
+    return { ...s, at };
+  });
+  const soonAt = { title: cursor, cards: cursor + 1 };
+  cursor += 1 + SOON_TOOLS.length;
+  const rosterAt = cursor;
+
   return (
-  <div className="home-page">
-    <section className="hero">
-      <span className="home-kicker rise" style={step(0)}>
-        롤 내전 도구 모음
-      </span>
-      <FaDice className="hero-icon rise" style={step(1)} />
-      <h1 className="hero-title rise" style={step(2)}>
-        롤랜챔
-      </h1>
-      <p className="hero-subtitle rise" style={step(3)}>
-        <strong>내전 팀 짜기</strong>, <strong>랜덤 챔피언 뽑기</strong>,{' '}
-        <strong>라인 분배</strong>까지. 정하기 귀찮은 건 전부 주사위한테 맡기세요.
-      </p>
-      <ul className="hero-badges rise" style={step(4)}>
-        <li>로그인 없음</li>
-        <li>화면 공유하고 같이 보기 좋음</li>
-        <li>모바일 지원</li>
-      </ul>
-    </section>
-
-    <section className="tool-section">
-      <h2 className="section-title rise" style={step(READY_FROM - 1)}>
-        지금 쓸 수 있는 도구
-        <span className="section-count">{GRID_TOOLS.length}</span>
-      </h2>
-      <div className="feature-grid">
-        {GRID_TOOLS.map((t, i) => (
-          <Link
-            to={t.to}
-            key={t.to}
-            className={`feature-card rise accent-${t.accent}`}
-            style={step(READY_FROM + i)}
-          >
-            <span className="feature-icon">{t.icon}</span>
-            <h3 className="feature-title">{t.title}</h3>
-            <p className="feature-desc">{t.desc}</p>
-            <span className="feature-cta">
-              시작하기 <FaArrowRight />
-            </span>
-          </Link>
-        ))}
-      </div>
-    </section>
-
-    {SPOTLIGHT_TOOL && (
-      <section className="tool-section">
-        <h2 className="section-title rise" style={step(SPOTLIGHT_FROM - 1)}>
-          내전 팀 짜고 난 다음
-        </h2>
-        <Link
-          to={SPOTLIGHT_TOOL.to}
-          className={`feature-card spotlight-card rise accent-${SPOTLIGHT_TOOL.accent}`}
-          style={step(SPOTLIGHT_FROM)}
-        >
-          <span className="feature-icon">{SPOTLIGHT_TOOL.icon}</span>
-          <span className="spotlight-text">
-            <h3 className="feature-title">{SPOTLIGHT_TOOL.title}</h3>
-            <p className="feature-desc">{SPOTLIGHT_TOOL.desc}</p>
-          </span>
-          <span className="feature-cta">
-            시작하기 <FaArrowRight />
-          </span>
-        </Link>
+    <div className="home-page">
+      <section className="hero">
+        <span className="home-kicker rise" style={step(0)}>
+          롤 내전 도구 모음
+        </span>
+        <FaDice className="hero-icon rise" style={step(1)} />
+        <h1 className="hero-title rise" style={step(2)}>
+          롤랜챔
+        </h1>
+        <p className="hero-subtitle rise" style={step(3)}>
+          친구들이랑 내전할 때 필요한 것들.
+          <br />
+          팀 짜고, 라인 정하고, 챔피언 뽑고, 전적까지 남긴다.
+        </p>
       </section>
-    )}
 
-    <section className="tool-section">
-      <h2 className="section-title rise" style={step(SOON_FROM - 1)}>
-        준비 중
-        <span className="section-count">{SOON_TOOLS.length}</span>
-      </h2>
-      <div className="feature-grid soon-grid">
-        {SOON_TOOLS.map((t, i) => (
-          <div
-            key={t.name}
-            className={`feature-card rise is-soon accent-${t.accent}`}
-            style={step(SOON_FROM + i)}
-          >
-            <span className="feature-icon">{t.icon}</span>
-            <h3 className="feature-title">{t.title}</h3>
-            <p className="feature-desc">{t.desc}</p>
-            <span className="feature-cta">준비 중</span>
+      {sections.map((s) => (
+        <section className="tool-section" key={s.key}>
+          <h2 className="section-title rise" style={step(s.at.title)}>
+            {s.label}
+            <span className="section-count">{s.tools.length}</span>
+          </h2>
+          <div className="feature-grid">
+            {s.tools.map((t, i) => (
+              <ToolCard key={t.to} tool={t} delay={s.at.cards + i} />
+            ))}
           </div>
-        ))}
-      </div>
-    </section>
+        </section>
+      ))}
 
-    <RosterManager className="rise" style={step(ROSTER_AT)} />
+      <section className="tool-section">
+        <h2 className="section-title rise" style={step(soonAt.title)}>
+          준비 중
+          <span className="section-count">{SOON_TOOLS.length}</span>
+        </h2>
+        <div className="feature-grid soon-grid">
+          {SOON_TOOLS.map((t, i) => (
+            <div
+              key={t.name}
+              className={`feature-card rise is-soon accent-${t.accent}`}
+              style={step(soonAt.cards + i)}
+            >
+              <span className="feature-icon">{t.icon}</span>
+              <h3 className="feature-title">{t.title}</h3>
+              <p className="feature-desc">{t.desc}</p>
+              <span className="feature-cta">준비 중</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
-    <footer className="footer rise" style={step(ROSTER_AT + 1)}>
-      © {new Date().getFullYear()} 롤랜챔 · Made by @HyeongJun02
-    </footer>
-  </div>
+      <RosterManager className="rise" style={step(rosterAt)} />
+
+      <footer className="footer rise" style={step(rosterAt + 1)}>
+        © {new Date().getFullYear()} 롤랜챔 · Made by @HyeongJun02
+      </footer>
+    </div>
   );
 };
 

@@ -1,11 +1,5 @@
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
-/* jsdom에는 ResizeObserver가 없다. 룰렛이 폭 측정에만 쓰므로 빈 구현으로 충분 */
-global.ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
 
 let act;
 

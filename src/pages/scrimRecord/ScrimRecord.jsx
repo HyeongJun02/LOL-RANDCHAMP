@@ -23,7 +23,21 @@ const blankTeam = () => Array.from({ length: TEAM_SIZE }, () => '');
 /* 컴포넌트 함수 안에서 매 렌더마다 새로 만들면 리액트가 다른 컴포넌트로 보고
    통째로 재마운트한다 (인풋 포커스가 키 입력마다 날아가는 버그로 이어짐).
    그래서 모듈 스코프에 한 번만 선언하고 필요한 값은 전부 props로 받는다. */
-const TeamPanel = ({ label, team, otherTeam, onChangeAt, onRemoveAt, onAdd, accent }) => (
+/* 이름 옆 승률. 이 모드에서 뛴 기록이 없으면 아무것도 안 보여준다 */
+const WinRate = ({ stat }) => {
+  if (!stat || stat.games === 0) return null;
+  const rate = Math.round((stat.wins / stat.games) * 100);
+  return (
+    <span
+      className={`sr-winrate ${rate >= 60 ? 'hot' : rate <= 40 ? 'cold' : ''}`}
+      title={`${stat.games}판 ${stat.wins}승 ${stat.losses}패`}
+    >
+      {rate}%
+    </span>
+  );
+};
+
+const TeamPanel = ({ label, team, otherTeam, stats, onChangeAt, onRemoveAt, onAdd, accent }) => (
   <div className={`sr-team ${accent}`}>
     <div className="sr-team-head">
       <h3>{label}</h3>
@@ -37,6 +51,7 @@ const TeamPanel = ({ label, team, otherTeam, onChangeAt, onRemoveAt, onAdd, acce
           placeholder="이름"
           onChange={(e) => onChangeAt(i, e.target.value)}
         />
+        <WinRate stat={statOf(stats, name)} />
         <RosterPicker
           taken={[...team.filter((_, idx) => idx !== i), ...otherTeam]}
           onPick={(m) => onChangeAt(i, m.name)}
@@ -160,6 +175,7 @@ const ScrimRecord = () => {
 
       <div className="sr-teams">
         <TeamPanel
+          stats={stats}
           label="1팀"
           team={teamA}
           otherTeam={teamB}
@@ -169,6 +185,7 @@ const ScrimRecord = () => {
           accent="team-blue"
         />
         <TeamPanel
+          stats={stats}
           label="2팀"
           team={teamB}
           otherTeam={teamA}

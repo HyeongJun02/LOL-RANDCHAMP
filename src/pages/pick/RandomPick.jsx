@@ -3,14 +3,12 @@ import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaDice, FaRedo } from 'react-icons/fa';
 import { useRoster } from '../../roster';
 import { addItems, poolOf } from './pick';
+import { ROLL_MS, rollDelay } from '../../rollTiming';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
 import PageHeader from '../../components/common/PageHeader';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './RandomPick.css';
-
-const ROLL_TICKS = 16;
-const ROLL_INTERVAL = 70;
 
 const PRESETS = [
   { label: '동전', items: ['앞', '뒤'] },
@@ -30,7 +28,7 @@ const RandomPick = () => {
   const [showLoader, setShowLoader] = useState(false);
   usePageMeta(PAGE_META.pick);
 
-  useEffect(() => () => clearInterval(timer.current), []);
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   const pool = poolOf(items, drawn, exclude);
 
@@ -66,12 +64,13 @@ const RandomPick = () => {
     }
 
     setResult(null);
-    let ticks = 0;
     const pick = () => pool[Math.floor(Math.random() * pool.length)];
+    const startedAt = Date.now();
 
-    timer.current = setInterval(() => {
-      if (++ticks >= ROLL_TICKS) {
-        clearInterval(timer.current);
+    /* 챔피언 뽑기와 같은 연출. 끝으로 갈수록 느려져야 뽑는 맛이 난다 */
+    const step = () => {
+      const progress = (Date.now() - startedAt) / ROLL_MS;
+      if (progress >= 1) {
         timer.current = null;
         const final = pick();
         setRolling(null);
@@ -80,7 +79,10 @@ const RandomPick = () => {
         return;
       }
       setRolling(pick());
-    }, ROLL_INTERVAL);
+      timer.current = setTimeout(step, rollDelay(progress));
+    };
+
+    timer.current = setTimeout(step, 0);
   };
 
   const shown = rolling || result;
@@ -158,7 +160,12 @@ const RandomPick = () => {
         <aside className="pick-side">
           <div className={`pick-stage ${rolling ? 'is-rolling' : ''}`}>
             {shown ? (
-              <span className="pick-result">{shown}</span>
+              <>
+                <span className="pick-result">{shown}</span>
+                {result && !rolling && (
+                  <span key={`flash-${result}`} className="result-flash" aria-hidden="true" />
+                )}
+              </>
             ) : (
               <span className="pick-idle">
                 <FaDice />

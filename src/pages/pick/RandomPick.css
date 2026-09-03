@@ -135,13 +135,14 @@
 
 .pick-side {
   position: sticky;
-  top: 68px;
+  top: calc(var(--header-h, 80px) + 0.6rem);
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
 }
 
 .pick-stage {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,17 +164,18 @@
   background: linear-gradient(180deg, #fff7e0, #e7c98a 60%, var(--gg-gold));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: pick-in 0.35s ease;
+  animation: pick-in 0.45s cubic-bezier(0.16, 1.2, 0.3, 1);
 }
 
 .pick-stage.is-rolling .pick-result {
-  filter: blur(1.5px);
-  opacity: 0.75;
+  filter: blur(2px);
+  opacity: 0.6;
+  transform: scale(0.94);
   animation: none;
 }
 
 @keyframes pick-in {
-  from { opacity: 0; transform: scale(0.9); }
+  from { opacity: 0; transform: scale(0.82); }
   to { opacity: 1; transform: scale(1); }
 }
 
@@ -305,6 +307,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .pick-result,
+  .result-flash,
   .draw-dice {
     animation: none;
   }

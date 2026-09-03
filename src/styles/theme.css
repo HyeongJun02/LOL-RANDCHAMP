@@ -16,6 +16,8 @@
   --gg-teal: #2dd4bf;
   --font-display: 'Black Han Sans', 'Noto Sans KR', sans-serif;
   --font-body: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  /* 헤더 실측값을 Header.jsx가 덮어쓴다. 여기 값은 첫 페인트용 근사치 */
+  --header-h: 80px;
 }
 
 /* ---------- 팝업 껍데기 ---------- */

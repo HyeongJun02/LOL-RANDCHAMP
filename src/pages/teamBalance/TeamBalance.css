@@ -22,7 +22,7 @@
   flex-direction: column;
   gap: 1rem;
   position: sticky;
-  top: 68px;
+  top: calc(var(--header-h, 80px) + 0.6rem);
 }
 
 /* ---------- 참가자 패널 ---------- */

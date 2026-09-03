@@ -50,3 +50,23 @@ test('라인 표에 없는 챔피언은 라인 필터가 걸리면 빠진다', (
   expect(ids(filterChampions(roster, [], '', []))).toEqual(['Zaahen']);
   expect(ids(filterChampions(roster, [], '', ['탑']))).toEqual([]);
 });
+
+test('픽 유형 필터는 OR로 걸리고 다른 조건과는 AND', () => {
+  const roster = [
+    { id: 'Camille', name: '카밀', tags: ['Fighter'] },   // 변칙 서폿
+    { id: 'Elise', name: '엘리스', tags: ['Mage'] },      // AP 정글
+    { id: 'Jinx', name: '징크스', tags: ['Marksman'] },   // 어디에도 없음
+  ];
+
+  expect(ids(filterChampions(roster, [], '', [], ['oddsup']))).toEqual(['Camille']);
+  expect(ids(filterChampions(roster, [], '', [], ['oddsup', 'apjungle']))).toEqual([
+    'Camille',
+    'Elise',
+  ]);
+  // 역할군과 AND
+  expect(ids(filterChampions(roster, ['Mage'], '', [], ['oddsup', 'apjungle']))).toEqual([
+    'Elise',
+  ]);
+  // 빈 배열이면 필터 안 함
+  expect(ids(filterChampions(roster, [], '', [], []))).toHaveLength(3);
+});

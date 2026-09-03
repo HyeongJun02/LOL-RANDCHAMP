@@ -1,17 +1,21 @@
 import React from 'react';
 import { FaDice, FaRedo } from 'react-icons/fa';
 import { championIcon, championPortrait } from '../../services/api';
+import { lanesOf } from '../../champLanes';
 import { findRole } from './roles';
 
 const ResultPanel = ({ champion, rolling, version, onRoll, poolSize }) => {
   const shown = rolling || champion;
+  const lanes = champion ? lanesOf(champion.id) : [];
 
   return (
     <aside className="result-panel">
       <div className={`result-stage ${rolling ? 'is-rolling' : ''}`}>
         {shown ? (
           <img
-            key={rolling ? shown.id : `pick-${shown.id}`}
+            /* key를 바꿔야 착지 애니메이션이 매번 다시 돈다.
+               도는 동안엔 캐시된 정사각 아이콘을 쓰고(요청 0), 확정되면 세로 일러스트로 */
+            key={rolling ? `roll-${shown.id}` : `pick-${shown.id}`}
             src={rolling ? championIcon(version, shown.id) : championPortrait(shown.id)}
             alt={shown.name}
             className="result-img"
@@ -23,24 +27,36 @@ const ResultPanel = ({ champion, rolling, version, onRoll, poolSize }) => {
           </div>
         )}
 
+        {/* 도는 동안 이름이 같이 넘어가야 '읽히는' 룰렛이 된다 */}
+        {rolling && <span className="rolling-name">{rolling.name}</span>}
+
         {champion && !rolling && (
-          <div className="result-caption">
-            <h2>{champion.name}</h2>
-            <p className="result-title">{champion.title}</p>
-            <div className="result-roles">
-              {champion.tags.map((tag) => {
-                const role = findRole(tag);
-                return role ? (
-                  <span key={tag} className="result-role">
-                    <img src={role.icon} alt="" />
-                    {role.label}
-                  </span>
-                ) : null;
-              })}
-            </div>
-          </div>
+          <span key={`flash-${champion.id}`} className="result-flash" aria-hidden="true" />
         )}
       </div>
+
+      {champion && !rolling && (
+        <div className="result-info">
+          <h2>{champion.name}</h2>
+          <p className="result-title">{champion.title}</p>
+          <div className="result-roles">
+            {champion.tags.map((tag) => {
+              const role = findRole(tag);
+              return role ? (
+                <span key={tag} className="result-role">
+                  <img src={role.icon} alt="" />
+                  {role.label}
+                </span>
+              ) : null;
+            })}
+            {lanes.map((lane) => (
+              <span key={lane} className="result-role is-lane">
+                {lane}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <button className="roll-btn" onClick={onRoll} disabled={!!rolling}>
         {champion && !rolling ? <FaRedo /> : <FaDice className="roll-dice" />}

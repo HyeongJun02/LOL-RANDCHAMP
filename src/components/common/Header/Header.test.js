@@ -107,7 +107,7 @@ test('로그아웃 상태면 로그인 버튼이 뜨고, 누르면 모달이 열
   expect(document.querySelector('.modal-backdrop')).not.toBeNull();
 });
 
-test('로그인 상태면 이름과 로그아웃 버튼이 뜬다', () => {
+test('로그인 상태면 아바타와 이름이 뜨고, 눌러야 로그아웃이 보인다', () => {
   const signOut = jest.fn().mockResolvedValue();
   const el = renderWithAuth({
     configured: true,
@@ -118,7 +118,31 @@ test('로그인 상태면 이름과 로그아웃 버튼이 뜬다', () => {
 
   expect(el.querySelector('.login-btn')).toBeNull();
   expect(el.querySelector('.user-name').textContent).toBe('철수');
+  // 사진이 없으면 이름 첫 글자로 떨어진다
+  expect(el.querySelector('.avatar-letter').textContent).toBe('철');
+  // 로그아웃은 메뉴를 열기 전엔 안 보인다
+  expect(el.querySelector('.user-signout')).toBeNull();
+
+  click(el.querySelector('.user-trigger'));
+  expect(el.querySelector('.user-info').textContent).toContain('chulsu@example.com');
 
   click(el.querySelector('.user-signout'));
   expect(signOut).toHaveBeenCalledTimes(1);
+  // 고르고 나면 메뉴가 닫힌다
+  expect(el.querySelector('.user-dropdown')).toBeNull();
+});
+
+test('프로필 사진이 있으면 사진을 쓴다', () => {
+  const el = renderWithAuth({
+    configured: true,
+    loading: false,
+    user: { name: '철수', email: 'c@e.com', image: 'https://example.com/me.png' },
+    signOut: jest.fn(),
+  });
+
+  const img = el.querySelector('.user-avatar img');
+  expect(img.getAttribute('src')).toBe('https://example.com/me.png');
+  /* 구글 이미지 호스트는 referrer가 붙으면 403을 주기도 한다 */
+  expect(img.getAttribute('referrerpolicy')).toBe('no-referrer');
+  expect(el.querySelector('.avatar-letter')).toBeNull();
 });
