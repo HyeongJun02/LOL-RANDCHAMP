@@ -1,23 +1,14 @@
 import React from 'react';
-import { FaPlus, FaTimes, FaUserFriends } from 'react-icons/fa';
+import { FaPlus, FaTimes } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier } from '../../tiers';
 import { useRoster, addMember, updateMember, removeMember } from '../../roster';
-import LineSelector from '../../components/common/LineSelector';
+import LineSelector from '../common/LineSelector';
 
-const RosterManager = ({ className = '', style }) => {
+const RosterEditor = () => {
   const roster = useRoster();
 
   return (
-    <section className={`tool-section ${className}`} style={style}>
-      <h2 className="section-title">
-        <FaUserFriends /> 내 팀원 명단
-        <span className="section-count">{roster.length}</span>
-      </h2>
-      <p className="roster-desc">
-        자주 같이 하는 친구들을 저장해두면, 도구마다 이름 칸 옆의 버튼으로 바로 불러올 수 있어요.
-        못 가는 라인까지 저장해두면 라인 분배에서 자동으로 밴됩니다. 이 브라우저에만 저장됩니다.
-      </p>
-
+    <>
       <div className="roster-panel">
         {roster.length === 0 && (
           <p className="roster-blank">아직 저장된 팀원이 없어요. 아래 버튼으로 추가하세요.</p>
@@ -89,8 +80,8 @@ const RosterManager = ({ className = '', style }) => {
           <FaPlus /> 팀원 추가
         </button>
       </div>
-    </section>
+    </>
   );
 };
 
-export default RosterManager;
+export default RosterEditor;

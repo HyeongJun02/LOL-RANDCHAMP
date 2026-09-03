@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaDice, FaArrowRight } from 'react-icons/fa';
+import { FaDice, FaArrowRight, FaUserFriends } from 'react-icons/fa';
 import { TOOL_SECTIONS, SOON_TOOLS } from '../../tools';
-import RosterManager from './RosterManager';
+import { openRosterModal } from '../../rosterModal';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './HomePage.css';
 
@@ -29,7 +29,7 @@ const HomePage = () => {
   usePageMeta(PAGE_META.home);
 
   /* 섹션마다 제목 1 + 카드 n 만큼 순번을 먹는다 */
-  let cursor = HERO_STEPS;
+  let cursor = HERO_STEPS + 1;
   const sections = TOOL_SECTIONS.map((s) => {
     const at = { title: cursor, cards: cursor + 1 };
     cursor += 1 + s.tools.length;
@@ -54,6 +54,13 @@ const HomePage = () => {
           <br />
           팀 짜고, 라인 정하고, 챔피언 뽑고, 전적까지 남긴다.
         </p>
+        <button
+          className="hero-roster rise"
+          style={step(4)}
+          onClick={openRosterModal}
+        >
+          <FaUserFriends /> 내 팀원 명단
+        </button>
       </section>
 
       {sections.map((s) => (
@@ -91,9 +98,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      <RosterManager className="rise" style={step(rosterAt)} />
-
-      <footer className="footer rise" style={step(rosterAt + 1)}>
+      <footer className="footer rise" style={step(rosterAt)}>
         © {new Date().getFullYear()} 롤랜챔 · Made by @HyeongJun02
       </footer>
     </div>

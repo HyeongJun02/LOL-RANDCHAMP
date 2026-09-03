@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaChevronDown, FaSignOutAlt } from 'react-icons/fa';
+import { FaChevronDown, FaSignOutAlt, FaUserFriends } from 'react-icons/fa';
+import { openRosterModal } from '../../rosterModal';
 import './UserMenu.css';
 
 const initialOf = (user) =>
@@ -58,6 +59,16 @@ const UserMenu = ({ user, onSignOut }) => {
               <em>{user.email}</em>
             </span>
           </div>
+          <button
+            className="user-menu-item"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              openRosterModal();
+            }}
+          >
+            <FaUserFriends /> 내 팀원 명단
+          </button>
           <button
             className="user-signout"
             role="menuitem"

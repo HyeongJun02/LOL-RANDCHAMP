@@ -6,12 +6,12 @@ const render = () => {
   jest.resetModules();
   const React = require('react');
   const { createRoot } = require('react-dom/client');
-  const RosterManager = require('./RosterManager').default;
+  const RosterEditor = require('./RosterEditor').default;
   ({ act } = React);
 
   const container = document.createElement('div');
   document.body.appendChild(container);
-  act(() => createRoot(container).render(React.createElement(RosterManager)));
+  act(() => createRoot(container).render(React.createElement(RosterEditor)));
   return container;
 };
 

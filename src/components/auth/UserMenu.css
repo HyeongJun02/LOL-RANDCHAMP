@@ -132,6 +132,7 @@
   white-space: nowrap;
 }
 
+.user-menu-item,
 .user-signout {
   display: flex;
   align-items: center;
@@ -147,6 +148,11 @@
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
+}
+
+.user-menu-item:hover {
+  background: rgba(200, 170, 110, 0.14);
+  color: var(--gg-gold-light);
 }
 
 .user-signout:hover {

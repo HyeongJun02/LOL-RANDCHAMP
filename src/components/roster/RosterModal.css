@@ -1,0 +1,7 @@
+/* 팝업 안에서는 패널 테두리가 이중으로 보여서 벗긴다 */
+.modal .roster-panel {
+  padding: 0;
+  background: none;
+  border: none;
+  backdrop-filter: none;
+}

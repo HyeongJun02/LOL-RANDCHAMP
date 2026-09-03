@@ -3,6 +3,7 @@ import { Toaster, useToasterStore, toast } from 'react-hot-toast';
 import { setSyncErrorHandler } from './store';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Backdrop from './components/common/Backdrop';
+import RosterModal from './components/roster/RosterModal';
 import Header from './components/common/Header/Header';
 import { AuthProvider } from './auth/AuthContext';
 import HomePage from './pages/home/HomePage';
@@ -52,6 +53,7 @@ const App = () => {
           </Routes>
         </Router>
       </AuthProvider>
+      <RosterModal />
       <ToastLimiter />
       <Toaster
         position="top-center"

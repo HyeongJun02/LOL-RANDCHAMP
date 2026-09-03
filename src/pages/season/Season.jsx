@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaTrophy, FaCopy } from 'react-icons/fa';
+import { FaTrophy, FaCopy, FaImage } from 'react-icons/fa';
 import {
   useMatches,
   statsFor,
@@ -16,6 +16,7 @@ import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import Insights from './Insights';
 import { buildInsights } from './insightData';
 import { formatReport, copyText } from './report';
+import { downloadReport } from './reportImage';
 import PageHeader from '../../components/common/PageHeader';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './Season.css';
@@ -74,12 +75,22 @@ const Season = () => {
   const periodLabel = isAll ? '전체 기간' : monthLabel(active);
   const modeLabel = mode === 'aram' ? '칼바람' : '일반';
 
+  const reportData = { periodLabel, modeLabel, played, ranking, insights };
+
   const share = async () => {
-    const text = formatReport({ periodLabel, modeLabel, played, ranking, insights });
-    if (await copyText(text)) {
+    if (await copyText(formatReport(reportData))) {
       toast.success('정산 결과를 복사했어요. 붙여넣기 하세요.');
     } else {
       toast.error('복사에 실패했어요. 주소가 https인지 확인해 주세요.');
+    }
+  };
+
+  const saveImage = async () => {
+    const name = `롤랜챔_${periodLabel}_${modeLabel}.png`.replace(/\s+/g, '');
+    if (await downloadReport(reportData, name)) {
+      toast.success('이미지로 저장했어요.');
+    } else {
+      toast.error('이미지를 만들지 못했어요.');
     }
   };
 
@@ -132,9 +143,14 @@ const Season = () => {
             <span>
               {periodLabel} · <strong>{played}</strong>경기 · {ranking.length}명 참여
             </span>
-            <button className="ghost-btn" onClick={share} disabled={played === 0}>
-              <FaCopy /> 결과 복사
-            </button>
+            <span className="season-actions">
+              <button className="ghost-btn" onClick={share} disabled={played === 0}>
+                <FaCopy /> 결과 복사
+              </button>
+              <button className="ghost-btn" onClick={saveImage} disabled={played === 0}>
+                <FaImage /> 이미지 저장
+              </button>
+            </span>
           </div>
 
           {ranking.length === 0 ? (

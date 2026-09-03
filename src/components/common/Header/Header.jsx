@@ -2,7 +2,7 @@ import React, { useState, useLayoutEffect, useRef } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FaDice } from 'react-icons/fa';
-import { READY_TOOLS } from '../../../tools';
+import { TOOL_SECTIONS } from '../../../tools';
 import { useAuth } from '../../../auth/AuthContext';
 import AuthModal from '../../auth/AuthModal';
 import UserMenu from '../../auth/UserMenu';
@@ -61,18 +61,25 @@ const Header = () => {
 
       {/* 도구가 늘어나면 이 줄만 길어진다. 넘치면 가로로 스크롤된다 */}
       <nav className="header-nav">
+        {/* 홈과 같은 분류·같은 순서로 묶는다. 섞여 있으면 어디가 어딘지 모른다 */}
         <div className="nav-menu">
-          {READY_TOOLS.map((t) => (
-            <NavLink
-              key={t.to}
-              to={t.to}
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-              title={t.name}
-              aria-label={t.name}
-            >
-              <span className="nav-icon">{t.icon}</span>
-              <span className="nav-label">{t.name}</span>
-            </NavLink>
+          {TOOL_SECTIONS.map((section, i) => (
+            <React.Fragment key={section.key}>
+              {i > 0 && <span className="nav-divider" aria-hidden="true" />}
+              <span className="nav-group-label">{section.label}</span>
+              {section.tools.map((t) => (
+                <NavLink
+                  key={t.to}
+                  to={t.to}
+                  className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                  title={t.name}
+                  aria-label={t.name}
+                >
+                  <span className="nav-icon">{t.icon}</span>
+                  <span className="nav-label">{t.name}</span>
+                </NavLink>
+              ))}
+            </React.Fragment>
           ))}
         </div>
       </nav>

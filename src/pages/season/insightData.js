@@ -48,27 +48,32 @@ export const buildInsights = (matches, mode, now = Date.now()) => {
   return [
     {
       key: 'hot',
+      group: 'streak',
       label: '지금 연승 중',
       value: hot && hot.current > 1 ? `${hot.name} ${hot.current}연승` : null,
     },
     {
       key: 'cold',
+      group: 'streak',
       label: '지금 연패 중',
       value: cold && cold.current < -1 ? `${cold.name} ${-cold.current}연패` : null,
     },
     {
       key: 'best',
+      group: 'streak',
       label: '역대 최고 연승',
       value: best && best.bestWin > 1 ? `${best.name} ${best.bestWin}연승` : null,
     },
     {
       key: 'duo',
+      group: 'pair',
       label: '찰떡 궁합',
       value: duos[0] ? `${duos[0].a} · ${duos[0].b} ${pct(duos[0].rate)}` : null,
       hint: duos[0] && `같은 팀 ${duos[0].games}판`,
     },
     {
       key: 'worstDuo',
+      group: 'pair',
       label: '같이 가면 지는 조합',
       value:
         worstDuo && worstDuo.rate < 0.5
@@ -78,50 +83,59 @@ export const buildInsights = (matches, mode, now = Date.now()) => {
     },
     {
       key: 'mostDuo',
+      group: 'pair',
       label: '가장 많이 같은 팀',
       value: mostPlayedDuo ? `${mostPlayedDuo.a} · ${mostPlayedDuo.b} ${mostPlayedDuo.games}판` : null,
     },
     {
       key: 'rival',
+      group: 'versus',
       label: '천적',
       value: rivals[0] ? `${rivals[0].winner} → ${rivals[0].loser} ${pct(rivals[0].rate)}` : null,
       hint: rivals[0] && `맞붙은 ${rivals[0].games}판`,
     },
     {
       key: 'even',
+      group: 'versus',
       label: '팽팽한 맞수',
       value: evenRival ? `${evenRival.winner} · ${evenRival.loser} ${pct(evenRival.rate)}` : null,
       hint: evenRival && `맞붙은 ${evenRival.games}판`,
     },
     {
       key: 'mostMet',
+      group: 'versus',
       label: '최다 맞대결',
       value: mostMet ? `${mostMet.winner} · ${mostMet.loser} ${mostMet.games}판` : null,
     },
     {
       key: 'underdog',
+      group: 'streak',
       label: '언더독',
       value: underdog ? `${underdog[0]} ${underdog[1]}번` : null,
       hint: '열세로 봤는데 이긴 판',
     },
     {
       key: 'breaker',
+      group: 'streak',
       label: '연승 저격수',
       value: breaker ? `${breaker[0]} ${breaker[1]}번` : null,
       hint: `${BREAK_MIN}연승 이상을 끊은 횟수`,
     },
     {
       key: 'iron',
+      group: 'attend',
       label: '개근왕',
       value: iron ? `${iron[0]} ${iron[1]}판` : null,
     },
     {
       key: 'busiest',
+      group: 'attend',
       label: '가장 뜨거웠던 날',
       value: busiest ? `${busiest.day} ${busiest.games}판` : null,
     },
     {
       key: 'ghost',
+      group: 'attend',
       label: '가장 오래 안 온 사람',
       value: ghost && ghostDays >= 1 ? `${ghost[0]} ${ghostDays}일째` : null,
     },
@@ -129,3 +143,11 @@ export const buildInsights = (matches, mode, now = Date.now()) => {
 };
 
 export const PAIR_MIN = MIN_PAIR_GAMES;
+
+/* 14개를 한 덩어리로 쏟으면 뭐가 뭔지 안 보인다. 성격별로 나눈다 */
+export const INSIGHT_GROUPS = [
+  { key: 'streak', label: '기세' },
+  { key: 'pair', label: '궁합' },
+  { key: 'versus', label: '맞대결' },
+  { key: 'attend', label: '출석' },
+];
