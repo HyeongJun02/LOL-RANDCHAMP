@@ -1,4 +1,12 @@
-import { streaksOf, duosOf, rivalsOf } from './matches';
+import {
+  streaksOf,
+  duosOf,
+  rivalsOf,
+  underdogsOf,
+  streakBreakersOf,
+  busiestDayOf,
+  lastSeenOf,
+} from './matches';
 
 let clock = 0;
 const g = (teamA, teamB, winner, mode = 'normal') => ({
@@ -102,4 +110,60 @@ test('모드가 다르면 섞이지 않는다', () => {
   const list = [g(['철수'], ['영희'], 'A', 'aram')];
   expect(streaksOf(list, 'normal').size).toBe(0);
   expect(streaksOf(list, 'aram').get('철수').current).toBe(1);
+});
+
+describe('언더독 / 연승 저격', () => {
+  test('약팀이 강팀을 이기면 언더독으로 잡힌다', () => {
+    /* 고수가 먼저 평점을 쌓아두고, 그 뒤 호구가 한 번 이긴다 */
+    const seed = Array.from({ length: 10 }, () => g(['고수'], ['호구'], 'A'));
+    const list = [...seed, g(['호구'], ['고수'], 'A')];
+
+    expect(underdogsOf(list, 'normal').get('호구')).toBe(1);
+    expect(underdogsOf(list, 'normal').get('고수')).toBeUndefined();
+  });
+
+  test('예상대로 이긴 판은 언더독이 아니다', () => {
+    expect(underdogsOf([g(['철수'], ['영희'], 'A')], 'normal').size).toBe(0);
+  });
+
+  test('3연승 이상을 끊어야 저격으로 센다', () => {
+    const two = [g(['철수'], ['영희'], 'A'), g(['철수'], ['영희'], 'A'), g(['철수'], ['영희'], 'B')];
+    expect(streakBreakersOf(two, 'normal').size).toBe(0);
+
+    clock = 0;
+    const three = [
+      g(['철수'], ['영희'], 'A'),
+      g(['철수'], ['영희'], 'A'),
+      g(['철수'], ['영희'], 'A'),
+      g(['철수'], ['영희'], 'B'),
+    ];
+    expect(streakBreakersOf(three, 'normal').get('영희')).toBe(1);
+  });
+});
+
+describe('날짜 통계', () => {
+  const onDay = (y, m, d) => ({
+    id: `d${++clock}`,
+    mode: 'normal',
+    teamA: ['철수'],
+    teamB: ['영희'],
+    winner: 'A',
+    playedAt: new Date(y, m - 1, d, 21).getTime(),
+  });
+
+  test('가장 많이 한 날을 찾는다', () => {
+    const list = [onDay(2026, 9, 1), onDay(2026, 9, 3), onDay(2026, 9, 3), onDay(2026, 9, 3)];
+    expect(busiestDayOf(list, 'normal')).toEqual({ day: '2026-09-03', games: 3 });
+  });
+
+  test('기록이 없으면 null', () => {
+    expect(busiestDayOf([], 'normal')).toBeNull();
+  });
+
+  test('마지막 출전 시각을 이름별로 준다', () => {
+    const a = onDay(2026, 9, 1);
+    const b = onDay(2026, 9, 5);
+    const seen = lastSeenOf([a, b], 'normal');
+    expect(seen.get('철수')).toBe(b.playedAt);
+  });
 });

@@ -19,7 +19,7 @@ test('경로와 이름이 겹치지 않는다', () => {
 
 test('완성된 도구는 반드시 분류가 있다 (홈에서 안 사라지게)', () => {
   READY_TOOLS.forEach((t) => {
-    expect(['game', 'record']).toContain(t.category);
+    expect(['game', 'scrim']).toContain(t.category);
   });
 });
 

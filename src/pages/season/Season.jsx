@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { FaTrophy } from 'react-icons/fa';
+import toast from 'react-hot-toast';
+import { FaTrophy, FaCopy } from 'react-icons/fa';
 import {
   useMatches,
   statsFor,
@@ -13,6 +14,8 @@ import { getTier, tierName } from '../../tiers';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import Insights from './Insights';
+import { buildInsights } from './insightData';
+import { formatReport, copyText } from './report';
 import PageHeader from '../../components/common/PageHeader';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './Season.css';
@@ -63,6 +66,23 @@ const Season = () => {
 
   const played = monthMatches.filter((m) => m.mode === mode).length;
 
+  const insights = useMemo(
+    () => buildInsights(monthMatches, mode),
+    [monthMatches, mode]
+  );
+
+  const periodLabel = isAll ? '전체 기간' : monthLabel(active);
+  const modeLabel = mode === 'aram' ? '칼바람' : '일반';
+
+  const share = async () => {
+    const text = formatReport({ periodLabel, modeLabel, played, ranking, insights });
+    if (await copyText(text)) {
+      toast.success('정산 결과를 복사했어요. 붙여넣기 하세요.');
+    } else {
+      toast.error('복사에 실패했어요. 주소가 https인지 확인해 주세요.');
+    }
+  };
+
   return (
     <div className="page season-page">
       <PageHeader
@@ -108,10 +128,14 @@ const Season = () => {
             </div>
           </div>
 
-          <p className="season-summary">
-            {isAll ? '전체 기간' : monthLabel(active)} · <strong>{played}</strong>경기 ·{' '}
-            {ranking.length}명 참여
-          </p>
+          <div className="season-summary">
+            <span>
+              {periodLabel} · <strong>{played}</strong>경기 · {ranking.length}명 참여
+            </span>
+            <button className="ghost-btn" onClick={share} disabled={played === 0}>
+              <FaCopy /> 결과 복사
+            </button>
+          </div>
 
           {ranking.length === 0 ? (
             <p className="season-blank">
@@ -149,7 +173,7 @@ const Season = () => {
 
           <section className="season-insights">
             <h2>숨은 기록</h2>
-            <Insights matches={monthMatches} mode={mode} />
+            <Insights items={insights} />
           </section>
         </>
       )}

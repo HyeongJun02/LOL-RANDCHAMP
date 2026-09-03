@@ -3,7 +3,7 @@ import { FaRandom, FaUsers, FaBan, FaClipboardList, FaGem, FaTrophy, FaChartBar 
 import { GiPathDistance, GiCardRandom } from 'react-icons/gi';
 
 /* 도구 추가 = 여기 한 항목. 헤더 nav와 홈 카드가 같이 따라온다.
-   category: 'game' 게임 도구 / 'record' 기록
+   category: 'game' 게임 도구 / 'scrim' 내전
    `to`가 없으면 아직 준비 중인 도구다 (category는 무시된다). */
 export const TOOLS = [
   {
@@ -26,7 +26,7 @@ export const TOOLS = [
   },
   {
     to: '/team-balance',
-    category: 'game',
+    category: 'scrim',
     name: '내전 팀 짜기',
     title: '내전 팀 짜기',
     desc: '티어로 평점을 매겨 양 팀을 비슷하게 가른다. 10명 안 채워도 된다.',
@@ -44,7 +44,7 @@ export const TOOLS = [
   },
   {
     to: '/scrim-record',
-    category: 'record',
+    category: 'scrim',
     name: '내전 기록지',
     title: '내전 기록지',
     desc: '이긴 팀만 고르면 승패와 내전 포인트가 쌓인다. 팀 짜기 결과도 그대로 가져온다.',
@@ -54,7 +54,7 @@ export const TOOLS = [
 
   {
     to: '/season',
-    category: 'record',
+    category: 'scrim',
     name: '시즌 정산',
     title: '내전 시즌 정산',
     desc: '9월, 10월처럼 달마다 끊어서 승률과 포인트 순위를 낸다. 매달 0에서 다시 시작.',
@@ -92,5 +92,5 @@ export const SOON_TOOLS = TOOLS.filter((t) => !t.to);
 /* 홈 화면 분류. 헤더 nav는 READY_TOOLS를 그대로 쓴다 */
 export const TOOL_SECTIONS = [
   { key: 'game', label: '게임 도구', tools: READY_TOOLS.filter((t) => t.category === 'game') },
-  { key: 'record', label: '기록', tools: READY_TOOLS.filter((t) => t.category === 'record') },
+  { key: 'scrim', label: '내전', tools: READY_TOOLS.filter((t) => t.category === 'scrim') },
 ];
