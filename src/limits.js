@@ -11,7 +11,7 @@ export const ADMIN_USER_ID = '56a0f45a-26de-46f6-8edf-38b592a6caf7';
 export const MAX_ROSTER = 60;
 
 /* 방 (명세서 F) */
-export const MAX_ROOMS = 5;
+export const MAX_ROOMS = 3;
 export const MAX_MEMBERS = 50;
 export const MAX_ROOM_PLAYERS = 50;
 export const MAX_SCRIMS = 1000;

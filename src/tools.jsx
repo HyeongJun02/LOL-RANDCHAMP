@@ -45,9 +45,10 @@ export const TOOLS = [
   {
     to: '/rooms',
     category: 'scrim',
+    primary: true,
     name: '내전 방',
     title: '내전 방',
-    desc: '같이 하는 사람들끼리 방을 만든다. 입장 코드만 알면 기록과 정산을 같이 본다.',
+    desc: '같이 하는 사람들끼리 방을 만든다. 팀 짜기·기록·또또·정산이 전부 방 안에 있다.',
     icon: <FaClipboardList />,
     accent: 'teal',
   },
@@ -79,8 +80,23 @@ export const TOOLS = [
 export const READY_TOOLS = TOOLS.filter((t) => t.to);
 export const SOON_TOOLS = TOOLS.filter((t) => !t.to);
 
-/* 홈 화면 분류. 헤더 nav는 READY_TOOLS를 그대로 쓴다 */
+/* 홈 화면 분류. 헤더 nav도 이 순서를 그대로 따른다.
+   내전이 먼저다 - 이 사이트에 오는 이유는 내전이고, 게임 도구는
+   내전하다가 곁들이는 것들이다 */
 export const TOOL_SECTIONS = [
-  { key: 'game', label: '게임 도구', tools: READY_TOOLS.filter((t) => t.category === 'game') },
-  { key: 'scrim', label: '내전', tools: READY_TOOLS.filter((t) => t.category === 'scrim') },
+  {
+    key: 'scrim',
+    label: '내전',
+    hint: '방을 만들면 팀 짜기부터 기록·정산까지 한곳에서 됩니다',
+    /* 대표 도구(내전 방)가 맨 앞. 팀 짜기는 그 방 안에서도 쓸 수 있는 곁길이다 */
+    tools: READY_TOOLS.filter((t) => t.category === 'scrim').sort(
+      (a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0)
+    ),
+  },
+  {
+    key: 'game',
+    label: '게임 도구',
+    hint: '정하기 귀찮은 것들을 주사위한테 맡깁니다',
+    tools: READY_TOOLS.filter((t) => t.category === 'game'),
+  },
 ];

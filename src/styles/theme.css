@@ -384,48 +384,50 @@
 /* ---------- 내전 포인트 배지 (팀 분배 / 내전 기록지 공용) ---------- */
 
 /* +12 / -3 처럼 자릿수가 달라도 칸 폭이 같고, 안에서는 가운데 정렬 */
+/* 내전 포인트 배지.
+   ▲▼ 화살표를 쓰면 '승률이 몇 % 올랐다'처럼 읽힌다. 이건 증감율이 아니라
+   쌓여 있는 점수(가산점)라, 화살표를 빼고 점수판처럼 보이게 한다 */
 .scrim-badge {
   flex: none;
-  min-width: 2.7rem;
+  min-width: 3.1rem;
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: center;
-  gap: 0.22rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
+  gap: 0.12rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--gg-panel-border);
+  font-size: 0.74rem;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
   white-space: nowrap;
-  border: 1px solid transparent;
 }
 
-/* tier-badge 옆에 나란히 놓이면 테두리가 없어서 유독 밋밋해 보였다.
-   테두리 + 방향 삼각형(가상요소라 textContent엔 안 잡힘)으로 존재감을 맞춘다 */
+/* 단위를 붙여야 '점수'로 읽힌다. 가상요소라 textContent에는 안 잡힌다 */
+.scrim-badge::after {
+  content: 'pt';
+  font-size: 0.62em;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
 .scrim-badge.pos {
-  color: var(--gg-green);
-  background: color-mix(in srgb, var(--gg-green) 18%, transparent);
-  border-color: color-mix(in srgb, var(--gg-green) 45%, transparent);
-}
-
-.scrim-badge.pos::before {
-  content: '▲';
-  font-size: 0.6em;
+  color: var(--gg-gold-light);
+  border-color: rgba(200, 170, 110, 0.45);
+  background: rgba(200, 170, 110, 0.14);
 }
 
 .scrim-badge.neg {
-  color: var(--gg-red);
-  background: color-mix(in srgb, var(--gg-red) 18%, transparent);
-  border-color: color-mix(in srgb, var(--gg-red) 45%, transparent);
-}
-
-.scrim-badge.neg::before {
-  content: '▼';
-  font-size: 0.6em;
+  color: #9aa8bd;
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.1);
 }
 
 .scrim-badge.zero {
   color: #6b7a94;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   border-color: var(--gg-panel-border);
 }
 
@@ -452,4 +454,164 @@
 
 .row-del:hover {
   color: var(--gg-red);
+}
+
+/* ---------- 등장 애니메이션 (전 페이지 공용) ---------- */
+/* 홈에서만 쓰던 걸 올렸다. --i 순서대로 위에서부터 올라온다.
+   간격(60ms)보다 길이(0.6s)를 길게 둬서 여러 개가 겹쳐 흐르게 한다 */
+
+.rise {
+  animation: rise 0.6s cubic-bezier(0.25, 0.8, 0.28, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 탭 전환처럼 자리는 그대로고 내용만 바뀔 때. 위로 밀지 않고 살짝 스며든다 */
+.fade-in {
+  animation: fade-in 0.28s ease backwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- 스켈레톤 ---------- */
+/* 로딩 중에 빈 화면을 두면 '멈췄나?' 싶다. 올 내용의 모양만 미리 깔아둔다 */
+
+.skel {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.11) 37%,
+    rgba(255, 255, 255, 0.05) 63%
+  );
+  background-size: 400% 100%;
+  animation: skel-slide 1.4s ease infinite;
+}
+
+@keyframes skel-slide {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+.skel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ---------- 체크 토글 (명단 스타일, 전 페이지 공용) ---------- */
+/* 기본 체크박스가 화면마다 튀어나오던 걸 하나로 모았다 */
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.check-row:hover {
+  border-color: rgba(200, 170, 110, 0.4);
+  background: rgba(200, 170, 110, 0.06);
+}
+
+.check-row.is-on {
+  border-color: rgba(200, 170, 110, 0.6);
+  background: rgba(200, 170, 110, 0.12);
+}
+
+.check-row.is-off {
+  opacity: 0.55;
+}
+
+.check-row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.check-box {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+  color: #06111f;
+  font-size: 0.62rem;
+  transition: all 0.18s ease;
+}
+
+.check-row.is-on .check-box {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
+}
+
+.check-row input:focus-visible + .check-box {
+  outline: 2px solid var(--gg-gold);
+  outline-offset: 2px;
+}
+
+.check-row input:disabled ~ * {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .fade-in,
+  .skel {
+    animation: none;
+  }
+}
+
+/* ---------- 페이지 진입 연출 (전 페이지 자동) ---------- */
+/* 페이지마다 클래스를 달지 않아도, .page 바로 아래 블록들이 위에서부터
+   차례로 올라온다. 없으면 화면이 통째로 '툭' 나타나서 버벅이는 느낌이 든다.
+   순서를 직접 지정하고 싶으면 .rise에 --i를 주면 된다.
+   sticky처럼 transform이 방해되는 요소는 .no-rise로 뺀다 */
+
+.page > *:not(.no-rise) {
+  animation: rise 0.5s cubic-bezier(0.25, 0.8, 0.28, 1) backwards;
+}
+
+.page > *:nth-child(1) { animation-delay: 0ms; }
+.page > *:nth-child(2) { animation-delay: 55ms; }
+.page > *:nth-child(3) { animation-delay: 110ms; }
+.page > *:nth-child(4) { animation-delay: 165ms; }
+.page > *:nth-child(5) { animation-delay: 220ms; }
+.page > *:nth-child(n + 6) { animation-delay: 275ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page > * {
+    animation: none;
+  }
 }

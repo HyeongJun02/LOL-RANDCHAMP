@@ -1,7 +1,20 @@
 import React, { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FaArrowLeft, FaKey, FaPlus, FaSync, FaTimes } from 'react-icons/fa';
+import {
+  FaArrowLeft,
+  FaKey,
+  FaPlus,
+  FaSync,
+  FaTimes,
+  FaHome,
+  FaPlay,
+  FaDice,
+  FaChartBar,
+  FaCoins,
+  FaListUl,
+  FaCog,
+} from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import {
   useRoom,
@@ -29,17 +42,23 @@ import Season from '../season/Season';
 import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
 import FeedTab from './FeedTab';
-import PageHeader from '../../components/common/PageHeader';
+import { useDialog } from '../../components/common/Dialog';
+import RosterLoader from '../../components/common/RosterLoader';
+import RosterLoadButton from '../../components/common/RosterLoadButton';
+import { SkelLine, SkelRows } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './Rooms.css';
 
+/* 탭 순서 = 실제로 쓰는 순서. 방에 들어와서 게임을 시작하고, 또또를 열고,
+   끝나면 기록을 본다. 홈은 이 전부로 가는 갈림길이라 맨 앞이다 */
 const TABS = [
-  { key: 'record', label: '기록' },
-  { key: 'season', label: '정산' },
-  { key: 'bet', label: '또또' },
-  { key: 'kkiko', label: '끼꼬' },
-  { key: 'feed', label: '피드' },
-  { key: 'settings', label: '설정' },
+  { key: 'home', label: '홈', icon: <FaHome />, desc: '이 방에서 할 수 있는 것들' },
+  { key: 'record', label: '게임 시작', icon: <FaPlay />, desc: '팀을 넣고 승패를 기록합니다' },
+  { key: 'bet', label: '또또', icon: <FaDice />, desc: '끼꼬를 걸고 결과를 맞힙니다' },
+  { key: 'season', label: '기록', icon: <FaChartBar />, desc: '전적·순위·시즌 정산' },
+  { key: 'kkiko', label: '포인트', icon: <FaCoins />, desc: '끼꼬 잔액과 주고받기' },
+  { key: 'feed', label: '로그', icon: <FaListUl />, desc: '방에서 일어난 일들' },
+  { key: 'settings', label: '설정', icon: <FaCog />, desc: '참가자·멤버·입장 코드' },
 ];
 
 /* 이름은 타이핑마다 저장하면 안 된다. 키 하나마다 UPDATE 한 번에
@@ -108,7 +127,9 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
   const [name, setName] = useState(room.name);
   const [code, setCode] = useState(null);
   const [newName, setNewName] = useState('');
+  const [showLoader, setShowLoader] = useState(false);
   const busy = useRef(false);
+  const { confirm } = useDialog();
 
   const guard = (fn) => async (...args) => {
     if (busy.current) return;
@@ -124,8 +145,13 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
 
   const showCode = guard(async () => setCode(await getJoinCode(room.id)));
   const rerollCode = guard(async () => {
-    if (!window.confirm('코드를 새로 뽑으면 예전 코드는 못 씁니다. 이미 들어온 사람은 그대로예요.'))
-      return;
+    const ok = await confirm({
+      title: '입장 코드 새로 뽑기',
+      message: '코드를 새로 뽑을까요?',
+      detail: '예전 코드는 더 이상 못 씁니다. 이미 들어온 사람은 그대로 남아요.',
+      confirmText: '새로 뽑기',
+    });
+    if (!ok) return;
     setCode(await resetJoinCode(room.id));
     toast.success('새 코드를 뽑았어요.');
   });
@@ -143,13 +169,39 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
     reload();
   });
 
+  /* 내 팀원 명단에서 한 번에 데려온다. 방 참가자는 지난 경기가 물려 있어
+     빼면 안 되므로, 이미 있는 사람은 잠그고 새로 고른 사람만 넣는다 */
+  const addFromRoster = guard(async (members_) => {
+    const have = new Set(players.map((p) => p.name.trim()));
+    const fresh = members_.filter((m) => m.name.trim() && !have.has(m.name.trim()));
+    if (fresh.length === 0) return;
+    const room_ = MAX_ROOM_PLAYERS - players.length;
+    const take = fresh.slice(0, Math.max(0, room_));
+    for (const m of take) {
+      await addRoomPlayer(room.id, { name: m.name.trim(), tier: m.tier, division: m.division });
+    }
+    if (take.length < fresh.length) {
+      toast.error(`자리가 모자라 ${fresh.length - take.length}명은 못 넣었어요.`);
+    } else {
+      toast.success(`${take.length}명을 명단에 넣었어요.`);
+    }
+    reload();
+  });
+
   const patchPlayer = guard(async (id, patch) => {
     await updateRoomPlayer(id, patch);
     reload();
   });
 
   const dropPlayer = guard(async (p) => {
-    if (!window.confirm(`'${p.name}' 님을 명단에서 지울까요? 지난 경기 기록은 남습니다.`)) return;
+    const ok = await confirm({
+      title: '참가자 삭제',
+      message: `'${p.name}' 님을 명단에서 지울까요?`,
+      detail: '지난 경기 기록은 그대로 남습니다.',
+      confirmText: '삭제',
+      danger: true,
+    });
+    if (!ok) return;
     await removeRoomPlayer(p.id);
     reload();
   });
@@ -160,28 +212,54 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
   });
 
   const handOver = guard(async (m) => {
-    if (!window.confirm(`'${m.nickname}' 님에게 방장을 넘길까요? 되돌리려면 그쪽이 다시 넘겨줘야 해요.`))
-      return;
+    const ok = await confirm({
+      title: '방장 넘기기',
+      message: `'${m.nickname}' 님에게 방장을 넘길까요?`,
+      detail: '되돌리려면 그쪽에서 다시 넘겨줘야 합니다.',
+      confirmText: '넘기기',
+      danger: true,
+    });
+    if (!ok) return;
     await transferRoom(room.id, m.user_id);
     toast.success('방장을 넘겼어요.');
     reload();
   });
 
   const kick = guard(async (m) => {
-    if (!window.confirm(`'${m.nickname}' 님을 내보낼까요?`)) return;
+    const ok = await confirm({
+      title: '멤버 내보내기',
+      message: `'${m.nickname}' 님을 내보낼까요?`,
+      detail: '입장 코드를 알면 다시 들어올 수 있어요.',
+      confirmText: '내보내기',
+      danger: true,
+    });
+    if (!ok) return;
     await kickMember(room.id, m.user_id);
     reload();
   });
 
   const leave = guard(async () => {
-    if (!window.confirm('이 방에서 나갈까요? 다시 들어오려면 입장 코드가 필요해요.')) return;
+    const ok = await confirm({
+      title: '방 나가기',
+      message: '이 방에서 나갈까요?',
+      detail: '다시 들어오려면 입장 코드가 필요해요.',
+      confirmText: '나가기',
+      danger: true,
+    });
+    if (!ok) return;
     await leaveRoom(room.id);
     onGone();
   });
 
   const remove = guard(async () => {
-    if (!window.confirm(`'${room.name}' 방을 삭제할까요? 경기 기록까지 전부 사라지고 되돌릴 수 없어요.`))
-      return;
+    const ok = await confirm({
+      title: '방 삭제',
+      message: `'${room.name}' 방을 삭제할까요?`,
+      detail: '경기 기록과 포인트까지 전부 사라지고 되돌릴 수 없습니다.',
+      confirmText: '삭제',
+      danger: true,
+    });
+    if (!ok) return;
     await deleteRoom(room.id);
     onGone();
   });
@@ -230,22 +308,32 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
 
       {isAdmin && (
         <section className="room-panel">
-          <h3>
-            참가자 명단<span className="panel-count">{players.length}명</span>
-          </h3>
+          <div className="room-panel-head">
+            <h3>
+              참가자 명단<span className="panel-count">{players.length}명</span>
+            </h3>
+            <RosterLoadButton
+              onClick={() => setShowLoader(true)}
+              disabled={players.length >= MAX_ROOM_PLAYERS}
+            />
+          </div>
           <p className="rooms-hint">
-            기록지에서 새 이름을 적으면 여기에 자동으로 추가됩니다. 이름을 고쳐도 지난 전적은
-            그대로 따라옵니다.
+            게임 시작 탭에서 새 이름을 적으면 여기에 자동으로 추가됩니다. 이름을 고쳐도 지난
+            전적은 그대로 따라옵니다.
           </p>
-          {players.map((p) => (
-            <PlayerRow key={p.id} player={p} onPatch={patchPlayer} onDrop={dropPlayer} />
-          ))}
+
+          <div className="room-player-list">
+            {players.map((p) => (
+              <PlayerRow key={p.id} player={p} onPatch={patchPlayer} onDrop={dropPlayer} />
+            ))}
+          </div>
+
           <div className="rooms-form-row">
             <input
               className="rooms-input"
               value={newName}
               maxLength={16}
-              placeholder="참가자 이름"
+              placeholder="참가자 이름을 직접 적어도 됩니다"
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
             />
@@ -257,6 +345,16 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
               <FaPlus /> 추가
             </button>
           </div>
+
+          {showLoader && (
+            <RosterLoader
+              addOnly
+              present={players.map((p) => p.name)}
+              limit={MAX_ROOM_PLAYERS - players.length}
+              onConfirm={addFromRoster}
+              onClose={() => setShowLoader(false)}
+            />
+          )}
         </section>
       )}
 
@@ -342,11 +440,23 @@ const Room = () => {
     reload();
   };
 
-  if (authLoading || loading) return <div className="page" />;
+  /* 로딩 중에도 방 껍데기는 그려두고 안쪽만 스켈레톤으로. 화면이 통째로
+     비었다가 튀어나오면 그게 곧 '랙 걸린 느낌'이다 */
+  if (authLoading || loading) {
+    return (
+      <div className="page room-page">
+        <div className="room-hero">
+          <SkelLine w="9rem" h={26} />
+          <SkelLine w="13rem" h={13} style={{ marginTop: 10 }} />
+        </div>
+        <SkelRows count={5} h={52} />
+      </div>
+    );
+  }
 
   if (!user || error || !room) {
     return (
-      <div className="page">
+      <div className="page room-page">
         <p className="rooms-blank">{error || '방을 볼 수 없어요.'}</p>
         <Link className="ghost-btn" to="/rooms">
           <FaArrowLeft /> 방 목록으로
@@ -355,25 +465,60 @@ const Room = () => {
     );
   }
 
-  return (
-    <div className="page">
-      <PageHeader title={room.name} sub={`${members.length}명 · 내 권한 ${ROLE_LABEL[myRole]}`}>
-        <Link className="room-back" to="/rooms">
-          <FaArrowLeft /> 방 목록
-        </Link>
-      </PageHeader>
+  const myPoints = members.find((m) => m.user_id === user.id)?.points ?? 0;
 
-      <div className="seg-tabs lg room-tabs">
+  return (
+    <div className="page room-page">
+      <header className="room-hero">
+        <div className="room-hero-left">
+          <Link className="room-back" to="/rooms" title="방 목록으로">
+            <FaArrowLeft />
+          </Link>
+          <div>
+            <h1 className="room-name">{room.name}</h1>
+            <p className="room-meta">
+              {members.length}명 · {ROLE_LABEL[myRole]}
+            </p>
+          </div>
+        </div>
+
+        {/* 내 끼꼬는 어느 탭에 있든 보여야 한다. 배팅하다 잔액 보러
+            탭을 옮겨다니게 만들면 안 된다 */}
+        <button
+          className="room-mypoints"
+          onClick={() => setTab('kkiko')}
+          title="포인트 탭으로"
+        >
+          <FaCoins />
+          <strong>{myPoints.toLocaleString()}</strong>
+          <span>끼꼬</span>
+        </button>
+      </header>
+
+      <div className="room-tabs no-rise">
         {TABS.map((t) => (
           <button
             key={t.key}
-            className={`seg-tab ${tab === t.key ? 'active' : ''}`}
+            className={`room-tab ${tab === t.key ? 'active' : ''}`}
             onClick={() => setTab(t.key)}
           >
+            <span className="room-tab-icon">{t.icon}</span>
             {t.label}
           </button>
         ))}
       </div>
+
+      {tab === 'home' && (
+        <div className="room-home fade-in">
+          {TABS.filter((t) => t.key !== 'home').map((t) => (
+            <button key={t.key} className="room-home-card" onClick={() => setTab(t.key)}>
+              <span className="room-home-icon">{t.icon}</span>
+              <strong>{t.label}</strong>
+              <em>{t.desc}</em>
+            </button>
+          ))}
+        </div>
+      )}
 
       {!editable && tab === 'record' && (
         <p className="rooms-hint room-readonly">
@@ -381,45 +526,48 @@ const Room = () => {
         </p>
       )}
 
-      {tab === 'record' && (
-        <ScrimRecord
-          matches={matches}
-          players={players}
-          canEdit={editable}
-          onAdd={record}
-          onRemove={unrecord}
-          onOpenBetting={editable ? openBet : undefined}
-        />
-      )}
-      {tab === 'season' && <Season matches={matches} players={players} />}
-      {tab === 'bet' && (
-        <BetTab
-          scrims={scrims}
-          activeScrim={activeScrim}
-          players={players}
-          members={members}
-          myId={user.id}
-          canEdit={editable}
-          isOwner={myRole === 'owner'}
-          version={room.version}
-          onChanged={reload}
-        />
-      )}
-      {tab === 'kkiko' && (
-        <KkikoTab roomId={roomId} members={members} myId={user.id} onChanged={reload} />
-      )}
-      {tab === 'feed' && <FeedTab roomId={roomId} version={room.version} />}
-      {tab === 'settings' && (
-        <Settings
-          room={room}
-          members={members}
-          players={players}
-          myRole={myRole}
-          myId={user.id}
-          reload={reload}
-          onGone={() => navigate('/rooms')}
-        />
-      )}
+      {/* key를 탭으로 주면 탭을 옮길 때마다 새로 마운트되어 fade-in이 다시 돈다 */}
+      <div className="room-panel-wrap fade-in" key={tab}>
+        {tab === 'record' && (
+          <ScrimRecord
+            matches={matches}
+            players={players}
+            canEdit={editable}
+            onAdd={record}
+            onRemove={unrecord}
+            onOpenBetting={editable ? openBet : undefined}
+          />
+        )}
+        {tab === 'season' && <Season matches={matches} players={players} />}
+        {tab === 'bet' && (
+          <BetTab
+            scrims={scrims}
+            activeScrim={activeScrim}
+            players={players}
+            members={members}
+            myId={user.id}
+            canEdit={editable}
+            isOwner={myRole === 'owner'}
+            version={room.version}
+            onChanged={reload}
+          />
+        )}
+        {tab === 'kkiko' && (
+          <KkikoTab roomId={roomId} members={members} myId={user.id} onChanged={reload} />
+        )}
+        {tab === 'feed' && <FeedTab roomId={roomId} version={room.version} />}
+        {tab === 'settings' && (
+          <Settings
+            room={room}
+            members={members}
+            players={players}
+            myRole={myRole}
+            myId={user.id}
+            reload={reload}
+            onGone={() => navigate('/rooms')}
+          />
+        )}
+      </div>
     </div>
   );
 };

@@ -445,3 +445,75 @@
   background: rgba(200, 170, 110, 0.18);
   border-color: rgba(200, 170, 110, 0.6);
 }
+
+/* ---------- 대표 도구 (내전 방) ---------- */
+/* 내전 방이 이 사이트의 목적지다. 팀 짜기는 그 안으로 들어가는 곁길이라
+   같은 크기로 두면 어디로 가야 하는지가 안 보인다 */
+
+.section-hint {
+  margin: -0.7rem 0 0.9rem;
+  font-size: 0.78rem;
+  color: #6b7a94;
+}
+
+.feature-grid.has-primary {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.feature-card.is-primary {
+  grid-column: 1 / -1;
+  padding: 1.5rem 1.4rem;
+  border-color: rgba(45, 212, 191, 0.35);
+  background: linear-gradient(150deg, rgba(45, 212, 191, 0.14), rgba(255, 255, 255, 0.02));
+}
+
+.feature-card.is-primary .feature-icon {
+  width: 48px;
+  height: 48px;
+  font-size: 1.25rem;
+}
+
+.feature-card.is-primary .feature-title {
+  font-size: 1.15rem;
+}
+
+.feature-card.is-primary .feature-desc {
+  font-size: 0.88rem;
+}
+
+@media (max-width: 640px) {
+  .feature-card.is-primary {
+    padding: 1.2rem 1.1rem;
+  }
+}
+
+/* 대표 카드 아래 곁들이 카드는 한 줄짜리로 줄인다 */
+.feature-grid.has-primary .feature-card:not(.is-primary) {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.85rem 1rem;
+}
+
+.feature-grid.has-primary .feature-card:not(.is-primary) .feature-icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+
+.feature-grid.has-primary .feature-card:not(.is-primary) .feature-title {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.feature-grid.has-primary .feature-card:not(.is-primary) .feature-desc {
+  display: none;
+}
+
+.feature-grid.has-primary .feature-card:not(.is-primary) .feature-cta {
+  margin-top: 0;
+  margin-left: auto;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}

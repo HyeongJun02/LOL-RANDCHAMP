@@ -1,0 +1,41 @@
+.dialog-message {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: #e6ecf7;
+  white-space: pre-line;
+}
+
+.dialog-detail {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #7d8ba3;
+}
+
+/* 확인 버튼은 모달 푸터 오른쪽 끝에 붙인다 */
+.dialog-ok {
+  margin-left: auto;
+  padding: 0.5rem 1.1rem;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
+  color: #06111f;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.15s ease;
+}
+
+.dialog-ok:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* 되돌릴 수 없는 것(삭제·강퇴)은 빨간색으로 한 번 더 멈칫하게 */
+.dialog-ok.is-danger {
+  background: linear-gradient(135deg, #ff8f80, var(--gg-red));
+  color: #2a0b07;
+}

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaPaperPlane } from 'react-icons/fa';
 import { transferPoints, fetchLedger } from '../../rooms';
+import { useDialog } from '../../components/common/Dialog';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -31,6 +32,7 @@ const KkikoTab = ({ roomId, members, myId, onChanged }) => {
   const busy = useRef(false);
 
   const nameOf = new Map(members.map((m) => [m.user_id, m.nickname]));
+  const { confirm } = useDialog();
   const me = members.find((m) => m.user_id === myId);
   const ranked = [...members].sort((a, b) => b.points - a.points);
   const others = members.filter((m) => m.user_id !== myId);
@@ -54,8 +56,13 @@ const KkikoTab = ({ roomId, members, myId, onChanged }) => {
       toast.error('보낼 끼꼬를 1 이상의 숫자로 적어주세요.');
       return;
     }
-    if (!window.confirm(`${nameOf.get(to)} 님에게 ${value.toLocaleString()} 끼꼬를 보낼까요?`))
-      return;
+    const ok = await confirm({
+      title: '끼꼬 보내기',
+      message: `${nameOf.get(to)} 님에게 ${value.toLocaleString()} 끼꼬를 보낼까요?`,
+      detail: '보낸 끼꼬는 되돌릴 수 없어요.',
+      confirmText: '보내기',
+    });
+    if (!ok) return;
 
     busy.current = true;
     try {

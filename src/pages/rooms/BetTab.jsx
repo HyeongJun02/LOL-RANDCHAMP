@@ -13,6 +13,7 @@ import {
   unsettleScrim,
   fetchBetting,
 } from '../../rooms';
+import { useDialog } from '../../components/common/Dialog';
 
 const num = (n) => Number(n || 0).toLocaleString();
 
@@ -36,6 +37,7 @@ const BetTab = ({
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
   const memberName = new Map(members.map((m) => [m.user_id, m.nickname]));
   const me = members.find((m) => m.user_id === myId);
+  const { confirm } = useDialog();
 
   /* 또또를 건 경기만. 결과가 나온 것들은 기록으로 남겨 계속 본다 */
   const history = scrims
@@ -138,8 +140,13 @@ const BetTab = ({
 
   const lock = (scrim) =>
     guard(async () => {
-      if (!window.confirm('배팅을 마감할까요? 마감하면 아무도 더 걸 수 없고 배당이 공개됩니다.'))
-        return;
+      const ok = await confirm({
+        title: '배팅 마감',
+        message: '지금 배팅을 마감할까요?',
+        detail: '마감하면 아무도 더 걸 수 없고, 선택지별 배당이 공개됩니다.',
+        confirmText: '마감',
+      });
+      if (!ok) return;
       await lockBetting(scrim.id);
       toast.success('배팅을 마감했어요.');
       onChanged();
@@ -172,8 +179,14 @@ const BetTab = ({
 
   const undo = (scrim) =>
     guard(async () => {
-      if (!window.confirm('정산을 되돌릴까요? 지급이 전부 취소되고, 되돌린 사실이 피드에 남습니다.'))
-        return;
+      const ok = await confirm({
+        title: '정산 되돌리기',
+        message: '정산을 되돌릴까요?',
+        detail: '지급이 전부 취소되고, 되돌린 사실이 로그에 남습니다.',
+        confirmText: '되돌리기',
+        danger: true,
+      });
+      if (!ok) return;
       await unsettleScrim(scrim.id);
       toast.success('되돌렸어요. 결과를 다시 넣어주세요.');
       onChanged();

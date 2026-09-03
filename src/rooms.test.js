@@ -56,7 +56,7 @@ jest.mock('./neon', () => ({
   isNeonConfigured: true,
 }));
 
-const { toMatches, addScrimByNames, feedLine, killMarket, capOf } = require('./rooms');
+const { toMatches, addScrimByNames, feedLine, feedParts, killMarket, capOf } = require('./rooms');
 
 beforeEach(() => {
   calls.length = 0;
@@ -175,10 +175,31 @@ describe('addScrimByNames', () => {
   });
 });
 
-test('피드는 로그에 박아둔 그때 이름으로 문장을 만든다', () => {
-  expect(
-    feedLine({ type: 'transfer', payload: { from: '철수', to: '영희', amount: 2000 } })
-  ).toBe('철수 → 영희 에게 2,000 끼꼬를 보냈습니다');
+test('로그는 그때 박아둔 이름으로 문장을 만든다 (닉네임을 바꿔도 그대로)', () => {
+  const line = feedLine({
+    type: 'transfer',
+    payload: { from: '철수', to: '영희', amount: 2000 },
+  });
+  expect(line).toContain('철수');
+  expect(line).toContain('영희');
+  expect(line).toContain('2,000');
+});
+
+test('로그 조각은 이름과 금액을 따로 표시해 색을 입힐 수 있게 준다', () => {
+  const { tag, parts } = feedParts({
+    type: 'transfer',
+    payload: { from: '철수', to: '영희', amount: 2000 },
+  });
+
+  expect(tag.label).toBe('이체');
+  expect(parts.filter((p) => p.k === 'name').map((p) => p.v)).toEqual(['철수', '영희']);
+  expect(parts.find((p) => p.k === 'amount').v).toContain('2,000');
+});
+
+test('모르는 종류의 로그도 태그를 달아 그냥 지나가게 둔다', () => {
+  const { tag, parts } = feedParts({ type: '새로운거', payload: {} });
+  expect(tag.label).toBe('기타');
+  expect(parts).toHaveLength(1);
 });
 
 /* ---------- SQL 쪽 ---------- */

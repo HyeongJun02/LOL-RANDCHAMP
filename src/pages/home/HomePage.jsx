@@ -10,10 +10,11 @@ import './HomePage.css';
 const step = (i) => ({ '--i': i });
 const HERO_STEPS = 4;
 
+/* primary는 이 사이트의 목적지라 크게, 나머지는 곁들이라 한 줄로 */
 const ToolCard = ({ tool, delay }) => (
   <Link
     to={tool.to}
-    className={`feature-card rise accent-${tool.accent}`}
+    className={`feature-card rise accent-${tool.accent} ${tool.primary ? 'is-primary' : ''}`}
     style={step(delay)}
   >
     <span className="feature-icon">{tool.icon}</span>
@@ -69,7 +70,12 @@ const HomePage = () => {
             {s.label}
             <span className="section-count">{s.tools.length}</span>
           </h2>
-          <div className="feature-grid">
+          {s.hint && (
+            <p className="section-hint rise" style={step(s.at.title)}>
+              {s.hint}
+            </p>
+          )}
+          <div className={`feature-grid ${s.tools.some((t) => t.primary) ? 'has-primary' : ''}`}>
             {s.tools.map((t, i) => (
               <ToolCard key={t.to} tool={t} delay={s.at.cards + i} />
             ))}

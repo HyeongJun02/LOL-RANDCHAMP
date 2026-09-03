@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Backdrop from './components/common/Backdrop';
 import RosterModal from './components/roster/RosterModal';
 import Header from './components/common/Header/Header';
+import { DialogProvider } from './components/common/Dialog';
 import { AuthProvider } from './auth/AuthContext';
 import HomePage from './pages/home/HomePage';
 import RandomChampion from './pages/randomChampion/RandomChampion';
@@ -38,20 +39,22 @@ const App = () => {
   return (
     <>
       <Backdrop />
-      <AuthProvider>
-        <Router>
-          <Header />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/random-champion" element={<RandomChampion />} />
-            <Route path="/random-line" element={<RandomLinePage />} />
-            <Route path="/team-balance" element={<TeamBalance />} />
-            <Route path="/pick" element={<RandomPick />} />
-            <Route path="/rooms" element={<RoomList />} />
-            <Route path="/rooms/:id" element={<Room />} />
-          </Routes>
-        </Router>
-      </AuthProvider>
+      <DialogProvider>
+        <AuthProvider>
+          <Router>
+            <Header />
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/random-champion" element={<RandomChampion />} />
+              <Route path="/random-line" element={<RandomLinePage />} />
+              <Route path="/team-balance" element={<TeamBalance />} />
+              <Route path="/pick" element={<RandomPick />} />
+              <Route path="/rooms" element={<RoomList />} />
+              <Route path="/rooms/:id" element={<Room />} />
+            </Routes>
+          </Router>
+        </AuthProvider>
+      </DialogProvider>
       <RosterModal />
       <ToastLimiter />
       <Toaster

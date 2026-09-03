@@ -390,7 +390,7 @@ begin
 
   if me <> public.admin_id() then
     select count(*) into n from rooms where owner_id = me;
-    if n >= 5 then raise exception '방은 최대 5개까지 만들 수 있어요.'; end if;
+    if n >= 3 then raise exception '방은 최대 3개까지 만들 수 있어요.'; end if;
   end if;
 
   insert into profiles (user_id) values (me) on conflict (user_id) do nothing;

@@ -182,22 +182,208 @@
 
 /* ---------- 방 안 ---------- */
 
+/* ---------- 방 머리 ---------- */
+/* 방 이름은 페이지 제목만큼 굵을 필요가 없다. 방 안에서 중요한 건
+   지금 뭘 하는지(탭)와 내 끼꼬지, 방 이름이 아니다 */
+
+.room-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+}
+
+.room-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
 .room-back {
+  flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  color: #94a3b8;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #93a5c4;
   text-decoration: none;
+  transition: all 0.2s ease;
 }
 
 .room-back:hover {
-  color: #38bdf8;
+  color: var(--gg-gold-light);
+  border-color: rgba(200, 170, 110, 0.45);
 }
 
+.room-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #f1f5f9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: #6b7a94;
+}
+
+/* 내 끼꼬. 어느 탭에서도 같은 자리에 있어야 눈이 안 헤맨다 */
+.room-mypoints {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.32rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 170, 110, 0.35);
+  background: rgba(200, 170, 110, 0.1);
+  color: var(--gg-gold-light);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.room-mypoints svg {
+  align-self: center;
+  font-size: 0.85rem;
+}
+
+.room-mypoints strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.room-mypoints span {
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.room-mypoints:hover {
+  border-color: var(--gg-gold);
+  background: rgba(200, 170, 110, 0.18);
+}
+
+/* ---------- 방 탭 ---------- */
+/* 스크롤을 내려도 따라온다. 기록을 한참 내려보다 또또로 넘어가려고
+   맨 위까지 올라가야 하면 그게 제일 답답하다 */
+
 .room-tabs {
+  position: sticky;
+  top: var(--header-h, 80px);
+  z-index: 20;
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
   margin-bottom: 1rem;
+  padding: 0.3rem;
+  border-radius: 12px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(8, 12, 20, 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.room-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.room-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.4rem 0.7rem;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: #8b98ae;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.room-tab-icon {
+  display: inline-flex;
+  font-size: 0.8rem;
+}
+
+.room-tab:hover {
+  color: #e6ecf7;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.room-tab.active {
+  background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
+  color: #06111f;
+}
+
+/* ---------- 방 홈 ---------- */
+
+.room-home {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.7rem;
+}
+
+.room-home-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--gg-panel-border);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.room-home-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(200, 170, 110, 0.45);
+}
+
+.room-home-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 0.2rem;
+  border-radius: 10px;
+  background: rgba(200, 170, 110, 0.14);
+  color: var(--gg-gold);
+  font-size: 0.85rem;
+}
+
+.room-home-card strong {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.room-home-card em {
+  font-style: normal;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #7d8ba3;
 }
 
 .room-readonly {
@@ -382,19 +568,95 @@
   line-height: 1.5;
 }
 
+.room-feed li {
+  align-items: baseline;
+}
+
+/* 무엇에 관한 줄인지 먼저 눈에 들어와야 훑기 편하다 */
+.feed-tag {
+  flex: none;
+  min-width: 2.6rem;
+  text-align: center;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+}
+
+.feed-tag.tone-gold {
+  color: var(--gg-gold-light);
+  background: rgba(200, 170, 110, 0.14);
+  border-color: rgba(200, 170, 110, 0.35);
+}
+
+.feed-tag.tone-blue {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.feed-tag.tone-purple {
+  color: #d8b4fe;
+  background: rgba(192, 132, 252, 0.12);
+  border-color: rgba(192, 132, 252, 0.3);
+}
+
+.feed-tag.tone-red {
+  color: #fca5a5;
+  background: rgba(249, 115, 98, 0.12);
+  border-color: rgba(249, 115, 98, 0.32);
+}
+
+.feed-tag.tone-gray {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
 .feed-when {
+  flex: none;
   color: #64748b;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .feed-text {
-  color: #cbd5e1;
+  color: #8b98ae;
+  min-width: 0;
 }
 
-.feed-more {
-  margin: 0.8rem auto 0;
-  display: block;
+/* 사람 이름과 금액은 색으로 구분한다. 회색 문장 속에서 이 둘만 찾는 일이
+   대부분이라, 색이 없으면 매번 문장을 처음부터 읽게 된다 */
+.feed-name {
+  color: #e6ecf7;
+  font-weight: 700;
+}
+
+.feed-amount {
+  color: var(--gg-gold-light);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-hot {
+  color: var(--gg-green);
+  font-weight: 800;
+}
+
+.feed-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+.feed-page-no {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6b7a94;
+  font-variant-numeric: tabular-nums;
 }
 
 
@@ -603,4 +865,37 @@
   border-radius: 8px;
   background: rgba(30, 41, 59, 0.45);
   font-size: 0.82rem;
+}
+
+/* ---------- 참가자 명단 ---------- */
+
+.room-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.room-panel-head h3 {
+  margin: 0;
+}
+
+/* 줄이 많아지면 패널이 한없이 길어진다. 안쪽만 스크롤한다 */
+.room-player-list {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  margin: 0.7rem 0;
+  padding-right: 0.15rem;
+}
+
+.room-player-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.room-player-list::-webkit-scrollbar-thumb {
+  background: rgba(200, 170, 110, 0.35);
+  border-radius: 10px;
 }

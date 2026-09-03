@@ -12,14 +12,18 @@ const SORTS = [
 /* 저장된 팀원을 체크해서 참가자 목록을 통째로 맞춘다.
    체크를 풀면 이미 들어가 있던 사람도 빠진다.
    present: 지금 참가자로 들어가 있는 이름들
-   limit:   명단에서 채울 수 있는 최대 인원 (없으면 무제한) */
-const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
+   limit:   명단에서 채울 수 있는 최대 인원 (없으면 무제한)
+
+   addOnly: 방 참가자처럼 '빼면 안 되는' 목록용. 이미 있는 사람은 잠기고,
+   새로 고른 사람만 onConfirm으로 넘어간다. 방 참가자를 빼버리면 그 사람의
+   지난 경기 기록이 갈 곳을 잃는다 */
+const RosterLoader = ({ present = [], limit, addOnly = false, onConfirm, onClose }) => {
   const roster = useRoster();
   const presentNames = new Set(present.map((n) => n.trim()).filter(Boolean));
 
   const [sort, setSort] = useState('name');
   const [picked, setPicked] = useState(() =>
-    roster.filter((m) => presentNames.has(m.name.trim())).map((m) => m.id)
+    addOnly ? [] : roster.filter((m) => presentNames.has(m.name.trim())).map((m) => m.id)
   );
 
   /* 정렬은 보이는 순서만 바꾼다. '위에서 N명 선택'도 이 순서를 따른다 */
@@ -39,11 +43,15 @@ const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
 
-  /* 자리가 모자라면 보이는 순서대로 위에서부터 채운다 */
-  const selectable = Math.min(limit ?? sorted.length, sorted.length);
+  /* addOnly에서는 이미 방에 있는 사람을 고를 수 없다 */
+  const locked = (m) => addOnly && presentNames.has(m.name.trim());
+
+  /* 자리가 모자라면 보이는 순서대로 위에서부터 채운다. 잠긴 사람은 건너뛴다 */
+  const pickable = sorted.filter((m) => !locked(m));
+  const selectable = Math.min(limit ?? pickable.length, pickable.length);
   const allSelected = selectable > 0 && picked.length >= selectable;
   const selectAll = () =>
-    setPicked(allSelected ? [] : sorted.slice(0, selectable).map((m) => m.id));
+    setPicked(allSelected ? [] : pickable.slice(0, selectable).map((m) => m.id));
 
   const confirm = () => {
     onConfirm(roster.filter((m) => picked.includes(m.id)));
@@ -95,7 +103,7 @@ const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
             <button className="loader-all" onClick={selectAll}>
               {allSelected
                 ? '전체 해제'
-                : selectable < sorted.length
+                : selectable < pickable.length
                   ? `위에서 ${selectable}명`
                   : '전체 선택'}
             </button>
@@ -110,7 +118,7 @@ const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
                     <input
                       type="checkbox"
                       checked={checked}
-                      disabled={atLimit && !checked}
+                      disabled={locked(m) || (atLimit && !checked)}
                       onChange={() => toggle(m.id)}
                     />
                     <span className="loader-name">{m.name || '(이름 없음)'}</span>

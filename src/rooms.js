@@ -96,29 +96,68 @@ export const fetchLogs = async (roomId, beforeId) => {
 
 const num = (n) => Number(n || 0).toLocaleString();
 
-/* 피드 한 줄을 문장으로. 이름은 로그가 남을 때 박아둔 값이라
-   나중에 닉네임을 바꿔도 그때 이름 그대로 보인다 */
-export const feedLine = (log) => {
+/* 로그 한 줄을 조각으로 나눠 돌려준다.
+   통 문자열로 주면 화면에서 이름과 금액에 색을 못 입힌다. 무엇이 이름이고
+   무엇이 금액인지는 여기서만 알고 있으므로, 조각으로 잘라 넘긴다.
+
+   tag는 이 줄이 무엇에 관한 것인지 (경기/이체/배팅). 목록에서 눈으로
+   훑을 때 종류부터 걸러진다. */
+const t = (v) => ({ k: 'text', v });
+const nameOf_ = (v) => ({ k: 'name', v });
+const amountOf = (v) => ({ k: 'amount', v: `${num(v)} 끼꼬` });
+
+export const LOG_TAGS = {
+  transfer: { label: '이체', tone: 'blue' },
+  betting_open: { label: '배팅', tone: 'purple' },
+  betting_locked: { label: '배팅', tone: 'purple' },
+  settled: { label: '경기', tone: 'gold' },
+  settle_undone: { label: '정정', tone: 'red' },
+};
+
+export const feedParts = (log) => {
   const p = log.payload || {};
+  const tag = LOG_TAGS[log.type] || { label: '기타', tone: 'gray' };
+
   switch (log.type) {
     case 'transfer':
-      return `${p.from} → ${p.to} 에게 ${num(p.amount)} 끼꼬를 보냈습니다`;
+      return {
+        tag,
+        parts: [nameOf_(p.from), t(' → '), nameOf_(p.to), t(' '), amountOf(p.amount), t(' 보냄')],
+      };
     case 'betting_open':
-      return `${p.mode === 'aram' ? '칼바람' : '일반'} ${p.size}인 경기가 열렸습니다. 배팅 시작`;
+      return {
+        tag,
+        parts: [
+          t(`${p.mode === 'aram' ? '칼바람' : '일반'} ${p.size}인 경기 · `),
+          { k: 'hot', v: '배팅 시작' },
+        ],
+      };
     case 'betting_locked':
-      return `배팅이 마감되었습니다 (${p.people}명 · ${num(p.total)} 끼꼬)`;
+      return {
+        tag,
+        parts: [t('배팅 마감 · '), nameOf_(`${p.people}명`), t(' · '), amountOf(p.total)],
+      };
     case 'settled':
-      return (
-        `${p.winner === 'A' ? '1팀' : '2팀'} 승리` +
-        (p.kills == null ? '' : ` · 총 킬 ${p.kills}`) +
-        (p.bet_total ? ` · 또또 ${num(p.bet_total)} 끼꼬 정산` : '')
-      );
+      return {
+        tag,
+        parts: [
+          { k: 'hot', v: p.winner === 'A' ? '1팀 승리' : '2팀 승리' },
+          ...(p.kills == null ? [] : [t(' · 총 킬 '), nameOf_(String(p.kills))]),
+          ...(p.bet_total ? [t(' · 또또 '), amountOf(p.bet_total), t(' 정산')] : []),
+        ],
+      };
     case 'settle_undone':
-      return `방장이 정산을 되돌렸습니다 (${p.count}번째)`;
+      return { tag, parts: [t(`방장이 ${p.count}번째 정산을 되돌렸습니다`)] };
     default:
-      return log.type;
+      return { tag, parts: [t(log.type)] };
   }
 };
+
+/* 한 줄 문자열이 필요한 곳(알림 등)을 위해 남겨둔다 */
+export const feedLine = (log) =>
+  feedParts(log)
+    .parts.map((x) => x.v)
+    .join('');
 
 /* ---------- 참가자 명단 ---------- */
 /* RLS가 방장·부방장만 쓰게 막는다. 돈이 안 걸린 데이터라 함수까지는 필요 없다 */
