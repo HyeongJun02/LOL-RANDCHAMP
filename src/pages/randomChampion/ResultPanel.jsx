@@ -4,7 +4,15 @@ import { championIcon, championPortrait } from '../../services/api';
 import { lanesOf } from '../../champLanes';
 import { findRole } from './roles';
 
-const ResultPanel = ({ champion, rolling, version, onRoll, poolSize }) => {
+const ResultPanel = ({
+  champion,
+  rolling,
+  version,
+  onRoll,
+  poolSize,
+  skipAnim,
+  onToggleSkip,
+}) => {
   const shown = rolling || champion;
   const lanes = champion ? lanesOf(champion.id) : [];
 
@@ -63,6 +71,15 @@ const ResultPanel = ({ champion, rolling, version, onRoll, poolSize }) => {
         {rolling ? '뽑는 중...' : champion ? '다시 뽑기' : '랜덤 챔피언 뽑기'}
         <span className="roll-pool">{poolSize}명 중</span>
       </button>
+
+      <label className="opt-toggle">
+        <input
+          type="checkbox"
+          checked={skipAnim}
+          onChange={(e) => onToggleSkip(e.target.checked)}
+        />
+        연출 건너뛰기
+      </label>
 
       {champion && !rolling && (
         <a

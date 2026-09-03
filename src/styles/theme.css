@@ -202,6 +202,32 @@
   cursor: default;
 }
 
+/* ---------- 옵션 체크박스 (여러 페이지 공용) ---------- */
+
+.opt-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #cbd5e5;
+  cursor: pointer;
+}
+
+.opt-toggle input {
+  accent-color: var(--gg-gold);
+  cursor: pointer;
+}
+
+.opt-toggle span {
+  flex-basis: 100%;
+  padding-left: 1.3rem;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #5b6b85;
+}
+
 /* ---------- 배경 데코 (오로라 블롭 + 헥스 패턴 + 그레인) ---------- */
 /* App에서 <Backdrop/>로 한 번만 렌더. fixed라 헤더 뒤까지 깔린다. */
 

@@ -141,3 +141,113 @@ export const monthLabel = (monthKey) => {
   const [y, m] = String(monthKey).split('-');
   return `${y}년 ${Number(m)}월`;
 };
+
+/* ---------- 손으로 세기 힘든 것들 ---------- */
+
+/* 짝 통계는 표본이 적으면 100%/0%가 남발돼서 의미가 없다 */
+export const MIN_PAIR_GAMES = 3;
+
+const sorted = (list, mode) =>
+  list
+    .filter((m) => m.mode === mode)
+    .slice()
+    .sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
+
+const pairKey = (a, b) => [a, b].sort((x, y) => x.localeCompare(y, 'ko')).join('\u0000');
+
+/* 현재 연승/연패와 역대 최고 연승. current는 양수면 연승, 음수면 연패 */
+export const streaksOf = (list, mode) => {
+  const out = new Map();
+  const ensure = (n) => {
+    if (!out.has(n)) out.set(n, { current: 0, bestWin: 0, worstLoss: 0 });
+    return out.get(n);
+  };
+
+  sorted(list, mode).forEach((m) => {
+    const teamA = clean(m.teamA);
+    const teamB = clean(m.teamB);
+    const winners = m.winner === 'A' ? teamA : teamB;
+    const losers = m.winner === 'A' ? teamB : teamA;
+
+    winners.forEach((n) => {
+      const s = ensure(n);
+      s.current = s.current > 0 ? s.current + 1 : 1;
+      s.bestWin = Math.max(s.bestWin, s.current);
+    });
+    losers.forEach((n) => {
+      const s = ensure(n);
+      s.current = s.current < 0 ? s.current - 1 : -1;
+      s.worstLoss = Math.max(s.worstLoss, -s.current);
+    });
+  });
+
+  return out;
+};
+
+/* 같은 팀으로 뛰었을 때의 승률. 궁합 */
+export const duosOf = (list, mode, minGames = MIN_PAIR_GAMES) => {
+  const pairs = new Map();
+
+  sorted(list, mode).forEach((m) => {
+    const teams = [clean(m.teamA), clean(m.teamB)];
+    teams.forEach((team, side) => {
+      const won = (side === 0) === (m.winner === 'A');
+      for (let i = 0; i < team.length; i += 1) {
+        for (let j = i + 1; j < team.length; j += 1) {
+          const key = pairKey(team[i], team[j]);
+          if (!pairs.has(key)) pairs.set(key, { a: team[i], b: team[j], games: 0, wins: 0 });
+          const p = pairs.get(key);
+          p.games += 1;
+          if (won) p.wins += 1;
+        }
+      }
+    });
+  });
+
+  return [...pairs.values()]
+    .filter((p) => p.games >= minGames)
+    .map((p) => ({ ...p, rate: p.wins / p.games }))
+    .sort((x, y) => y.rate - x.rate || y.games - x.games);
+};
+
+/* 적으로 만났을 때의 상대 전적. 천적 */
+export const rivalsOf = (list, mode, minGames = MIN_PAIR_GAMES) => {
+  const pairs = new Map();
+
+  sorted(list, mode).forEach((m) => {
+    const teamA = clean(m.teamA);
+    const teamB = clean(m.teamB);
+    const winners = m.winner === 'A' ? teamA : teamB;
+    const losers = m.winner === 'A' ? teamB : teamA;
+
+    winners.forEach((w) =>
+      losers.forEach((l) => {
+        const key = pairKey(w, l);
+        if (!pairs.has(key)) {
+          /* 이름을 미리 박아둔다. 승자만 기록하면 한쪽이 전승했을 때
+             진 사람 이름을 알 방법이 없어진다 */
+          const [a, b] = key.split(' ');
+          pairs.set(key, { a, b, games: 0, aWins: 0 });
+        }
+        const p = pairs.get(key);
+        p.games += 1;
+        if (w === p.a) p.aWins += 1;
+      })
+    );
+  });
+
+  return [...pairs.values()]
+    .filter((p) => p.games >= minGames)
+    .map((p) => {
+      const aLeads = p.aWins * 2 >= p.games;
+      const wins = aLeads ? p.aWins : p.games - p.aWins;
+      return {
+        winner: aLeads ? p.a : p.b,
+        loser: aLeads ? p.b : p.a,
+        games: p.games,
+        wins,
+        rate: wins / p.games,
+      };
+    })
+    .sort((x, y) => y.rate - x.rate || y.games - x.games);
+};

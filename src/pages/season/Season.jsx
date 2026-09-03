@@ -12,6 +12,7 @@ import { useRoster } from '../../roster';
 import { getTier, tierName } from '../../tiers';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
+import Insights from './Insights';
 import PageHeader from '../../components/common/PageHeader';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './Season.css';
@@ -22,6 +23,8 @@ const MODES = [
 ];
 
 const MEDALS = ['🥇', '🥈', '🥉'];
+/* 달 탭과 같은 자리에 놓는 '전체 시즌' */
+const ALL = 'all';
 
 const Season = () => {
   const matches = useMatches();
@@ -34,9 +37,15 @@ const Season = () => {
 
   /* 기록이 들어오면 가장 최근 달이 기본. 고른 달의 기록을 다 지우면 되돌린다 */
   const active =
-    month && months.includes(month) ? month : months[0] || monthKeyOf(Date.now());
+    month === ALL || (month && months.includes(month))
+      ? month
+      : months[0] || monthKeyOf(Date.now());
+  const isAll = active === ALL;
 
-  const monthMatches = useMemo(() => inMonth(matches, active), [matches, active]);
+  const monthMatches = useMemo(
+    () => (isAll ? matches : inMonth(matches, active)),
+    [matches, active, isAll]
+  );
 
   /* 그 달만 떼어 처음부터 다시 계산한다. 달마다 0에서 시작하는 시즌 개념 */
   const stats = useMemo(() => statsFor(monthMatches, mode), [monthMatches, mode]);
@@ -69,6 +78,12 @@ const Season = () => {
         <>
           <div className="season-bar">
             <div className="season-months">
+              <button
+                className={`season-month ${isAll ? 'active' : ''}`}
+                onClick={() => setMonth(ALL)}
+              >
+                전체 시즌
+              </button>
               {months.map((m) => (
                 <button
                   key={m}
@@ -94,13 +109,14 @@ const Season = () => {
           </div>
 
           <p className="season-summary">
-            {monthLabel(active)} · <strong>{played}</strong>경기 · {ranking.length}명 참여
+            {isAll ? '전체 기간' : monthLabel(active)} · <strong>{played}</strong>경기 ·{' '}
+            {ranking.length}명 참여
           </p>
 
           {ranking.length === 0 ? (
             <p className="season-blank">
-              {monthLabel(active)}에는 {mode === 'aram' ? '칼바람' : '일반'} 내전 기록이
-              없습니다.
+              {isAll ? '전체 기간에' : `${monthLabel(active)}에는`}{' '}
+              {mode === 'aram' ? '칼바람' : '일반'} 내전 기록이 없습니다.
             </p>
           ) : (
             <ol className="season-board">
@@ -130,12 +146,19 @@ const Season = () => {
           )}
 
           <ScrimPointsHelp />
+
+          <section className="season-insights">
+            <h2>숨은 기록</h2>
+            <Insights matches={monthMatches} mode={mode} />
+          </section>
         </>
       )}
 
       <p className="season-note">
-        <FaTrophy /> 포인트는 그 달 기록만으로 매번 다시 계산합니다. 지난달 성적은 넘어오지
-        않습니다.
+        <FaTrophy />{' '}
+        {isAll
+          ? '전체 기간 기록을 모두 합쳐 계산합니다.'
+          : '포인트는 그 달 기록만으로 매번 다시 계산합니다. 지난달 성적은 넘어오지 않습니다.'}
       </p>
     </div>
   );

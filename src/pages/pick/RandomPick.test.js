@@ -34,14 +34,14 @@ const finishRoll = () => act(() => jest.advanceTimersByTime(4000));
 
 /* '연출 건너뛰기'를 켜면 릴 없이 즉시 확정된다. 뽑기 로직만 볼 때 쓴다 */
 const skipAnimation = (el) => {
-  const box = [...el.querySelectorAll('.pick-toggle')].find((l) =>
+  const box = [...el.querySelectorAll('.opt-toggle')].find((l) =>
     l.textContent.includes('연출 건너뛰기')
   );
   act(() => box.querySelector('input').click());
 };
 
 const toggleExclude = (el) => {
-  const box = [...el.querySelectorAll('.pick-toggle')].find((l) =>
+  const box = [...el.querySelectorAll('.opt-toggle')].find((l) =>
     l.textContent.includes('뽑은 항목 제외')
   );
   act(() => box.querySelector('input').click());
@@ -150,13 +150,13 @@ test('연출을 끄면 릴 없이 바로 나온다', () => {
   expect(el.querySelector('.pick-result')).not.toBeNull();
 });
 
-test('연출 설정은 다시 들어와도 유지된다', () => {
+test('연출 설정은 다시 들어와도 유지된다 (도구 공용)', () => {
   skipAnimation(render());
-  expect(localStorage.getItem('lrc.pickSkipAnim')).toBe('1');
+  expect(localStorage.getItem('lrc.skipAnim')).toBe('1');
 
   document.body.innerHTML = '';
   const again = render();
-  const box = [...again.querySelectorAll('.pick-toggle')].find((l) =>
+  const box = [...again.querySelectorAll('.opt-toggle')].find((l) =>
     l.textContent.includes('연출 건너뛰기')
   );
   expect(box.querySelector('input').checked).toBe(true);

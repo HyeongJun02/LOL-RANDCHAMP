@@ -4,6 +4,7 @@ import { FaPlus, FaTimes, FaDice, FaRedo } from 'react-icons/fa';
 import { useRoster } from '../../roster';
 import { addItems, poolOf } from './pick';
 import Reel from './Reel';
+import { readSkipAnim, writeSkipAnim } from '../../skipAnim';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
 import PageHeader from '../../components/common/PageHeader';
@@ -16,16 +17,6 @@ const PRESETS = [
   { label: '예 / 아니오', items: ['예', '아니오'] },
 ];
 
-const SKIP_KEY = 'lrc.pickSkipAnim';
-
-const readSkip = () => {
-  try {
-    return localStorage.getItem(SKIP_KEY) === '1';
-  } catch {
-    return false;
-  }
-};
-
 const RandomPick = () => {
   const roster = useRoster();
   const [items, setItems] = useState([]);
@@ -35,17 +26,13 @@ const RandomPick = () => {
   const [result, setResult] = useState(null);
   /* seq가 바뀔 때마다 릴이 한 번 돈다. spin이 있으면 도는 중 */
   const [spin, setSpin] = useState(null);
-  const [skipAnim, setSkipAnim] = useState(readSkip);
+  const [skipAnim, setSkipAnim] = useState(readSkipAnim);
   const [showLoader, setShowLoader] = useState(false);
   usePageMeta(PAGE_META.pick);
 
   const toggleSkip = (on) => {
     setSkipAnim(on);
-    try {
-      localStorage.setItem(SKIP_KEY, on ? '1' : '0');
-    } catch {
-      /* 저장 못 해도 이번 세션에선 동작한다 */
-    }
+    writeSkipAnim(on);
   };
 
   const pool = poolOf(items, drawn, exclude);
@@ -196,7 +183,7 @@ const RandomPick = () => {
             <span className="draw-pool">{pool.length}개 중</span>
           </button>
 
-          <label className="pick-toggle">
+          <label className="opt-toggle">
             <input
               type="checkbox"
               checked={exclude}
@@ -206,7 +193,7 @@ const RandomPick = () => {
             <span>순서 정하기나 여러 명 뽑을 때</span>
           </label>
 
-          <label className="pick-toggle">
+          <label className="opt-toggle">
             <input
               type="checkbox"
               checked={skipAnim}

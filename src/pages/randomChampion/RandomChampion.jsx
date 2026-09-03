@@ -8,6 +8,7 @@ import { LANE_META, countUnclassified } from '../../champLanes';
 import { PICK_GROUPS } from '../../champPicks';
 import { filterChampions } from './filter';
 import { ROLL_MS, rollDelay } from '../../rollTiming';
+import { readSkipAnim, writeSkipAnim } from '../../skipAnim';
 import ResultPanel from './ResultPanel';
 import PageHeader from '../../components/common/PageHeader';
 import { usePageMeta, PAGE_META } from '../../seo';
@@ -25,6 +26,7 @@ const RandomChampion = () => {
   const [rolling, setRolling] = useState(null);
   const timer = useRef(null);
   const filtersRef = useRef(null);
+  const [skipAnim, setSkipAnim] = useState(readSkipAnim);
   usePageMeta(PAGE_META.randomChampion);
 
   /* 필터 바도 sticky라, 결과 패널이 그 밑으로 들어가면 가려진다.
@@ -74,6 +76,11 @@ const RandomChampion = () => {
     if (timer.current) return;
     if (filtered.length === 0) {
       toast.error('조건에 맞는 챔피언이 없어요.');
+      return;
+    }
+
+    if (skipAnim) {
+      setPicked(pick());
       return;
     }
 
@@ -235,6 +242,11 @@ const RandomChampion = () => {
           version={version}
           onRoll={roll}
           poolSize={filtered.length}
+          skipAnim={skipAnim}
+          onToggleSkip={(on) => {
+            setSkipAnim(on);
+            writeSkipAnim(on);
+          }}
         />
       </div>
     </div>

@@ -122,30 +122,14 @@ test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', () => {
   expect(bNames).toEqual(expect.arrayContaining(['다', '라']));
 });
 
-test('팀 패널의 이름 옆에 그 사람 승률이 뜬다', () => {
+test('입력 칸에는 승률을 안 보여준다 (리더보드에만)', () => {
   seedMatches([
     { id: 'm1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
-    { id: 'm2', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 2 },
-    { id: 'm3', mode: 'normal', teamA: ['영희'], teamB: ['철수'], winner: 'A', playedAt: 3 },
   ]);
   const el = render();
+  setValue(el.querySelectorAll('.sr-row input')[0], '철수');
 
-  const firstInput = el.querySelectorAll('.sr-row input')[0];
-  setValue(firstInput, '철수');
-
-  const row = firstInput.closest('.sr-row');
-  const rate = row.querySelector('.sr-winrate');
-  expect(rate.textContent).toBe('67%'); // 3판 2승
-  expect(rate.getAttribute('title')).toBe('3판 2승 1패');
-  expect(rate.classList.contains('hot')).toBe(true);
-});
-
-test('기록이 없는 이름에는 승률을 안 보여준다', () => {
-  seedMatches([]);
-  const el = render();
-
-  const firstInput = el.querySelectorAll('.sr-row input')[0];
-  setValue(firstInput, '처음온사람');
-
-  expect(firstInput.closest('.sr-row').querySelector('.sr-winrate')).toBeNull();
+  expect(el.querySelector('.sr-row .sr-winrate')).toBeNull();
+  // 순위표에는 그대로 있다
+  expect(el.querySelector('.board-record').textContent).toContain('%');
 });
