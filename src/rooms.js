@@ -62,6 +62,52 @@ export const renameRoom = async (roomId, name) => {
   return unwrap(await neon.from('rooms').update({ name: name.trim() }).eq('id', roomId));
 };
 
+export const transferPoints = (roomId, toUserId, amount) =>
+  rpc('transfer_points', { p_room: roomId, p_to: toUserId, p_amount: amount });
+
+/* ---------- 포인트 내역 · 피드 ---------- */
+
+/* RLS가 내 행만 준다. 방을 가려낼 필요도 없다 */
+export const fetchLedger = async (limit = 30) => {
+  if (!isNeonConfigured) throw new Error(NOT_READY);
+  return unwrap(
+    await neon
+      .from('point_ledger')
+      .select('id,room_id,delta,reason,counterpart_user_id,created_at')
+      .order('id', { ascending: false })
+      .limit(limit)
+  );
+};
+
+export const FEED_PAGE = 20;
+
+/* 커서 방식. 전체를 다시 받지 않고 마지막 id보다 작은 것만 이어 받는다 */
+export const fetchLogs = async (roomId, beforeId) => {
+  if (!isNeonConfigured) throw new Error(NOT_READY);
+  let q = neon
+    .from('room_logs')
+    .select('id,type,payload,created_at')
+    .eq('room_id', roomId)
+    .order('id', { ascending: false })
+    .limit(FEED_PAGE);
+  if (beforeId) q = q.lt('id', beforeId);
+  return unwrap(await q);
+};
+
+const num = (n) => Number(n || 0).toLocaleString();
+
+/* 피드 한 줄을 문장으로. 이름은 로그가 남을 때 박아둔 값이라
+   나중에 닉네임을 바꿔도 그때 이름 그대로 보인다 */
+export const feedLine = (log) => {
+  const p = log.payload || {};
+  switch (log.type) {
+    case 'transfer':
+      return `${p.from} → ${p.to} 에게 ${num(p.amount)} 끼꼬를 보냈습니다`;
+    default:
+      return log.type;
+  }
+};
+
 /* ---------- 참가자 명단 ---------- */
 /* RLS가 방장·부방장만 쓰게 막는다. 돈이 안 걸린 데이터라 함수까지는 필요 없다 */
 

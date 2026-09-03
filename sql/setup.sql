@@ -535,11 +535,120 @@ begin
 end; $fn$;
 
 
+-- ============================================================
+-- 5. 포인트 원장 · 방 피드
+-- ============================================================
+-- 잔액(profiles.points)과 내역(point_ledger)을 둘 다 둔다.
+-- 잔액을 매번 원장 합계로 계산하면 내역이 쌓일수록 느려지고,
+-- 원장이 없으면 "누가 누구에게 얼마 보냈는지"를 볼 방법이 없다.
+-- 어긋나지 않게 항상 같은 함수 안에서 함께 갱신한다.
+
+create table if not exists public.point_ledger (
+  id                  bigint generated always as identity primary key,
+  user_id             text   not null,
+  room_id             bigint references public.rooms(id) on delete set null,
+  delta               int    not null,
+  reason              text   not null,
+  counterpart_user_id text,
+  ref_id              bigint,
+  created_at          timestamptz not null default now()
+);
+create index if not exists point_ledger_user on public.point_ledger (user_id, created_at desc);
+
+create table if not exists public.room_logs (
+  id         bigint generated always as identity primary key,
+  room_id    bigint not null references public.rooms(id) on delete cascade,
+  type       text   not null,
+  payload    jsonb  not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists room_logs_room on public.room_logs (room_id, id desc);
+
+alter table public.point_ledger enable row level security;
+alter table public.room_logs    enable row level security;
+
+-- 읽기만 열어준다. 쓰기는 전부 함수 안에서만 일어난다.
+grant select on public.point_ledger to authenticated;
+grant select on public.room_logs to authenticated;
+
+drop policy if exists ledger_own on public.point_ledger;
+create policy ledger_own on public.point_ledger
+  for select to authenticated using (user_id = auth.user_id());
+
+drop policy if exists logs_read on public.room_logs;
+create policy logs_read on public.room_logs
+  for select to authenticated using (public.is_room_member(room_id));
+
+
+-- 피드 한 줄. 이름은 그때 값을 payload에 박아 둔다 - 닉네임은 바뀌지만
+-- 지난 기록은 그때 이름으로 남아야 한다.
+--
+-- ponytail: 넣을 때마다 오래된 줄을 지운다. 인덱스를 탄 한 문장이고
+-- 방마다 하루 몇 줄 수준이라 이걸로 충분하다. 로그가 폭증하면
+-- 주기적으로 한 번에 지우는 쪽으로 옮길 것.
+create or replace function public.log_room(rid bigint, p_type text, p_payload jsonb)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  insert into room_logs (room_id, type, payload) values (rid, p_type, p_payload);
+
+  delete from room_logs
+   where room_id = rid
+     and id <= coalesce(
+       (select id from room_logs where room_id = rid order by id desc offset 500 limit 1), 0);
+end; $fn$;
+
+
+-- 같은 방 멤버끼리만 보낼 수 있다. 모르는 사람에게는 못 보낸다.
+create or replace function public.transfer_points(p_room bigint, p_to text, p_amount int)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare
+  me       text := auth.user_id();
+  my_name  text;
+  to_name  text;
+begin
+  perform public.roll_season();
+
+  if not public.is_room_member(p_room) then
+    raise exception '이 방의 멤버가 아니에요.';
+  end if;
+  if p_to = me then
+    raise exception '자기 자신에게는 보낼 수 없어요.';
+  end if;
+  if not exists (select 1 from room_members where room_id = p_room and user_id = p_to) then
+    raise exception '그 사람은 이 방 멤버가 아니에요.';
+  end if;
+  if p_amount is null or p_amount <= 0 then
+    raise exception '보낼 끼꼬를 1 이상으로 적어주세요.';
+  end if;
+
+  -- 잔액 확인과 차감을 한 문장으로 한다. 따로 하면 두 요청이 같은 잔액을
+  -- 보고 둘 다 통과해서, 가진 것보다 많이 보낼 수 있다.
+  update profiles set points = points - p_amount
+   where user_id = me and points >= p_amount;
+  if not found then
+    raise exception '끼꼬가 모자라요.';
+  end if;
+
+  update profiles set points = points + p_amount where user_id = p_to;
+
+  insert into point_ledger (user_id, room_id, delta, reason, counterpart_user_id)
+  values (me,   p_room, -p_amount, 'transfer_out', p_to),
+         (p_to, p_room,  p_amount, 'transfer_in',  me);
+
+  select coalesce(nullif(nickname, ''), '이름없음') into my_name from profiles where user_id = me;
+  select coalesce(nullif(nickname, ''), '이름없음') into to_name from profiles where user_id = p_to;
+
+  perform public.log_room(p_room, 'transfer', jsonb_build_object(
+    'from', my_name, 'to', to_name, 'amount', p_amount));
+end; $fn$;
+
+
 -- 트리거·내부 함수는 클라이언트가 직접 부를 이유가 없다.
 revoke execute on function public.roll_season() from public;
 revoke execute on function public.bump_room_version() from public;
 revoke execute on function public.enforce_room_limits() from public;
 revoke execute on function public.enforce_app_state_limits() from public;
+revoke execute on function public.log_room(bigint, text, jsonb) from public;
 
 grant execute on function
   public.get_me(),
@@ -552,6 +661,7 @@ grant execute on function
   public.kick_member(bigint, text),
   public.leave_room(bigint),
   public.delete_room(bigint),
+  public.transfer_points(bigint, text, int),
   public.is_room_member(bigint),
   public.is_room_admin(bigint),
   public.is_room_owner(bigint)

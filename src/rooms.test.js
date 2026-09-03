@@ -49,7 +49,7 @@ jest.mock('./neon', () => ({
   isNeonConfigured: true,
 }));
 
-const { toMatches, addScrimByNames } = require('./rooms');
+const { toMatches, addScrimByNames, feedLine } = require('./rooms');
 
 beforeEach(() => {
   calls.length = 0;
@@ -168,6 +168,12 @@ describe('addScrimByNames', () => {
   });
 });
 
+test('피드는 로그에 박아둔 그때 이름으로 문장을 만든다', () => {
+  expect(
+    feedLine({ type: 'transfer', payload: { from: '철수', to: '영희', amount: 2000 } })
+  ).toBe('철수 → 영희 에게 2,000 끼꼬를 보냈습니다');
+});
+
 /* ---------- SQL 쪽 ---------- */
 /* 실행해볼 수 없으니, 무너지면 조용히 잘못되는 부분만 눈으로 못 지나치게 잡아둔다 */
 
@@ -181,6 +187,25 @@ test('시즌 롤은 잠근 뒤에 달을 다시 확인한다 (동시에 두 번 
   const recheck = body.indexOf('if cur >= m then', lock);
   expect(lock).toBeGreaterThan(-1);
   expect(recheck).toBeGreaterThan(lock);
+});
+
+/* 잔액 확인과 차감이 갈라져 있으면, 두 요청이 같은 잔액을 보고 둘 다 통과해
+   가진 것보다 많이 보낼 수 있다. 한 문장이어야 한다 */
+test('송금은 잔액 확인과 차감을 한 문장으로 한다', () => {
+  const body = sql.slice(
+    sql.indexOf('function public.transfer_points'),
+    sql.indexOf('$fn$;', sql.indexOf('function public.transfer_points'))
+  );
+  expect(body).toMatch(
+    /update profiles set points = points - p_amount\s+where user_id = me and points >= p_amount;/
+  );
+  expect(body).toContain('if not found then');
+});
+
+test('포인트 원장과 피드는 클라이언트가 못 쓴다 (읽기만)', () => {
+  expect(sql).toContain('grant select on public.point_ledger to authenticated;');
+  expect(sql).toContain('grant select on public.room_logs to authenticated;');
+  expect(sql).not.toMatch(/grant [^;]*insert[^;]*on public\.(point_ledger|room_logs)/);
 });
 
 test('끼꼬 잔액은 클라이언트가 직접 못 쓴다 (닉네임 컬럼만 열려 있다)', () => {

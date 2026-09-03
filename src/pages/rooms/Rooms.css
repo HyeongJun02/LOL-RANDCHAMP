@@ -314,3 +314,85 @@
     flex: 1 1 100%;
   }
 }
+
+/* ---------- 끼꼬 ---------- */
+
+.kkiko-rank {
+  width: 1.8rem;
+  text-align: center;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.kkiko-ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.kkiko-ledger li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.45);
+  font-size: 0.82rem;
+}
+
+.kkiko-when {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kkiko-delta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kkiko-delta.plus {
+  color: #4ade80;
+}
+
+.kkiko-delta.minus {
+  color: #f87171;
+}
+
+/* ---------- 피드 ---------- */
+
+.room-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.room-feed li {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.4);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.feed-when {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.feed-text {
+  color: #cbd5e1;
+}
+
+.feed-more {
+  margin: 0.8rem auto 0;
+  display: block;
+}
