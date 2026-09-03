@@ -1,44 +1,12 @@
-import { createStore } from './store';
+/* 내전 전적 집계.
 
-/* 내전 전적. localStorage가 기본이고, 로그인하면 Neon과 동기화된다.
-   저장 방식은 store.js가 맡고 여기는 전적 규칙과 집계만 갖는다. */
-const uid = () => Math.random().toString(36).slice(2, 9);
+   기록 자체는 방이 들고 있다(rooms.js). 여기는 계산만 한다.
+   전부 리스트를 인자로 받는 순수 함수라, 방 단위든 달 단위든
+   잘라서 넘기기만 하면 된다.
 
-/* 로그인 시 합치기: 같은 경기(id)는 한 번만. 기기마다 기록한 경기가
-   전부 살아남고, 시간순으로 다시 정렬한다 */
-const merge = (local, remote) => {
-  const byId = new Map();
-  [...remote, ...local].forEach((m) => {
-    if (m && m.id && !byId.has(m.id)) byId.set(m.id, m);
-  });
-  return [...byId.values()].sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
-};
-
-const store = createStore({
-  key: 'lrc.matches',
-  column: 'matches',
-  merge,
-  limitKind: 'matches',
-});
-
-export const useMatches = store.use;
-
-/* React 밖에서 지금 값을 읽어야 할 때 */
-export const getMatches = store.get;
-
-/**
- * @param mode 'aram' | 'normal'
- * @param teamA, teamB 이름 배열 (공백 제거된 상태로 넘길 것)
- * @param winner 'A' | 'B'
- */
-export const addMatch = ({ mode, teamA, teamB, winner }) =>
-  store.commit([
-    ...store.get(),
-    { id: uid(), mode, teamA, teamB, winner, playedAt: Date.now() },
-  ]);
-
-export const removeMatch = (id) =>
-  store.commit(store.get().filter((m) => m.id !== id));
+   경기 하나의 모양: { id, mode, teamA: [이름], teamB: [이름], winner, playedAt }
+   방의 scrims는 이름 대신 room_players.id를 담고 있어서,
+   rooms.js의 toMatches()가 이 모양으로 바꿔서 넘긴다. */
 
 /* ------------------------------------------------------------------
    내전 포인트
@@ -336,28 +304,7 @@ export const lastSeenOf = (list, mode) => {
   return out;
 };
 
-/* 전적은 이름을 문자열로 들고 있다(로스터 id와 묶여 있지 않다).
-   그래서 명단에서 이름을 바꾸면 여기서도 같이 갈아줘야
-   같은 사람이 두 명으로 갈라지지 않는다.
-   바뀐 경기 수를 돌려준다. */
-export const renamePlayer = (before, after) => {
-  const from = String(before).trim();
-  const to = String(after).trim();
-  if (!from || !to || from === to) return 0;
-
-  let touched = 0;
-  const swap = (team) => (team || []).map((n) => (String(n).trim() === from ? to : n));
-
-  const next = store.get().map((m) => {
-    const teamA = swap(m.teamA);
-    const teamB = swap(m.teamB);
-    const changed =
-      teamA.some((n, i) => n !== m.teamA[i]) || teamB.some((n, i) => n !== m.teamB[i]);
-    if (!changed) return m;
-    touched += 1;
-    return { ...m, teamA, teamB };
-  });
-
-  if (touched > 0) store.commit(next);
-  return touched;
-};
+/* 예전엔 여기 renamePlayer가 있었다. 전적이 이름 문자열을 들고 있어서
+   명단에서 이름을 바꾸면 경기를 전부 훑어 갈아야 했다.
+   지금은 방의 scrims가 room_players.id를 담으므로, 이름을 바꾸면
+   room_players 한 행만 고치면 된다. 갈아끼울 게 없다. */

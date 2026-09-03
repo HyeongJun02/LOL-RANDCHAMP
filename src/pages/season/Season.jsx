@@ -2,14 +2,12 @@ import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaTrophy, FaCopy, FaImage } from 'react-icons/fa';
 import {
-  useMatches,
   statsFor,
   monthsOf,
   inMonth,
   monthKeyOf,
   monthLabel,
 } from '../../matches';
-import { useRoster } from '../../roster';
 import { getTier, tierName } from '../../tiers';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
@@ -17,8 +15,6 @@ import Insights from './Insights';
 import { buildInsights } from './insightData';
 import { formatReport, copyText } from './report';
 import { downloadReport } from './reportImage';
-import PageHeader from '../../components/common/PageHeader';
-import { usePageMeta, PAGE_META } from '../../seo';
 import './Season.css';
 
 const MODES = [
@@ -30,10 +26,10 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 /* 달 탭과 같은 자리에 놓는 '전체 시즌' */
 const ALL = 'all';
 
-const Season = () => {
-  const matches = useMatches();
-  const roster = useRoster();
-  usePageMeta(PAGE_META.season);
+/* 방의 '정산' 탭.
+   matches: rooms.js가 이름을 붙여 넘겨준 경기 목록
+   players: 방 참가자 명단 (티어 배지용) */
+const Season = ({ matches = [], players = [] }) => {
 
   const months = useMemo(() => monthsOf(matches), [matches]);
   const [month, setMonth] = useState(null);
@@ -95,15 +91,10 @@ const Season = () => {
   };
 
   return (
-    <div className="page season-page">
-      <PageHeader
-        title="내전 시즌 정산"
-        sub="달마다 0에서 다시 시작한다. 이번 달 1등이 누구인지."
-      />
-
+    <div className="season-page">
       {months.length === 0 ? (
         <p className="season-blank">
-          아직 기록이 없습니다. 내전 기록지에서 경기를 남기면 여기에 쌓입니다.
+          아직 기록이 없습니다. 기록 탭에서 경기를 남기면 여기에 쌓입니다.
         </p>
       ) : (
         <>
@@ -161,7 +152,7 @@ const Season = () => {
           ) : (
             <ol className="season-board">
               {ranking.map((r, i) => {
-                const member = roster.find((m) => m.name === r.name);
+                const member = players.find((m) => m.name === r.name);
                 return (
                   <li key={r.name} className={i < 3 ? `top top-${i + 1}` : ''}>
                     <span className="season-rank">{MEDALS[i] || i + 1}</span>

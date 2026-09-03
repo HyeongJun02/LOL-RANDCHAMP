@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaRandom, FaUsers, FaBan, FaClipboardList, FaGem, FaTrophy, FaChartBar } from 'react-icons/fa';
+import { FaRandom, FaUsers, FaBan, FaClipboardList, FaGem, FaChartBar } from 'react-icons/fa';
 import { GiPathDistance, GiCardRandom } from 'react-icons/gi';
 
 /* 도구 추가 = 여기 한 항목. 헤더 nav와 홈 카드가 같이 따라온다.
@@ -43,23 +43,13 @@ export const TOOLS = [
     accent: 'green',
   },
   {
-    to: '/scrim-record',
+    to: '/rooms',
     category: 'scrim',
-    name: '내전 기록지',
-    title: '내전 기록지',
-    desc: '이긴 팀만 고르면 승패와 내전 포인트가 쌓인다. 팀 짜기 결과도 그대로 가져온다.',
+    name: '내전 방',
+    title: '내전 방',
+    desc: '같이 하는 사람들끼리 방을 만든다. 입장 코드만 알면 기록과 정산을 같이 본다.',
     icon: <FaClipboardList />,
     accent: 'teal',
-  },
-
-  {
-    to: '/season',
-    category: 'scrim',
-    name: '시즌 정산',
-    title: '내전 시즌 정산',
-    desc: '9월, 10월처럼 달마다 끊어서 승률과 포인트 순위를 낸다. 매달 0에서 다시 시작.',
-    icon: <FaTrophy />,
-    accent: 'gold',
   },
 
   /* ---------- 준비 중 ---------- */

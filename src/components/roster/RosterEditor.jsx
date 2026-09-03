@@ -1,22 +1,14 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier } from '../../tiers';
-import toast from 'react-hot-toast';
 import { useRoster, addMember, updateMember, removeMember } from '../../roster';
-import { renamePlayer } from '../../matches';
 import LineSelector from '../common/LineSelector';
 
+/* 이 명단은 라인 분배·랜덤 뽑기처럼 로그인 없이 쓰는 도구용이다.
+   내전 전적은 방이 따로 들고 있어서, 여기서 이름을 바꿔도
+   전적을 갈아끼울 일이 없다 (방은 참가자 id로 경기를 남긴다) */
 const RosterEditor = () => {
   const roster = useRoster();
-  /* 이름은 타이핑마다 바뀌므로, 전적 갈아끼우기는 입력을 끝냈을 때 한 번만 한다 */
-  const before = useRef('');
-
-  const finishRename = (name) => {
-    const moved = renamePlayer(before.current, name);
-    if (moved > 0) {
-      toast.success(`내전 기록 ${moved}경기의 이름도 같이 바꿨어요.`);
-    }
-  };
 
   return (
     <>
@@ -33,11 +25,7 @@ const RosterEditor = () => {
                 className="member-name"
                 value={m.name}
                 placeholder="이름"
-                onFocus={() => {
-                  before.current = m.name;
-                }}
                 onChange={(e) => updateMember(m.id, { name: e.target.value })}
-                onBlur={(e) => finishRename(e.target.value)}
               />
               <select
                 className="member-tier"

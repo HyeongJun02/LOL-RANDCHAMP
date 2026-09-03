@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { useRoster } from '../../roster';
-import { useMatches, gameCountsOf } from '../../matches';
 import { getTier, tierName, ratingOf } from '../../tiers';
 import Modal from './Modal';
 import './RosterLoader.css';
@@ -8,7 +7,6 @@ import './RosterLoader.css';
 const SORTS = [
   { value: 'name', label: '이름순' },
   { value: 'tier', label: '티어순' },
-  { value: 'games', label: '내전순' },
 ];
 
 /* 저장된 팀원을 체크해서 참가자 목록을 통째로 맞춘다.
@@ -17,15 +15,12 @@ const SORTS = [
    limit:   명단에서 채울 수 있는 최대 인원 (없으면 무제한) */
 const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
   const roster = useRoster();
-  const matches = useMatches();
   const presentNames = new Set(present.map((n) => n.trim()).filter(Boolean));
 
   const [sort, setSort] = useState('name');
   const [picked, setPicked] = useState(() =>
     roster.filter((m) => presentNames.has(m.name.trim())).map((m) => m.id)
   );
-
-  const counts = useMemo(() => gameCountsOf(matches), [matches]);
 
   /* 정렬은 보이는 순서만 바꾼다. '위에서 N명 선택'도 이 순서를 따른다 */
   const sorted = useMemo(() => {
@@ -34,12 +29,8 @@ const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
     if (sort === 'tier') {
       return list.sort((a, b) => ratingOf(b) - ratingOf(a) || byName(a, b));
     }
-    if (sort === 'games') {
-      const of = (m) => counts.get(m.name.trim()) || 0;
-      return list.sort((a, b) => of(b) - of(a) || byName(a, b));
-    }
     return list.sort(byName);
-  }, [roster, sort, counts]);
+  }, [roster, sort]);
 
   const atLimit = limit !== undefined && picked.length >= limit;
 
@@ -113,7 +104,6 @@ const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
           <ul className="loader-list">
             {sorted.map((m) => {
               const checked = picked.includes(m.id);
-              const games = counts.get(m.name.trim()) || 0;
               return (
                 <li key={m.id}>
                   <label>
@@ -130,9 +120,6 @@ const RosterLoader = ({ present = [], limit, onConfirm, onClose }) => {
                     >
                       {tierName(m)}
                     </span>
-                    {sort === 'games' && games > 0 && (
-                      <span className="loader-lines">내전 {games}판</span>
-                    )}
                     {presentNames.has(m.name.trim()) && (
                       <span className="loader-added">참가 중</span>
                     )}

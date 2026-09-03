@@ -4,7 +4,7 @@ import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
 import { splitTeams, MAX_PLAYERS, winChance, IGNORE_RATING } from './balance';
 import { mergeMembers, useRoster } from '../../roster';
-import { useMatches, statsFor, pointsOf, statOf } from '../../matches';
+import { statsFor, pointsOf, statOf } from '../../matches';
 import { saveLastSplit } from '../../lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
@@ -45,7 +45,10 @@ const TierBadge = ({ player }) => {
   );
 };
 
-const TeamBalance = () => {
+/* matches를 넘기면 '평점 기준'에 내전 포인트가 함께 뜬다.
+   전적은 이제 방 안에만 있어서, 로그인 없이 여는 이 화면에는 넘어올 게 없다.
+   방 안에서 이 화면을 띄우게 되면 그때 방의 경기 목록을 넘기면 된다 */
+const TeamBalance = ({ matches = [] }) => {
   const [players, setPlayers] = useState(() =>
     Array.from({ length: 10 }, blankPlayer)
   );
@@ -57,10 +60,10 @@ const TeamBalance = () => {
   const [scrimMode, setScrimMode] = useState('normal');
   usePageMeta(PAGE_META.teamBalance);
   const roster = useRoster();
-  const matches = useMatches();
 
   const scrimStats = useMemo(() => statsFor(matches, scrimMode), [matches, scrimMode]);
-  const showScrim = ratingMode !== 'tier';
+  const hasScrimData = matches.length > 0;
+  const showScrim = hasScrimData && ratingMode !== 'tier';
 
   /* 평점 기준에 따라 실제로 팀을 나눌 때 쓸 값을 만든다.
      both는 티어 평점에 그대로 더한다 — tiers.js 눈금(디비전 1~2점)에
@@ -72,7 +75,7 @@ const TeamBalance = () => {
     return ratingOf(p);
   };
 
-  /* 결과가 나올 때마다(직접 짜기/후보 고르기 공통) 내전 기록지가 이어받을 수 있게 남겨둔다 */
+  /* 결과가 나올 때마다(직접 짜기/후보 고르기 공통) 방의 기록 탭이 이어받을 수 있게 남겨둔다 */
   useEffect(() => {
     if (!result) return;
     saveLastSplit(result.teamA.map((p) => p.name), result.teamB.map((p) => p.name));
@@ -311,6 +314,7 @@ const TeamBalance = () => {
         </section>
 
         <aside className="tb-side">
+          {hasScrimData && (
           <div className="tb-panel">
             <span className="range-label">평점 기준</span>
             <div className="seg-tabs">
@@ -338,7 +342,7 @@ const TeamBalance = () => {
                   ))}
                 </div>
                 <p className="range-hint">
-                  내전 기록지에 쌓인 {scrimMode === 'aram' ? '칼바람' : '일반'} 내전 승패를
+                  방에 쌓인 {scrimMode === 'aram' ? '칼바람' : '일반'} 내전 승패를
                   {ratingMode === 'points' ? ' 평점 대신' : ' 티어 평점에 더해'} 반영합니다.
                   센 팀을 이길수록 많이 오르고, 판수가 적으면 조심스럽게 반영합니다.
                 </p>
@@ -346,6 +350,7 @@ const TeamBalance = () => {
               </>
             )}
           </div>
+          )}
 
           <div className="tb-panel">
             <label className="range-label" htmlFor="randomness">

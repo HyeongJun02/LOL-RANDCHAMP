@@ -168,58 +168,6 @@ describe('날짜 통계', () => {
   });
 });
 
-describe('이름 바꾸기', () => {
-  let store;
-  const load = () => {
-    jest.resetModules();
-    store = require('./matches');
-  };
-  const seed = (list) => localStorage.setItem('lrc.matches', JSON.stringify(list));
-  const stored = () => JSON.parse(localStorage.getItem('lrc.matches'));
-
-  beforeEach(() => localStorage.clear());
-
-  test('전적의 이름도 같이 바뀌고 바뀐 경기 수를 알려준다', () => {
-    seed([
-      { id: 'a', mode: 'normal', teamA: ['철수', '민수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
-      { id: 'b', mode: 'aram', teamA: ['영희'], teamB: ['철수'], winner: 'A', playedAt: 2 },
-      { id: 'c', mode: 'normal', teamA: ['민수'], teamB: ['영희'], winner: 'A', playedAt: 3 },
-    ]);
-    load();
-
-    expect(store.renamePlayer('철수', '철수2')).toBe(2); // 철수가 낀 경기만
-    const list = stored();
-    expect(list[0].teamA).toEqual(['철수2', '민수']);
-    expect(list[1].teamB).toEqual(['철수2']);
-    expect(list[2].teamA).toEqual(['민수']); // 안 바뀐 경기는 그대로
-  });
-
-  test('이름이 그대로거나 비어 있으면 아무것도 안 한다', () => {
-    seed([{ id: 'a', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 }]);
-    load();
-
-    expect(store.renamePlayer('철수', '철수')).toBe(0);
-    expect(store.renamePlayer('', '철수')).toBe(0);
-    expect(store.renamePlayer('철수', '  ')).toBe(0);
-    expect(stored()[0].teamA).toEqual(['철수']);
-  });
-
-  test('기록에 없는 이름을 바꿔도 조용히 넘어간다', () => {
-    seed([{ id: 'a', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 }]);
-    load();
-    expect(store.renamePlayer('없는사람', '누구')).toBe(0);
-  });
-
-  test('바꾼 뒤에는 한 사람으로 집계된다', () => {
-    seed([
-      { id: 'a', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
-      { id: 'b', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 2 },
-    ]);
-    load();
-    store.renamePlayer('철수', '새이름');
-
-    const stats = store.statsFor(stored(), 'normal');
-    expect(stats.get('새이름').wins).toBe(2);
-    expect(stats.has('철수')).toBe(false);
-  });
-});
+/* 이름 바꾸기 테스트는 없앴다. 방의 경기는 참가자 id를 담으므로
+   이름을 바꿔도 갈아끼울 전적이 없다 (rooms.js의 toMatches가 붙여준다).
+   그 동작은 rooms.test.js에서 본다 */

@@ -1,6 +1,6 @@
 import React from 'react';
 
-/* 내전 포인트 +/- 배지. 팀 분배와 내전 기록지에서 같이 쓴다.
+/* 내전 포인트 +/- 배지. 팀 분배와 방의 기록 탭에서 같이 쓴다.
    stat을 주면 이 사람 점수가 어떻게 나온 값인지 툴팁으로 풀어준다. */
 const buildTitle = (points, stat) => {
   if (!stat) return `내전 포인트 ${points > 0 ? `+${points}` : points}`;

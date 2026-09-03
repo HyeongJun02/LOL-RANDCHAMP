@@ -38,7 +38,8 @@ test('라벨은 0을 떼고 보여준다', () => {
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
-const renderPage = () => {
+/* Season은 이제 방이 넘겨주는 경기 목록만 그린다 */
+const renderPage = (matches) => {
   jest.resetModules();
   const React = require('react');
   const { createRoot } = require('react-dom/client');
@@ -46,7 +47,9 @@ const renderPage = () => {
 
   const container = document.createElement('div');
   document.body.appendChild(container);
-  React.act(() => createRoot(container).render(React.createElement(Season)));
+  React.act(() =>
+    createRoot(container).render(React.createElement(Season, { matches, players: [] }))
+  );
   return container;
 };
 
@@ -57,10 +60,9 @@ const clickText = (el, text) =>
       .dispatchEvent(new MouseEvent('click', { bubbles: true }))
   );
 
-const seed = (list) => localStorage.setItem('lrc.matches', JSON.stringify(list));
-
+let seq = 0;
 const game = (y, m, winner) => ({
-  id: `${y}-${m}-${winner}-${Math.random()}`,
+  id: `g${++seq}`,
   mode: 'normal',
   teamA: ['철수'],
   teamB: ['영희'],
@@ -69,13 +71,11 @@ const game = (y, m, winner) => ({
 });
 
 beforeEach(() => {
-  localStorage.clear();
   document.body.innerHTML = '';
 });
 
 test('달 탭과 전체 시즌 탭이 같이 뜬다', () => {
-  seed([game(2026, 8, 'A'), game(2026, 9, 'A')]);
-  const el = renderPage();
+  const el = renderPage([game(2026, 8, 'A'), game(2026, 9, 'A')]);
 
   const tabs = [...el.querySelectorAll('.season-month')].map((b) => b.textContent);
   expect(tabs).toEqual(['전체 시즌', '2026년 9월', '2026년 8월']);
@@ -84,8 +84,7 @@ test('달 탭과 전체 시즌 탭이 같이 뜬다', () => {
 });
 
 test('전체 시즌은 모든 달을 합쳐 센다', () => {
-  seed([game(2026, 8, 'A'), game(2026, 9, 'A'), game(2026, 9, 'B')]);
-  const el = renderPage();
+  const el = renderPage([game(2026, 8, 'A'), game(2026, 9, 'A'), game(2026, 9, 'B')]);
 
   expect(el.querySelector('.season-summary').textContent).toContain('2경기'); // 9월만
   clickText(el, '전체 시즌');
@@ -93,8 +92,7 @@ test('전체 시즌은 모든 달을 합쳐 센다', () => {
 });
 
 test('숨은 기록이 고른 기간을 따라간다', () => {
-  seed([game(2026, 8, 'A'), game(2026, 9, 'A'), game(2026, 9, 'A')]);
-  const el = renderPage();
+  const el = renderPage([game(2026, 8, 'A'), game(2026, 9, 'A'), game(2026, 9, 'A')]);
 
   // 9월만 보면 2연승
   expect(el.querySelector('.season-insights').textContent).toContain('2연승');
@@ -102,4 +100,10 @@ test('숨은 기록이 고른 기간을 따라간다', () => {
   clickText(el, '전체 시즌');
   // 8월까지 합치면 3연승
   expect(el.querySelector('.season-insights').textContent).toContain('3연승');
+});
+
+test('기록이 없으면 안내만 뜬다', () => {
+  const el = renderPage([]);
+  expect(el.querySelector('.season-blank')).not.toBeNull();
+  expect(el.querySelector('.season-month')).toBeNull();
 });

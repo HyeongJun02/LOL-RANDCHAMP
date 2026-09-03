@@ -44,14 +44,6 @@ beforeEach(() => {
       { id: 'b', name: '나연', tier: 'SILVER', division: 2 },
     ])
   );
-  localStorage.setItem(
-    'lrc.matches',
-    JSON.stringify([
-      { id: 'm1', mode: 'normal', teamA: ['다현'], teamB: ['나연'], winner: 'A' },
-      { id: 'm2', mode: 'aram', teamA: ['다현'], teamB: ['나연'], winner: 'B' },
-      { id: 'm3', mode: 'normal', teamA: ['다현'], teamB: ['가영'], winner: 'A' },
-    ])
-  );
 });
 
 test('기본은 이름순', () => {
@@ -65,23 +57,22 @@ test('티어순은 높은 티어부터', () => {
   expect(shownNames()).toEqual(['가영', '나연', '다현']); // 다이아 > 실버 > 아이언
 });
 
-test('내전순은 많이 한 사람부터', () => {
+/* '내전순' 정렬은 없앴다. 전적이 방으로 옮겨가면서 이 명단에는
+   셀 판수가 없다 (이 명단은 로그인 없이 쓰는 도구들 것이다) */
+test('정렬 선택지는 이름순과 티어순뿐이다', () => {
   render();
-  click(byText('내전순'));
-  // 다현 3판, 나연 2판, 가영 1판
-  expect(shownNames()).toEqual(['다현', '나연', '가영']);
-  expect(document.body.textContent).toContain('내전 3판');
+  expect(byText('내전순')).toBeUndefined();
 });
 
 test('자리가 모자라면 보이는 순서대로 위에서 채운다', () => {
   render({ limit: 2 });
-  click(byText('내전순'));
+  click(byText('티어순'));
   click(byText('위에서 2명'));
 
   const checked = [...document.querySelectorAll('.loader-list li')]
     .filter((li) => li.querySelector('input').checked)
     .map((li) => li.querySelector('.loader-name').textContent);
-  expect(checked.sort()).toEqual(['나연', '다현'].sort());
+  expect(checked.sort()).toEqual(['가영', '나연'].sort()); // 다이아 > 실버 > 아이언
 });
 
 test('정렬을 바꿔도 체크한 사람은 유지된다', () => {
@@ -91,7 +82,7 @@ test('정렬을 바꿔도 체크한 사람은 유지된다', () => {
   );
   click(가영.querySelector('input'));
 
-  click(byText('내전순'));
+  click(byText('티어순'));
   const still = [...document.querySelectorAll('.loader-list li')].find((li) =>
     li.textContent.includes('가영')
   );

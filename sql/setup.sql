@@ -1,87 +1,558 @@
--- 롤랜챔: 로그인 사용자의 명단/전적 저장소
--- Neon 콘솔 > SQL Editor 에 그대로 붙여넣고 실행하세요.
+-- 롤랜챔 스키마
+-- Neon 콘솔 > SQL Editor 에 통째로 붙여넣고 실행하세요. 여러 번 실행해도 됩니다.
 --
--- 사용자당 한 행만 둡니다. 명단도 전적도 항상 배열째로 읽고 쓰는 데이터라
--- 정규화된 테이블이 이득이 없습니다. 나중에 전적을 SQL로 집계할 일이 생기면
--- 그때 matches만 별도 테이블로 분리하면 됩니다.
+-- 주의: 이 스크립트는 app_state.matches 컬럼을 지웁니다.
+--       개인 계정에 쌓여 있던 내전 기록이 사라집니다(명세서 B 결정).
+--       내전 기록은 이제 '방' 안에만 있습니다.
+
+-- ============================================================
+-- 0. 공용
+-- ============================================================
+
+-- 관리자는 모든 한도에서 제외. src/limits.js와 같은 값이어야 한다.
+create or replace function public.admin_id()
+returns text language sql immutable as $fn$
+  select '56a0f45a-26de-46f6-8edf-38b592a6caf7'::text;
+$fn$;
+
+-- 내전은 우리 동네 밤에 한다. 달 경계도 KST 기준.
+create or replace function public.now_month()
+returns text language sql stable as $fn$
+  select to_char(now() at time zone 'Asia/Seoul', 'YYYY-MM');
+$fn$;
+
+
+-- ============================================================
+-- 1. 팀원 명단 (기존)
+-- ============================================================
+-- 로그인 안 해도 쓰는 도구(라인 분배, 랜덤 뽑기)가 계속 참조하므로 남긴다.
+-- 내전 기록만 방으로 옮겨간다.
 
 create table if not exists public.app_state (
   user_id    text primary key default auth.user_id(),
   roster     jsonb not null default '[]'::jsonb,
-  matches    jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now()
 );
 
--- Data API는 브라우저에서 DB를 직접 찌릅니다.
--- RLS가 없으면 아무나 남의 명단을 읽고 지울 수 있습니다. 반드시 켜세요.
-alter table public.app_state enable row level security;
+alter table public.app_state drop column if exists matches;
 
--- RLS는 GRANT 위에 얹히는 것이라 권한도 같이 줘야 합니다.
+alter table public.app_state enable row level security;
 grant select, insert, update, delete on public.app_state to authenticated;
 
--- 자기 행에만 접근 가능. USING은 읽기/삭제, WITH CHECK는 쓰기 검사입니다.
 drop policy if exists app_state_own_row on public.app_state;
-create policy app_state_own_row
-  on public.app_state
-  for all
-  to authenticated
+create policy app_state_own_row on public.app_state
+  for all to authenticated
   using (auth.user_id() = user_id)
   with check (auth.user_id() = user_id);
 
--- 로그인 안 한 사용자(anon)에게는 아무 권한도 주지 않습니다.
--- 비로그인 상태에서는 앱이 localStorage만 씁니다.
-
-
--- ============================================================
--- 계정당 저장 한도
--- ============================================================
--- Data API는 브라우저가 DB를 직접 찌르는 구조라, 앱 코드의 한도는
--- 우회하면 그만이다. 실제 방어는 여기서 한다.
---
--- src/limits.js의 숫자와 맞춰둘 것. 한쪽만 바꾸면 화면에서는 되는데
--- 저장이 거절당하는 상황이 된다.
---
--- CHECK 제약이 아니라 트리거를 쓰는 이유: CHECK는 IMMUTABLE 함수만
--- 허용해서 크기 계산(pg_column_size 등)을 넣을 수 없고, 어떤 한도에
--- 걸렸는지 구분된 메시지를 줄 수도 없다.
-
+-- Data API는 브라우저가 DB를 직접 찌른다. 앱 코드의 한도는 우회하면 그만이라
+-- 실제 방어는 여기서 한다. CHECK가 아니라 트리거인 이유: CHECK는 IMMUTABLE
+-- 함수만 허용해서 크기 계산을 넣을 수 없고, 어디에 걸렸는지 구분도 못 한다.
 create or replace function public.enforce_app_state_limits()
-returns trigger
-language plpgsql
-as $$
-declare
-  -- 관리자는 한도 없음
-  admin_id  constant text := '56a0f45a-26de-46f6-8edf-38b592a6caf7';
-  max_roster  constant int := 60;
-  max_matches constant int := 300;
-  -- 배열 개수와 별개로, 한 행이 통째로 커지는 것도 막는다
-  max_bytes constant int := 120000;
+returns trigger language plpgsql as $fn$
 begin
-  if new.user_id = admin_id then
+  if new.user_id = public.admin_id() then
     return new;
   end if;
-
-  if jsonb_array_length(coalesce(new.roster, '[]'::jsonb)) > max_roster then
-    raise exception '팀원은 최대 %명까지 저장할 수 있습니다.', max_roster
-      using errcode = 'check_violation';
+  if jsonb_array_length(coalesce(new.roster, '[]'::jsonb)) > 60 then
+    raise exception '팀원은 최대 60명까지 저장할 수 있습니다.' using errcode = 'check_violation';
   end if;
-
-  if jsonb_array_length(coalesce(new.matches, '[]'::jsonb)) > max_matches then
-    raise exception '내전 기록은 최대 %경기까지 저장할 수 있습니다.', max_matches
-      using errcode = 'check_violation';
+  if octet_length(coalesce(new.roster, '[]'::jsonb)::text) > 60000 then
+    raise exception '저장 용량이 계정 한도를 넘었습니다.' using errcode = 'check_violation';
   end if;
-
-  if octet_length(coalesce(new.roster, '[]'::jsonb)::text)
-     + octet_length(coalesce(new.matches, '[]'::jsonb)::text) > max_bytes then
-    raise exception '저장 용량이 계정 한도를 넘었습니다.'
-      using errcode = 'check_violation';
-  end if;
-
   return new;
-end;
-$$;
+end; $fn$;
 
 drop trigger if exists app_state_limits on public.app_state;
 create trigger app_state_limits
   before insert or update on public.app_state
   for each row execute function public.enforce_app_state_limits();
+
+
+-- ============================================================
+-- 2. 사용자 (끼꼬 포인트)
+-- ============================================================
+-- points는 클라이언트가 절대 직접 못 쓴다. 콘솔에서 update 한 줄이면
+-- 잔액이 999999999가 되기 때문이다. 아래 GRANT에서 nickname 컬럼만 연다.
+
+create table if not exists public.profiles (
+  user_id            text primary key default auth.user_id(),
+  nickname           text,
+  points             int  not null default 10000,
+  points_month       text not null default public.now_month(),
+  role               text not null default 'user',
+  agreed_fairplay_at timestamptz,
+  created_at         timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+
+-- ============================================================
+-- 3. 방
+-- ============================================================
+
+create table if not exists public.rooms (
+  id         bigint generated always as identity primary key,
+  name       text not null,
+  join_code  text not null unique,
+  owner_id   text not null default auth.user_id(),
+  version    int  not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.room_members (
+  room_id   bigint not null references public.rooms(id) on delete cascade,
+  user_id   text   not null,
+  role      text   not null default 'member' check (role in ('owner','admin','member')),
+  joined_at timestamptz not null default now(),
+  primary key (room_id, user_id)
+);
+create index if not exists room_members_user on public.room_members (user_id);
+
+-- 그 방에서 뛰는 사람. 계정 없는 손님도 linked_user_id 없이 들어온다.
+create table if not exists public.room_players (
+  id             bigint generated always as identity primary key,
+  room_id        bigint not null references public.rooms(id) on delete cascade,
+  name           text   not null,
+  tier           text   not null default 'GOLD',
+  division       int    not null default 4,
+  linked_user_id text,
+  unique (room_id, name)
+);
+create index if not exists room_players_room on public.room_players (room_id);
+
+-- 팀은 room_players.id 배열로 담는다. 이름으로 담으면 이름을 바꿀 때마다
+-- 경기를 전부 훑어 갈아야 하고, 놓치면 한 사람이 두 명으로 갈라진다.
+create table if not exists public.scrims (
+  id         bigint generated always as identity primary key,
+  room_id    bigint not null references public.rooms(id) on delete cascade,
+  mode       text   not null check (mode in ('aram','normal')),
+  team_a     jsonb  not null,
+  team_b     jsonb  not null,
+  winner     text   check (winner in ('A','B')),
+  created_by text   not null default auth.user_id(),
+  played_at  timestamptz not null default now()
+);
+create index if not exists scrims_room_played on public.scrims (room_id, played_at desc);
+
+create table if not exists public.hall_of_fame (
+  room_id      bigint not null references public.rooms(id) on delete cascade,
+  month        text   not null,
+  user_id      text   not null,
+  display_name text   not null,
+  kkiko_points int    not null,
+  primary key (room_id, month, user_id)
+);
+
+
+-- 재귀 차단.
+-- rooms 정책은 "내가 이 방 멤버인가"를 물으려고 room_members를 읽는다.
+-- 그런데 room_members 정책도 같은 걸 물으면 정책이 자기를 다시 부른다.
+-- SECURITY DEFINER 함수는 RLS를 건너뛰므로 여기서 고리를 끊는다.
+create or replace function public.is_room_member(rid bigint)
+returns boolean language sql stable security definer set search_path = public as $fn$
+  select exists (
+    select 1 from room_members where room_id = rid and user_id = auth.user_id()
+  );
+$fn$;
+
+create or replace function public.is_room_admin(rid bigint)
+returns boolean language sql stable security definer set search_path = public as $fn$
+  select exists (
+    select 1 from room_members
+     where room_id = rid and user_id = auth.user_id() and role in ('owner','admin')
+  );
+$fn$;
+
+create or replace function public.is_room_owner(rid bigint)
+returns boolean language sql stable security definer set search_path = public as $fn$
+  select exists (select 1 from rooms where id = rid and owner_id = auth.user_id());
+$fn$;
+
+
+-- 같은 방 사람의 닉네임과 끼꼬는 봐야 순위를 만든다.
+-- 방을 공유하지 않는 남의 프로필은 안 보인다.
+drop policy if exists profiles_visible on public.profiles;
+create policy profiles_visible on public.profiles
+  for select to authenticated
+  using (
+    user_id = auth.user_id()
+    or exists (
+      select 1
+        from public.room_members a
+        join public.room_members b on b.room_id = a.room_id
+       where a.user_id = auth.user_id()
+         and b.user_id = public.profiles.user_id
+    )
+  );
+
+-- 닉네임만 열어준다. points/role은 아래 GRANT에서 컬럼 단위로 막혀
+-- 함수로만 움직인다.
+drop policy if exists profiles_own_update on public.profiles;
+create policy profiles_own_update on public.profiles
+  for update to authenticated
+  using (user_id = auth.user_id())
+  with check (user_id = auth.user_id());
+
+grant select on public.profiles to authenticated;
+grant update (nickname) on public.profiles to authenticated;
+
+
+-- 시즌 (월간 초기화)
+create table if not exists public.app_season (
+  id            int primary key default 1 check (id = 1),
+  current_month text not null,
+  rolled_at     timestamptz not null default now()
+);
+insert into public.app_season (id, current_month)
+  values (1, public.now_month())
+  on conflict (id) do nothing;
+
+grant select on public.app_season to authenticated;
+
+
+-- 매월 1일 끼꼬를 10,000으로 되돌린다. Neon 무료에 스케줄러가 없어
+-- 크론 대신 로그인할 때(get_me) 확인하는 지연 실행이다.
+--
+-- 여러 달이 밀려도 한 번에 처리된다. 중간 달들은 아무도 안 들어온 달이라
+-- 남길 기록이 없고, 마지막으로 알던 달(cur) 이름으로 한 번만 박제한다.
+create or replace function public.roll_season()
+returns void language plpgsql security definer set search_path = public as $fn$
+declare
+  m   text := public.now_month();
+  cur text;
+begin
+  -- 흔한 경우(같은 달)에 잠금까지 가지 않도록 먼저 싸게 확인한다
+  if (select current_month from app_season where id = 1) >= m then
+    return;
+  end if;
+
+  -- 두 명이 동시에 들어오면 둘 다 롤할 수 있다. 잠근 뒤 다시 읽어야 한다.
+  -- 먼저 읽고 잠그면 둘 다 옛 값을 보고 통과한다.
+  select current_month into cur from app_season where id = 1 for update;
+  if cur >= m then
+    return;
+  end if;
+
+  -- 초기화 전에 박제. 끼꼬만 남기면 된다 - 내전 성적은 scrims에 그대로 있어
+  -- 언제든 그 달만 떼어 다시 계산할 수 있다.
+  insert into hall_of_fame (room_id, month, user_id, display_name, kkiko_points)
+  select rm.room_id, cur, rm.user_id, coalesce(nullif(p.nickname, ''), '이름없음'), p.points
+    from room_members rm
+    join profiles p on p.user_id = rm.user_id
+  on conflict (room_id, month, user_id) do nothing;
+
+  update profiles set points = 10000, points_month = m;
+  update app_season set current_month = m, rolled_at = now() where id = 1;
+end; $fn$;
+
+
+-- 로그인 직후 클라이언트가 부르는 유일한 부트스트랩.
+-- 프로필이 없으면 만들고, 달이 넘어갔으면 여기서 시즌을 롤한다.
+create or replace function public.get_me()
+returns public.profiles language plpgsql security definer set search_path = public as $fn$
+declare me profiles;
+begin
+  perform public.roll_season();
+  insert into profiles (user_id) values (auth.user_id()) on conflict (user_id) do nothing;
+  select * into me from profiles where user_id = auth.user_id();
+  return me;
+end; $fn$;
+
+
+alter table public.rooms         enable row level security;
+alter table public.room_members  enable row level security;
+alter table public.room_players  enable row level security;
+alter table public.scrims        enable row level security;
+alter table public.hall_of_fame  enable row level security;
+
+-- 입장 코드는 컬럼 단위로 뺀다. 멤버 전원이 코드를 볼 수 있으면
+-- 재발급이 아무 의미가 없다. 방장·부방장은 get_join_code()로 본다.
+grant select (id, name, owner_id, version, created_at) on public.rooms to authenticated;
+grant update (name) on public.rooms to authenticated;
+grant select on public.room_members to authenticated;
+grant select on public.hall_of_fame to authenticated;
+grant select, insert, update, delete on public.room_players to authenticated;
+grant select, insert, delete on public.scrims to authenticated;
+
+drop policy if exists rooms_read on public.rooms;
+create policy rooms_read on public.rooms
+  for select to authenticated using (public.is_room_member(id));
+
+drop policy if exists rooms_admin_edit on public.rooms;
+create policy rooms_admin_edit on public.rooms
+  for update to authenticated
+  using (public.is_room_admin(id)) with check (public.is_room_admin(id));
+
+drop policy if exists members_read on public.room_members;
+create policy members_read on public.room_members
+  for select to authenticated using (public.is_room_member(room_id));
+
+drop policy if exists players_read on public.room_players;
+create policy players_read on public.room_players
+  for select to authenticated using (public.is_room_member(room_id));
+
+drop policy if exists players_admin_write on public.room_players;
+create policy players_admin_write on public.room_players
+  for all to authenticated
+  using (public.is_room_admin(room_id)) with check (public.is_room_admin(room_id));
+
+drop policy if exists scrims_read on public.scrims;
+create policy scrims_read on public.scrims
+  for select to authenticated using (public.is_room_member(room_id));
+
+drop policy if exists scrims_admin_write on public.scrims;
+create policy scrims_admin_write on public.scrims
+  for all to authenticated
+  using (public.is_room_admin(room_id)) with check (public.is_room_admin(room_id));
+
+drop policy if exists hof_read on public.hall_of_fame;
+create policy hof_read on public.hall_of_fame
+  for select to authenticated using (public.is_room_member(room_id));
+
+
+-- 한도. 방 5 / 멤버 50 / 참가자 50 / 경기 1000 (명세서 F).
+-- src/limits.js와 같은 값이어야 한다. 한쪽만 바꾸면 화면에서는 되는데
+-- 저장이 거절당한다.
+create or replace function public.enforce_room_limits()
+returns trigger language plpgsql as $fn$
+declare n int;
+begin
+  if tg_table_name = 'room_players' then
+    select count(*) into n from room_players where room_id = new.room_id;
+    if n >= 50 then
+      raise exception '방 참가자는 최대 50명까지예요.' using errcode = 'check_violation';
+    end if;
+  elsif tg_table_name = 'scrims' then
+    select count(*) into n from scrims where room_id = new.room_id;
+    if n >= 1000 then
+      raise exception '한 방에 최대 1000경기까지 남길 수 있어요. 오래된 기록을 지워주세요.'
+        using errcode = 'check_violation';
+    end if;
+  end if;
+  return new;
+end; $fn$;
+
+drop trigger if exists room_players_limit on public.room_players;
+create trigger room_players_limit before insert on public.room_players
+  for each row execute function public.enforce_room_limits();
+
+drop trigger if exists scrims_limit on public.scrims;
+create trigger scrims_limit before insert on public.scrims
+  for each row execute function public.enforce_room_limits();
+
+
+-- 방에 뭔가 바뀌면 version을 올린다. 클라이언트는 이 한 컬럼만 폴링하고,
+-- 값이 달라졌을 때만 상세를 다시 받는다. Data API에 실시간 구독이 없어서
+-- 폴링이 불가피한데, 방 전체를 매번 읽으면 그게 곧 DB 부하다.
+create or replace function public.bump_room_version()
+returns trigger language plpgsql security definer set search_path = public as $fn$
+begin
+  update rooms set version = version + 1
+   where id = coalesce(new.room_id, old.room_id);
+  return null;
+end; $fn$;
+
+drop trigger if exists scrims_bump on public.scrims;
+create trigger scrims_bump after insert or update or delete on public.scrims
+  for each row execute function public.bump_room_version();
+
+drop trigger if exists players_bump on public.room_players;
+create trigger players_bump after insert or update or delete on public.room_players
+  for each row execute function public.bump_room_version();
+
+drop trigger if exists members_bump on public.room_members;
+create trigger members_bump after insert or update or delete on public.room_members
+  for each row execute function public.bump_room_version();
+
+
+-- ============================================================
+-- 4. 방 함수
+-- ============================================================
+-- 헷갈리는 0/O/1/I는 뺀다. 코드는 입으로 불러주는 값이다.
+create or replace function public.new_join_code()
+returns text language sql volatile as $fn$
+  select string_agg(
+    substr('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', (floor(random() * 32) + 1)::int, 1), '')
+  from generate_series(1, 6);
+$fn$;
+
+create or replace function public.create_room(p_name text)
+returns public.rooms language plpgsql security definer set search_path = public as $fn$
+declare
+  me   text := auth.user_id();
+  n    int;
+  room rooms;
+begin
+  if me is null then raise exception '로그인이 필요해요.'; end if;
+  if coalesce(trim(p_name), '') = '' then raise exception '방 이름을 적어주세요.'; end if;
+
+  if me <> public.admin_id() then
+    select count(*) into n from rooms where owner_id = me;
+    if n >= 5 then raise exception '방은 최대 5개까지 만들 수 있어요.'; end if;
+  end if;
+
+  insert into profiles (user_id) values (me) on conflict (user_id) do nothing;
+
+  -- 코드가 겹치면 다시 뽑는다. 32^6이라 거의 안 겹치지만 unique가 막아준다.
+  for i in 1..5 loop
+    begin
+      insert into rooms (name, join_code, owner_id)
+        values (trim(p_name), public.new_join_code(), me)
+        returning * into room;
+      exit;
+    exception when unique_violation then
+      if i = 5 then raise; end if;
+    end;
+  end loop;
+
+  insert into room_members (room_id, user_id, role) values (room.id, me, 'owner');
+  return room;
+end; $fn$;
+
+
+create or replace function public.join_room(p_code text)
+returns bigint language plpgsql security definer set search_path = public as $fn$
+declare
+  me  text := auth.user_id();
+  rid bigint;
+  n   int;
+begin
+  if me is null then raise exception '로그인이 필요해요.'; end if;
+
+  select id into rid from rooms where join_code = upper(trim(p_code));
+  if rid is null then raise exception '그런 입장 코드가 없어요.'; end if;
+
+  -- 이미 멤버면 그냥 방 번호만 준다. 한 번 들어온 방은 코드 없이 다시 들어온다.
+  if exists (select 1 from room_members where room_id = rid and user_id = me) then
+    return rid;
+  end if;
+
+  select count(*) into n from room_members where room_id = rid;
+  if n >= 50 then raise exception '이 방은 인원이 가득 찼어요.'; end if;
+
+  insert into profiles (user_id) values (me) on conflict (user_id) do nothing;
+  insert into room_members (room_id, user_id) values (rid, me);
+  return rid;
+end; $fn$;
+
+
+create or replace function public.get_join_code(p_room bigint)
+returns text language plpgsql security definer set search_path = public as $fn$
+begin
+  if not public.is_room_admin(p_room) then
+    raise exception '방장과 부방장만 입장 코드를 볼 수 있어요.';
+  end if;
+  return (select join_code from rooms where id = p_room);
+end; $fn$;
+
+
+create or replace function public.reset_join_code(p_room bigint)
+returns text language plpgsql security definer set search_path = public as $fn$
+declare code text;
+begin
+  if not public.is_room_owner(p_room) then
+    raise exception '방장만 입장 코드를 새로 뽑을 수 있어요.';
+  end if;
+  for i in 1..5 loop
+    begin
+      update rooms set join_code = public.new_join_code()
+       where id = p_room returning join_code into code;
+      exit;
+    exception when unique_violation then
+      if i = 5 then raise; end if;
+    end;
+  end loop;
+  return code;
+end; $fn$;
+
+
+create or replace function public.set_member_role(p_room bigint, p_user text, p_role text)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  if not public.is_room_owner(p_room) then
+    raise exception '방장만 권한을 바꿀 수 있어요.';
+  end if;
+  if p_role not in ('admin', 'member') then
+    raise exception '부방장 또는 멤버로만 바꿀 수 있어요.';
+  end if;
+  -- 방장이 스스로를 강등하면 그 방에 방장이 없어진다.
+  -- 방장 자리를 넘기는 건 transfer_room으로 한다.
+  if p_user = auth.user_id() then
+    raise exception '자기 권한은 바꿀 수 없어요.';
+  end if;
+  update room_members set role = p_role where room_id = p_room and user_id = p_user;
+end; $fn$;
+
+
+create or replace function public.transfer_room(p_room bigint, p_user text)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  if not public.is_room_owner(p_room) then
+    raise exception '방장만 방을 넘길 수 있어요.';
+  end if;
+  if not exists (select 1 from room_members where room_id = p_room and user_id = p_user) then
+    raise exception '그 사람은 이 방 멤버가 아니에요.';
+  end if;
+  update rooms set owner_id = p_user where id = p_room;
+  update room_members set role = 'admin' where room_id = p_room and user_id = auth.user_id();
+  update room_members set role = 'owner' where room_id = p_room and user_id = p_user;
+end; $fn$;
+
+
+create or replace function public.kick_member(p_room bigint, p_user text)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  if not public.is_room_admin(p_room) then
+    raise exception '방장과 부방장만 내보낼 수 있어요.';
+  end if;
+  if p_user = (select owner_id from rooms where id = p_room) then
+    raise exception '방장은 내보낼 수 없어요.';
+  end if;
+  delete from room_members where room_id = p_room and user_id = p_user;
+end; $fn$;
+
+
+create or replace function public.leave_room(p_room bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  -- 방장이 나가면 방에 주인이 없어진다. 넘기고 나가거나, 방을 지워야 한다.
+  if public.is_room_owner(p_room) then
+    raise exception '방장은 나갈 수 없어요. 방을 넘기거나 삭제해 주세요.';
+  end if;
+  delete from room_members where room_id = p_room and user_id = auth.user_id();
+end; $fn$;
+
+
+create or replace function public.delete_room(p_room bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  if not public.is_room_owner(p_room) then
+    raise exception '방장만 방을 삭제할 수 있어요.';
+  end if;
+  delete from rooms where id = p_room;
+end; $fn$;
+
+
+-- 트리거·내부 함수는 클라이언트가 직접 부를 이유가 없다.
+revoke execute on function public.roll_season() from public;
+revoke execute on function public.bump_room_version() from public;
+revoke execute on function public.enforce_room_limits() from public;
+revoke execute on function public.enforce_app_state_limits() from public;
+
+grant execute on function
+  public.get_me(),
+  public.create_room(text),
+  public.join_room(text),
+  public.get_join_code(bigint),
+  public.reset_join_code(bigint),
+  public.set_member_role(bigint, text, text),
+  public.transfer_room(bigint, text),
+  public.kick_member(bigint, text),
+  public.leave_room(bigint),
+  public.delete_room(bigint),
+  public.is_room_member(bigint),
+  public.is_room_admin(bigint),
+  public.is_room_owner(bigint)
+to authenticated;

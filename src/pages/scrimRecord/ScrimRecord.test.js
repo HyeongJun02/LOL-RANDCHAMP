@@ -1,26 +1,46 @@
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
 let act;
+let React;
 
-/* matches.js/lastSplit.js가 적재 시점에 localStorage를 읽으므로,
-   시드를 심은 뒤 새로 require한다 (TeamBalance.test.js와 같은 패턴) */
-const render = () => {
+/* ScrimRecord는 이제 방이 넘겨주는 목록을 그리는 화면이다.
+   저장은 방(rooms.js)이 하므로, 여기서는 부모 역할만 하는 껍데기를 씌워
+   '기록을 남기면 화면이 따라오는가'만 본다.
+
+   lastSplit.js가 적재 시점에 localStorage를 읽으므로 시드를 심은 뒤 require한다 */
+const render = ({ initial = [], canEdit = true } = {}) => {
   jest.resetModules();
-  const React = require('react');
+  React = require('react');
   const { createRoot } = require('react-dom/client');
   const ScrimRecord = require('./ScrimRecord').default;
   ({ act } = React);
 
+  let seq = 0;
+  const Harness = () => {
+    const [matches, setMatches] = React.useState(initial);
+    return React.createElement(ScrimRecord, {
+      matches,
+      players: [],
+      canEdit,
+      onAdd: (m) =>
+        setMatches((prev) => [...prev, { ...m, id: `g${++seq}`, playedAt: Date.now() }]),
+      onRemove: (id) => setMatches((prev) => prev.filter((m) => m.id !== id)),
+    });
+  };
+
   const container = document.createElement('div');
   document.body.appendChild(container);
-  act(() => createRoot(container).render(React.createElement(ScrimRecord)));
+  act(() => createRoot(container).render(React.createElement(Harness)));
   return container;
 };
 
-const click = (el) =>
-  act(() => {
+/* onAdd/onRemove가 async라 상태 반영이 마이크로태스크 뒤로 밀린다.
+   act(async)로 감싸야 그것까지 흘려보내고 화면을 본다 */
+const click = async (el) => {
+  await act(async () => {
     el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
+};
 
 const setValue = (el, value) => {
   const proto = Object.getPrototypeOf(el);
@@ -31,27 +51,25 @@ const setValue = (el, value) => {
 const byText = (el, tag, text) =>
   [...el.querySelectorAll(tag)].find((b) => b.textContent.includes(text));
 
-/* 기록은 모듈 적재 때 읽으므로 render() 전에 심어야 한다 */
-const seedMatches = (list) =>
-  localStorage.setItem('lrc.matches', JSON.stringify(list));
+const fill = (el, a, b) => {
+  const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
+  setValue(teamAPanel.querySelectorAll('.sr-row input')[0], a);
+  setValue(teamBPanel.querySelectorAll('.sr-row input')[0], b);
+};
 
 beforeEach(() => {
   localStorage.clear();
   document.body.innerHTML = '';
 });
 
-test('양 팀에 이름을 넣고 승리 팀을 고르면 기록이 남는다', () => {
+test('양 팀에 이름을 넣고 승리 팀을 고르면 기록이 남는다', async () => {
   const el = render();
+  fill(el, '철수', '영희');
 
-  const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
-  setValue(teamAPanel.querySelectorAll('.sr-row input')[0], '철수');
-  setValue(teamBPanel.querySelectorAll('.sr-row input')[0], '영희');
-
-  click(byText(el, 'button', '1팀 승리'));
+  await click(byText(el, 'button', '1팀 승리'));
 
   expect(el.querySelector('.board-blank')).toBeNull();
-  const rows = [...el.querySelectorAll('.board-list li')];
-  expect(rows).toHaveLength(2);
+  expect([...el.querySelectorAll('.board-list li')]).toHaveLength(2);
   expect(byText(el, 'span', '철수').closest('li').textContent).toContain('1승 0패');
   expect(byText(el, 'span', '영희').closest('li').textContent).toContain('0승 1패');
 
@@ -60,60 +78,70 @@ test('양 팀에 이름을 넣고 승리 팀을 고르면 기록이 남는다', 
   expect(history.textContent).toContain('영희');
 });
 
-test('양 팀에 같은 이름이 있으면 기록하지 않는다', () => {
+test('양 팀에 같은 이름이 있으면 기록하지 않는다', async () => {
   const el = render();
-  const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
-  setValue(teamAPanel.querySelectorAll('.sr-row input')[0], '철수');
-  setValue(teamBPanel.querySelectorAll('.sr-row input')[0], '철수');
+  fill(el, '철수', '철수');
 
-  click(byText(el, 'button', '1팀 승리'));
+  await click(byText(el, 'button', '1팀 승리'));
 
   expect(el.querySelector('.board-blank')).not.toBeNull();
 });
 
-test('칼바람/일반 탭을 바꾸면 그 모드의 기록만 보인다', () => {
+test('칼바람/일반 탭을 바꾸면 그 모드의 기록만 보인다', async () => {
   const el = render();
-  const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
-  setValue(teamAPanel.querySelectorAll('.sr-row input')[0], '철수');
-  setValue(teamBPanel.querySelectorAll('.sr-row input')[0], '영희');
-  click(byText(el, 'button', '1팀 승리')); // 기본값 '일반'에 기록됨
+  fill(el, '철수', '영희');
+  await click(byText(el, 'button', '1팀 승리')); // 기본값 '일반'에 기록됨
 
-  click(byText(el, 'button', '칼바람 내전'));
+  await click(byText(el, 'button', '칼바람 내전'));
   expect(el.querySelector('.board-blank')).not.toBeNull();
 
-  click(byText(el, 'button', '일반 내전'));
+  await click(byText(el, 'button', '일반 내전'));
   expect(el.querySelector('.board-blank')).toBeNull();
 });
 
-test('기록 삭제 버튼을 누르면 전적에서 사라진다', () => {
+test('기록 삭제 버튼을 누르면 전적에서 사라진다', async () => {
   const el = render();
-  const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
-  setValue(teamAPanel.querySelectorAll('.sr-row input')[0], '철수');
-  setValue(teamBPanel.querySelectorAll('.sr-row input')[0], '영희');
-  click(byText(el, 'button', '1팀 승리'));
+  fill(el, '철수', '영희');
+  await click(byText(el, 'button', '1팀 승리'));
 
-  click(el.querySelector('.history-list .row-del'));
+  await click(el.querySelector('.history-list .row-del'));
 
   expect(el.querySelector('.board-blank')).not.toBeNull();
   expect(el.querySelector('.history-list')).toBeNull();
 });
 
-test('내전 팀 짜기 결과가 없으면 안내만 하고 팀을 바꾸지 않는다', () => {
+/* 입장 코드로 들어온 사람은 보기만 한다 */
+test('수정 권한이 없으면 입력과 삭제가 아예 안 보인다', async () => {
+  const el = render({
+    canEdit: false,
+    initial: [
+      { id: 'g1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
+    ],
+  });
+
+  expect(el.querySelector('.sr-team')).toBeNull();
+  expect(byText(el, 'button', '1팀 승리')).toBeUndefined();
+  expect(el.querySelector('.history-list .row-del')).toBeNull();
+  // 기록 자체는 보인다
+  expect(el.querySelector('.board-list li').textContent).toContain('철수');
+});
+
+test('내전 팀 짜기 결과가 없으면 안내만 하고 팀을 바꾸지 않는다', async () => {
   const el = render();
-  click(byText(el, 'button', '방금 짠 팀 가져오기'));
+  await click(byText(el, 'button', '방금 짠 팀 가져오기'));
 
   const filled = [...el.querySelectorAll('.sr-row input')].filter((i) => i.value !== '');
   expect(filled).toHaveLength(0);
 });
 
-test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', () => {
+test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', async () => {
   localStorage.setItem(
     'lrc.lastSplit',
     JSON.stringify({ teamA: ['가', '나'], teamB: ['다', '라'], at: Date.now() })
   );
   const el = render();
 
-  click(byText(el, 'button', '방금 짠 팀 가져오기'));
+  await click(byText(el, 'button', '방금 짠 팀 가져오기'));
 
   const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
   const aNames = [...teamAPanel.querySelectorAll('.sr-row input')].map((i) => i.value);
@@ -123,10 +151,11 @@ test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', () => {
 });
 
 test('입력 칸에는 승률을 안 보여준다 (리더보드에만)', () => {
-  seedMatches([
-    { id: 'm1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
-  ]);
-  const el = render();
+  const el = render({
+    initial: [
+      { id: 'g1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
+    ],
+  });
   setValue(el.querySelectorAll('.sr-row input')[0], '철수');
 
   expect(el.querySelector('.sr-row .sr-winrate')).toBeNull();

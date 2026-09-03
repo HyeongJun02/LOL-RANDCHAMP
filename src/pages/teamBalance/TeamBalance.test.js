@@ -6,7 +6,7 @@ let act;
 
 /* roster.js가 적재 시점에 localStorage를 읽으므로, 시드를 심은 뒤 새로 require한다.
    React도 같은 레지스트리에서 가져와야 훅 디스패처가 갈리지 않는다. */
-const render = () => {
+const render = (matches = []) => {
   jest.resetModules();
   const React = require('react');
   const { createRoot } = require('react-dom/client');
@@ -15,7 +15,7 @@ const render = () => {
 
   const container = document.createElement('div');
   document.body.appendChild(container);
-  act(() => createRoot(container).render(React.createElement(TeamBalance)));
+  act(() => createRoot(container).render(React.createElement(TeamBalance, { matches })));
   return container;
 };
 
@@ -64,8 +64,8 @@ const setValue = (el, value) => {
 const byText = (el, text) =>
   [...document.querySelectorAll('button')].find((b) => b.textContent.includes(text));
 
-const buildWith = (names) => {
-  const el = render();
+const buildWith = (names, matches = []) => {
+  const el = render(matches);
   const inputs = el.querySelectorAll('.row-name input');
   names.forEach((n, i) => setValue(inputs[i], n));
   click(el.querySelector('.build-btn'));
@@ -156,14 +156,17 @@ test('이미 들어간 팀원은 체크된 채로 뜨고, 풀면 참가자에서
   expect(names).toContain('영희');
 });
 
-const seedMatches = (list) => localStorage.setItem('lrc.matches', JSON.stringify(list));
-
 describe('내전 포인트 반영', () => {
+  /* 전적은 방이 들고 있다. 넘겨주지 않으면 평점 기준을 고를 것 자체가 없다 */
+  test('전적을 안 넘기면 평점 기준 자체가 안 뜬다', () => {
+    const el = buildWith(['철수', '영희']);
+    expect(byText(el, '티어 + 내전 포인트')).toBeUndefined();
+  });
+
   test('평점 기준을 티어만이 아닌 걸로 바꾸면 내전 포인트 배지가 보인다', () => {
-    seedMatches([
+    const el = buildWith(['철수', '영희'], [
       { id: 'm1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
     ]);
-    const el = buildWith(['철수', '영희']);
 
     expect(el.querySelector('.scrim-badge')).toBeNull();
 
@@ -172,11 +175,10 @@ describe('내전 포인트 반영', () => {
   });
 
   test('내전 포인트만 기준으로 짜면 평점 합이 내전 포인트 합과 같아진다', () => {
-    seedMatches([
+    const el = buildWith(['가', '나', '다', '라'], [
       { id: 'm1', mode: 'normal', teamA: ['가'], teamB: ['나'], winner: 'A', playedAt: 1 },
       { id: 'm2', mode: 'normal', teamA: ['다'], teamB: ['라'], winner: 'A', playedAt: 2 },
     ]);
-    const el = buildWith(['가', '나', '다', '라']);
     click(byText(el, '내전 포인트만'));
     click(el.querySelector('.build-btn'));
 
@@ -186,11 +188,10 @@ describe('내전 포인트 반영', () => {
   });
 
   test('칼바람/일반 전환에 따라 같은 사람도 다른 내전 포인트가 반영된다', () => {
-    seedMatches([
+    const el = buildWith(['철수', '영희'], [
       { id: 'm1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
       { id: 'm2', mode: 'aram', teamA: ['영희'], teamB: ['철수'], winner: 'A', playedAt: 2 },
     ]);
-    const el = buildWith(['철수', '영희']);
     click(byText(el, '내전 포인트만'));
     click(el.querySelector('.build-btn'));
 

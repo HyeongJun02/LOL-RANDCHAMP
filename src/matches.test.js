@@ -1,46 +1,7 @@
-const KEY = 'lrc.matches';
+import * as store from './matches';
 
-let store;
-
-const load = () => {
-  jest.resetModules();
-  store = require('./matches');
-};
-
-const stored = () => JSON.parse(localStorage.getItem(KEY));
-
-beforeEach(() => {
-  localStorage.clear();
-  load();
-});
-
-test('기록하면 id와 시각이 붙어 저장된다', () => {
-  store.addMatch({ mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A' });
-  const [m] = stored();
-  expect(m.id).toBeTruthy();
-  expect(m.playedAt).toBeGreaterThan(0);
-  expect(m).toMatchObject({ mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A' });
-});
-
-test('삭제하면 사라진다', () => {
-  store.addMatch({ mode: 'aram', teamA: ['a'], teamB: ['b'], winner: 'A' });
-  const { id } = stored()[0];
-  store.removeMatch(id);
-  expect(stored()).toEqual([]);
-});
-
-test('새로고침해도 남아 있다', () => {
-  store.addMatch({ mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'B' });
-  load();
-  expect(stored()).toHaveLength(1);
-});
-
-test('저장 데이터가 깨져 있어도 빈 기록으로 시작한다', () => {
-  localStorage.setItem(KEY, '{{망가진 json');
-  load();
-  store.addMatch({ mode: 'normal', teamA: ['a'], teamB: ['b'], winner: 'A' });
-  expect(stored()).toHaveLength(1);
-});
+/* 전적은 이제 방(rooms.js)이 들고 있고, 이 파일은 계산만 한다.
+   저장/불러오기 테스트는 rooms.test.js로 옮겼다 */
 
 describe('statsFor', () => {
   test('이긴 팀은 승 +1, 진 팀은 패 +1', () => {

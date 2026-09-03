@@ -6,8 +6,13 @@ const read = (rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8');
 
 /* 하드코딩하면 페이지를 추가할 때마다 이 테스트만 고치게 된다.
    실제 파일에서 읽어 비교해야 '라우트는 늘렸는데 SEO를 빼먹은' 걸 잡는다 */
+/* :id 같은 동적 경로는 뺀다. 방마다 다른 페이지라 sitemap에 올릴 주소가 없고
+   고정 제목·설명을 붙일 수도 없다 */
 const routePaths = () =>
-  [...read('App.js').matchAll(/<Route\s+path="([^"]+)"/g)].map((m) => m[1]).sort();
+  [...read('App.js').matchAll(/<Route\s+path="([^"]+)"/g)]
+    .map((m) => m[1])
+    .filter((p) => !p.includes(':'))
+    .sort();
 
 const sitemapPaths = () =>
   [...read('../public/sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)]

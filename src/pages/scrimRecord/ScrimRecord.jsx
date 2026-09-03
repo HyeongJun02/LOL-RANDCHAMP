@@ -1,15 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaArrowRight, FaPlus, FaTimes, FaTrophy, FaClipboardList } from 'react-icons/fa';
-import { useRoster } from '../../roster';
 import { getTier, tierName } from '../../tiers';
-import { useMatches, addMatch, removeMatch, statsFor, statOf } from '../../matches';
+import { statsFor, statOf } from '../../matches';
 import { loadLastSplit } from '../../lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
-import PageHeader from '../../components/common/PageHeader';
-import { usePageMeta, PAGE_META } from '../../seo';
 import './ScrimRecord.css';
 
 const MODES = [
@@ -23,7 +20,7 @@ const blankTeam = () => Array.from({ length: TEAM_SIZE }, () => '');
 /* 컴포넌트 함수 안에서 매 렌더마다 새로 만들면 리액트가 다른 컴포넌트로 보고
    통째로 재마운트한다 (인풋 포커스가 키 입력마다 날아가는 버그로 이어짐).
    그래서 모듈 스코프에 한 번만 선언하고 필요한 값은 전부 props로 받는다. */
-const TeamPanel = ({ label, team, otherTeam, onChangeAt, onRemoveAt, onAdd, accent }) => (
+const TeamPanel = ({ label, team, otherTeam, players, onChangeAt, onRemoveAt, onAdd, accent }) => (
   <div className={`sr-team ${accent}`}>
     <div className="sr-team-head">
       <h3>{label}</h3>
@@ -38,6 +35,8 @@ const TeamPanel = ({ label, team, otherTeam, onChangeAt, onRemoveAt, onAdd, acce
           onChange={(e) => onChangeAt(i, e.target.value)}
         />
         <RosterPicker
+          people={players}
+          title="방 참가자 불러오기"
           taken={[...team.filter((_, idx) => idx !== i), ...otherTeam]}
           onPick={(m) => onChangeAt(i, m.name)}
         />
@@ -63,20 +62,21 @@ const formatRelative = (ts) => {
   return `${Math.floor(hr / 24)}일 전`;
 };
 
-const ScrimRecord = () => {
+/* 방의 '기록' 탭.
+   matches: rooms.js가 이름을 붙여 넘겨준 경기 목록
+   players: 방 참가자 명단 (티어 배지와 이름 고르기에 쓴다)
+   canEdit: 방장·부방장만 true. 나머지는 보기만 한다 */
+const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRemove }) => {
   const [mode, setMode] = useState('normal');
   const [teamA, setTeamA] = useState(blankTeam);
   const [teamB, setTeamB] = useState(blankTeam);
-  usePageMeta(PAGE_META.scrimRecord);
-  const roster = useRoster();
-  const matches = useMatches();
+  /* 더블클릭으로 같은 경기가 두 번 들어가는 걸 막는다.
+     상태로 잡으면 렌더 클로저의 옛 값을 읽어서 두 번 통과한다 */
+  const saving = useRef(false);
 
   const stats = useMemo(() => statsFor(matches, mode), [matches, mode]);
   const history = useMemo(
-    () =>
-      matches
-        .filter((m) => m.mode === mode)
-        .sort((a, b) => b.playedAt - a.playedAt),
+    () => matches.filter((m) => m.mode === mode).sort((a, b) => b.playedAt - a.playedAt),
     [matches, mode]
   );
 
@@ -88,12 +88,10 @@ const ScrimRecord = () => {
     [stats]
   );
 
-  const tierOf = (name) => roster.find((m) => m.name.trim() === name.trim());
+  const playerOf = (name) => players.find((p) => p.name.trim() === name.trim());
 
   const setAt = (setter) => (i, name) =>
     setter((prev) => prev.map((n, idx) => (idx === i ? name : n)));
-  const setAAt = setAt(setTeamA);
-  const setBAt = setAt(setTeamB);
 
   const addSlot = (setter) => () => setter((prev) => [...prev, '']);
   const removeSlot = (setter) => (i) => setter((prev) => prev.filter((_, idx) => idx !== i));
@@ -114,7 +112,8 @@ const ScrimRecord = () => {
     setTeamB(blankTeam());
   };
 
-  const recordWin = (winner) => {
+  const recordWin = async (winner) => {
+    if (saving.current) return;
     const a = teamA.map((n) => n.trim()).filter(Boolean);
     const b = teamB.map((n) => n.trim()).filter(Boolean);
     if (a.length === 0 || b.length === 0) {
@@ -126,17 +125,28 @@ const ScrimRecord = () => {
       toast.error(`'${overlap}' 님이 양 팀에 모두 있어요.`);
       return;
     }
-    addMatch({ mode, teamA: a, teamB: b, winner });
-    toast.success(`${winner === 'A' ? '1팀' : '2팀'} 승리! 기록했어요.`);
+
+    saving.current = true;
+    try {
+      await onAdd({ mode, teamA: a, teamB: b, winner });
+      toast.success(`${winner === 'A' ? '1팀' : '2팀'} 승리! 기록했어요.`);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      saving.current = false;
+    }
+  };
+
+  const deleteMatch = async (id) => {
+    try {
+      await onRemove(id);
+    } catch (e) {
+      toast.error(e.message);
+    }
   };
 
   return (
-    <div className="page sr-page">
-      <PageHeader
-        title="내전 기록지"
-        sub="팀을 채우고 승리한 팀을 고르면 승패와 내전 포인트가 쌓입니다."
-      />
-
+    <>
       <div className="seg-tabs lg sr-mode-tabs">
         {MODES.map((m) => (
           <button
@@ -149,44 +159,50 @@ const ScrimRecord = () => {
         ))}
       </div>
 
-      <div className="sr-toolbar">
-        <button className="ghost-btn" onClick={importSplit}>
-          <FaArrowRight /> 방금 짠 팀 가져오기
-        </button>
-        <button className="ghost-btn" onClick={clearTeams}>
-          팀 비우기
-        </button>
-      </div>
+      {canEdit && (
+        <>
+          <div className="sr-toolbar">
+            <button className="ghost-btn" onClick={importSplit}>
+              <FaArrowRight /> 방금 짠 팀 가져오기
+            </button>
+            <button className="ghost-btn" onClick={clearTeams}>
+              팀 비우기
+            </button>
+          </div>
 
-      <div className="sr-teams">
-        <TeamPanel
-          label="1팀"
-          team={teamA}
-          otherTeam={teamB}
-          onChangeAt={setAAt}
-          onRemoveAt={removeSlot(setTeamA)}
-          onAdd={addSlot(setTeamA)}
-          accent="team-blue"
-        />
-        <TeamPanel
-          label="2팀"
-          team={teamB}
-          otherTeam={teamA}
-          onChangeAt={setBAt}
-          onRemoveAt={removeSlot(setTeamB)}
-          onAdd={addSlot(setTeamB)}
-          accent="team-red"
-        />
-      </div>
+          <div className="sr-teams">
+            <TeamPanel
+              label="1팀"
+              team={teamA}
+              otherTeam={teamB}
+              players={players}
+              onChangeAt={setAt(setTeamA)}
+              onRemoveAt={removeSlot(setTeamA)}
+              onAdd={addSlot(setTeamA)}
+              accent="team-blue"
+            />
+            <TeamPanel
+              label="2팀"
+              team={teamB}
+              otherTeam={teamA}
+              players={players}
+              onChangeAt={setAt(setTeamB)}
+              onRemoveAt={removeSlot(setTeamB)}
+              onAdd={addSlot(setTeamB)}
+              accent="team-red"
+            />
+          </div>
 
-      <div className="win-buttons">
-        <button className="win-btn team-blue" onClick={() => recordWin('A')}>
-          <FaTrophy /> 1팀 승리
-        </button>
-        <button className="win-btn team-red" onClick={() => recordWin('B')}>
-          <FaTrophy /> 2팀 승리
-        </button>
-      </div>
+          <div className="win-buttons">
+            <button className="win-btn team-blue" onClick={() => recordWin('A')}>
+              <FaTrophy /> 1팀 승리
+            </button>
+            <button className="win-btn team-red" onClick={() => recordWin('B')}>
+              <FaTrophy /> 2팀 승리
+            </button>
+          </div>
+        </>
+      )}
 
       <section className="sr-board">
         <h2>
@@ -198,17 +214,17 @@ const ScrimRecord = () => {
         ) : (
           <ul className="board-list">
             {board.map((r, i) => {
-              const member = tierOf(r.name);
+              const player = playerOf(r.name);
               return (
                 <li key={r.name}>
                   <span className="board-rank">{i + 1}</span>
                   <span className="board-name">{r.name}</span>
-                  {member && (
+                  {player && (
                     <span
                       className="tier-badge"
-                      style={{ '--tier': getTier(member.tier).color }}
+                      style={{ '--tier': getTier(player.tier).color }}
                     >
-                      {tierName(member)}
+                      {tierName(player)}
                     </span>
                   )}
                   <span className="board-record">
@@ -244,19 +260,21 @@ const ScrimRecord = () => {
                     {m.teamB.join(', ')}
                   </span>
                 </span>
-                <button
-                  className="row-del"
-                  onClick={() => removeMatch(m.id)}
-                  aria-label="기록 삭제"
-                >
-                  <FaTimes />
-                </button>
+                {canEdit && (
+                  <button
+                    className="row-del"
+                    onClick={() => deleteMatch(m.id)}
+                    aria-label="기록 삭제"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         )}
       </section>
-    </div>
+    </>
   );
 };
 
