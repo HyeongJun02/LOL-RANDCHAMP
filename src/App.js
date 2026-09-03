@@ -14,10 +14,9 @@ import RandomPick from './pages/pick/RandomPick';
 import ScrimRecord from './pages/scrimRecord/ScrimRecord';
 import Season from './pages/season/Season';
 
-/* 저장소 모듈은 UI를 몰라야 해서 실패 알림만 여기서 꽂아준다 */
-setSyncErrorHandler(() =>
-  toast.error('서버 저장에 실패했어요. 이 기기에는 남아 있습니다.')
-);
+/* 저장소 모듈은 UI를 몰라야 해서 알림 통로만 여기서 꽂아준다.
+   문구는 저장 실패든 한도 초과든 부르는 쪽이 정한다 */
+setSyncErrorHandler((message) => toast.error(message));
 
 const TOAST_LIMIT = 3;
 

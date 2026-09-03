@@ -14,7 +14,12 @@ const merge = (local, remote) => {
   return [...byId.values()].sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
 };
 
-const store = createStore({ key: 'lrc.matches', column: 'matches', merge });
+const store = createStore({
+  key: 'lrc.matches',
+  column: 'matches',
+  merge,
+  limitKind: 'matches',
+});
 
 export const useMatches = store.use;
 

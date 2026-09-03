@@ -140,3 +140,49 @@ test('서버 읽기가 실패해도 앱이 죽지 않고 로컬 값을 유지한
   expect(onError).toHaveBeenCalled();
   expect(stored()).toHaveLength(1);
 });
+
+describe('계정당 한도', () => {
+  const many = (n, prefix) =>
+    Array.from({ length: n }, (_, i) => ({ id: `${prefix}${i}`, name: `${prefix}${i}` }));
+
+  test('한도를 넘기면 화면 값도 안 바뀌고 알림만 간다', async () => {
+    const { MAX_ROSTER } = require('./limits');
+    localStorage.setItem('lrc.roster', JSON.stringify(many(MAX_ROSTER, 'p')));
+    load();
+
+    const onError = jest.fn();
+    store.setSyncErrorHandler(onError);
+    await store.setCloudUser('보통사람');
+    mockUpsert.mockClear();
+
+    roster.addMember({ name: '한명더' });
+
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining('최대'));
+    expect(stored()).toHaveLength(MAX_ROSTER); // 안 늘었다
+    expect(mockUpsert).not.toHaveBeenCalled(); // 서버도 안 건드린다
+  });
+
+  test('관리자는 한도를 안 받는다', async () => {
+    const { MAX_ROSTER, ADMIN_USER_ID } = require('./limits');
+    localStorage.setItem('lrc.roster', JSON.stringify(many(MAX_ROSTER, 'p')));
+    load();
+
+    const onError = jest.fn();
+    store.setSyncErrorHandler(onError);
+    await store.setCloudUser(ADMIN_USER_ID);
+
+    roster.addMember({ name: '한명더' });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(stored()).toHaveLength(MAX_ROSTER + 1);
+  });
+
+  test('로그인 안 했으면 한도가 없다', () => {
+    const { MAX_ROSTER } = require('./limits');
+    localStorage.setItem('lrc.roster', JSON.stringify(many(MAX_ROSTER, 'p')));
+    load();
+
+    roster.addMember({ name: '한명더' });
+    expect(stored()).toHaveLength(MAX_ROSTER + 1);
+  });
+});

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { neon, isNeonConfigured } from './neon';
+import { withinLimit, LIMIT_MESSAGE } from './limits';
 
 /* localStorage를 기본으로 쓰고, 로그인하면 Neon과 동기화하는 저장소 공장.
    roster.js / matches.js가 이걸 쓴다.
@@ -20,7 +21,10 @@ export const setSyncErrorHandler = (fn) => {
   onError = fn;
 };
 
-export const createStore = ({ key, column, hydrate = (x) => x, merge }) => {
+/* 로그인한 사용자만 서버 용량을 쓴다 */
+export const cloudUserId = () => userId;
+
+export const createStore = ({ key, column, hydrate = (x) => x, merge, limitKind }) => {
   const readLocal = () => {
     try {
       const raw = JSON.parse(localStorage.getItem(key));
@@ -52,11 +56,19 @@ export const createStore = ({ key, column, hydrate = (x) => x, merge }) => {
     if (error) throw new Error(error.message);
   };
 
+  /* 한도를 넘기면 화면 값도 바꾸지 않는다. 넣었다가 서버에서 거절당해
+     화면과 서버가 어긋나는 것보다, 애초에 안 넣는 편이 낫다.
+     넣었으면 true */
   const commit = (next) => {
+    if (limitKind && !withinLimit(limitKind, next.length, userId)) {
+      onError(LIMIT_MESSAGE[limitKind]);
+      return false;
+    }
     state = next;
     writeLocal();
     notify();
-    push().catch((e) => onError(e.message));
+    push().catch(() => onError('서버 저장에 실패했어요. 이 기기에는 남아 있습니다.'));
+    return true;
   };
 
   registry.push({

@@ -28,7 +28,13 @@ const merge = (local, remote) => {
   return out;
 };
 
-const store = createStore({ key: 'lrc.roster', column: 'roster', hydrate, merge });
+const store = createStore({
+  key: 'lrc.roster',
+  column: 'roster',
+  hydrate,
+  merge,
+  limitKind: 'roster',
+});
 
 export const useRoster = store.use;
 
