@@ -1,47 +1,22 @@
-import { useSyncExternalStore } from 'react';
+import { createStore } from './store';
 
-/* 내전 전적. roster.js와 같은 패턴 — localStorage 하나를 모듈이 소유하고
-   useSyncExternalStore로 뿌린다. 다른 탭 변경도 storage 이벤트로 따라온다. */
-const KEY = 'lrc.matches';
-
+/* 내전 전적. localStorage가 기본이고, 로그인하면 Neon과 동기화된다.
+   저장 방식은 store.js가 맡고 여기는 전적 규칙과 집계만 갖는다. */
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-const read = () => {
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY));
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
+/* 로그인 시 합치기: 같은 경기(id)는 한 번만. 기기마다 기록한 경기가
+   전부 살아남고, 시간순으로 다시 정렬한다 */
+const merge = (local, remote) => {
+  const byId = new Map();
+  [...remote, ...local].forEach((m) => {
+    if (m && m.id && !byId.has(m.id)) byId.set(m.id, m);
+  });
+  return [...byId.values()].sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
 };
 
-let matches = read();
-const listeners = new Set();
+const store = createStore({ key: 'lrc.matches', column: 'matches', merge });
 
-const notify = () => listeners.forEach((fn) => fn());
-
-const commit = (next) => {
-  matches = next;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(matches));
-  } catch {
-    /* 사파리 프라이빗 모드 등. 이번 세션에서만 유지된다 */
-  }
-  notify();
-};
-
-const subscribe = (fn) => {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-};
-
-window.addEventListener('storage', (e) => {
-  if (e.key !== KEY) return;
-  matches = read();
-  notify();
-});
-
-export const useMatches = () => useSyncExternalStore(subscribe, () => matches);
+export const useMatches = store.use;
 
 /**
  * @param mode 'aram' | 'normal'
@@ -49,12 +24,13 @@ export const useMatches = () => useSyncExternalStore(subscribe, () => matches);
  * @param winner 'A' | 'B'
  */
 export const addMatch = ({ mode, teamA, teamB, winner }) =>
-  commit([
-    ...matches,
+  store.commit([
+    ...store.get(),
     { id: uid(), mode, teamA, teamB, winner, playedAt: Date.now() },
   ]);
 
-export const removeMatch = (id) => commit(matches.filter((m) => m.id !== id));
+export const removeMatch = (id) =>
+  store.commit(store.get().filter((m) => m.id !== id));
 
 /* 승 1회 = +WIN, 패 1회 = +LOSS(음수). tiers.js 평점 눈금(티어 하나가 대략 6~7점,
    디비전 하나가 1~2점)에 맞춰 승 1회를 디비전 하나 정도로 잡았다. */

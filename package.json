@@ -39,5 +39,10 @@
   },
   "devDependencies": {
     "react-icons": "^5.4.0"
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^@neondatabase/neon-js$": "<rootDir>/config/jest/neonJsStub.js"
+    }
   }
 }

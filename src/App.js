@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Toaster, useToasterStore, toast } from 'react-hot-toast';
+import { setSyncErrorHandler } from './store';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Backdrop from './components/common/Backdrop';
 import Header from './components/common/Header/Header';
@@ -10,6 +11,11 @@ import RandomLinePage from './pages/randomLine/RandomLine';
 import TeamBalance from './pages/teamBalance/TeamBalance';
 import RandomPick from './pages/pick/RandomPick';
 import ScrimRecord from './pages/scrimRecord/ScrimRecord';
+
+/* 저장소 모듈은 UI를 몰라야 해서 실패 알림만 여기서 꽂아준다 */
+setSyncErrorHandler(() =>
+  toast.error('서버 저장에 실패했어요. 이 기기에는 남아 있습니다.')
+);
 
 const TOAST_LIMIT = 3;
 

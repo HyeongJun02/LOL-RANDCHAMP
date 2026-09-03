@@ -1,67 +1,52 @@
-import { useSyncExternalStore } from 'react';
+import { createStore } from './store';
 
-/* 저장된 팀원 명단. 백엔드가 없으니 localStorage에 둔다.
-   모듈 하나가 소유하고 useSyncExternalStore로 뿌려서, 어느 페이지에서 고쳐도
-   열려 있는 모든 화면이 같은 값을 본다. 다른 탭 변경도 storage 이벤트로 따라온다. */
-const KEY = 'lrc.roster';
-
+/* 저장된 팀원 명단. localStorage가 기본이고, 로그인하면 Neon과 동기화된다.
+   저장 방식은 store.js가 전부 맡고 여기는 명단 규칙만 갖는다. */
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-const read = () => {
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY));
-    if (!Array.isArray(raw)) return [];
-    /* id 없던 옛 데이터도 그대로 살린다 */
-    return raw.map((m) => ({
-      tier: 'GOLD',
-      division: 4,
-      lines: [],
-      ...m,
-      id: m.id || uid(),
-    }));
-  } catch {
-    return [];
-  }
+/* id 없던 옛 데이터, lines 없던 데이터도 그대로 살린다 */
+const hydrate = (list) =>
+  list.map((m) => ({
+    tier: 'GOLD',
+    division: 4,
+    lines: [],
+    ...m,
+    id: m.id || uid(),
+  }));
+
+/* 로그인 시 합치기: 같은 이름이면 한 사람으로 보고 서버 쪽을 남긴다.
+   이 기기에만 있던 사람은 뒤에 붙는다 — 어느 쪽도 버리지 않는다 */
+const merge = (local, remote) => {
+  const out = [...remote];
+  const seen = new Set(remote.map((m) => m.name.trim()));
+  local.forEach((m) => {
+    const name = m.name.trim();
+    if (name && seen.has(name)) return;
+    if (name) seen.add(name);
+    out.push(m);
+  });
+  return out;
 };
 
-let roster = read();
-const listeners = new Set();
+const store = createStore({ key: 'lrc.roster', column: 'roster', hydrate, merge });
 
-const notify = () => listeners.forEach((fn) => fn());
-
-const commit = (next) => {
-  roster = next;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(roster));
-  } catch {
-    /* 사파리 프라이빗 모드 등. 이번 세션에서만 유지된다 */
-  }
-  notify();
-};
-
-const subscribe = (fn) => {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-};
-
-window.addEventListener('storage', (e) => {
-  if (e.key !== KEY) return;
-  roster = read();
-  notify();
-});
-
-export const useRoster = () => useSyncExternalStore(subscribe, () => roster);
+export const useRoster = store.use;
 
 export const addMember = (member = {}) =>
-  commit([...roster, { id: uid(), name: '', tier: 'GOLD', division: 4, lines: [], ...member }]);
+  store.commit([
+    ...store.get(),
+    { id: uid(), name: '', tier: 'GOLD', division: 4, lines: [], ...member },
+  ]);
 
 export const updateMember = (id, patch) =>
-  commit(roster.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  store.commit(store.get().map((m) => (m.id === id ? { ...m, ...patch } : m)));
 
-export const removeMember = (id) => commit(roster.filter((m) => m.id !== id));
+export const removeMember = (id) =>
+  store.commit(store.get().filter((m) => m.id !== id));
 
 /* 이름이 같으면 티어만 갱신, 없으면 추가. 저장된 인원 수를 돌려준다 */
 export const mergeMembers = (people) => {
+  const roster = store.get();
   const next = [...roster];
   people.forEach(({ name, tier, division }) => {
     const trimmed = name.trim();
@@ -71,6 +56,6 @@ export const mergeMembers = (people) => {
     else next.push({ id: uid(), name: trimmed, tier, division });
   });
   const added = next.length - roster.length;
-  commit(next);
+  store.commit(next);
   return added;
 };
