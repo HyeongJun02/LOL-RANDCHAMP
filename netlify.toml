@@ -1,0 +1,12 @@
+# public/_redirects와 같은 이야기를 한 번 더 한다.
+# _redirects는 빌드 결과물(build/)에 실려 나가고, 이 파일은 저장소 루트에서
+# 읽힌다. 둘 중 하나만 있어도 되지만, 어느 쪽을 보든 눈에 띄게 둘 다 둔다.
+[build]
+  command = "npm run build"
+  publish = "build"
+
+# 없는 경로는 index.html로. 라우팅은 브라우저의 react-router가 한다.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

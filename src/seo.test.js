@@ -69,3 +69,18 @@ test('도메인이 아직 자리표시자면 알려준다', () => {
   // 배포 전에 SITE_URL / index.html / sitemap.xml / robots.txt를 같이 바꿔야 한다
   expect(SITE_URL.startsWith('https://')).toBe(true);
 });
+
+/* 새로고침하면 서버가 /rooms/12 라는 파일을 찾다가 404를 낸다.
+   라우팅은 브라우저가 하므로 없는 경로는 index.html로 넘겨줘야 한다.
+   호스팅마다 읽는 파일이 달라서(그래서 한 번 놓쳤다) 둘 다 있는지 본다 */
+test('새로고침해도 404가 나지 않게 SPA 폴백이 있다', () => {
+  const redirects = read('../public/_redirects');
+  expect(redirects).toMatch(/^\/\*\s+\/index\.html\s+200/m);
+
+  const netlify = read('../netlify.toml');
+  expect(netlify).toContain('from = "/*"');
+  expect(netlify).toContain('status = 200');
+
+  const vercel = JSON.parse(read('../vercel.json'));
+  expect(vercel.rewrites[0].destination).toBe('/index.html');
+});
