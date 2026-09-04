@@ -602,12 +602,15 @@ const Room = () => {
   const { hofRows, champion } = useHallOfFame(roomId);
   /* 탭을 주소(#bet)에 둔다. useState에만 담아두면 새로고침하거나
      링크를 공유했을 때 항상 첫 탭으로 돌아간다.
-     replace라 뒤로 가기는 탭을 되짚지 않고 방 목록으로 나간다 */
+     replace라 뒤로 가기는 탭을 되짚지 않고 방 목록으로 나간다.
+
+     들어오면 대문(홈)이 먼저다. 바로 기록 화면을 들이밀면
+     '오늘 뭐가 있었나'를 볼 자리가 없다 */
   const location = useLocation();
   const fromHash = location.hash.replace('#', '');
-  const tab = TABS.some((t) => t.key === fromHash) ? fromHash : 'record';
+  const tab = TABS.some((t) => t.key === fromHash) ? fromHash : 'home';
   const setTab = (key) =>
-    navigate(`${location.pathname}${key === 'record' ? '' : `#${key}`}`, { replace: true });
+    navigate(`${location.pathname}${key === 'home' ? '' : `#${key}`}`, { replace: true });
 
   const editable = canEditRole(myRole);
 
