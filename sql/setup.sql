@@ -78,6 +78,8 @@ create trigger app_state_limits
 create table if not exists public.profiles (
   user_id            text primary key default auth.user_id(),
   nickname           text,
+  -- 옛 계정 단위 잔액. 이제 방마다 room_wallets를 쓴다.
+  -- 지우면 이 표를 통째로 돌려주는 get_me()의 반환 타입이 바뀌어서 남겨둔다.
   points             int  not null default 10000,
   points_month       text not null default public.now_month(),
   role               text not null default 'user',
@@ -99,6 +101,19 @@ create table if not exists public.rooms (
   owner_id   text not null default auth.user_id(),
   version    int  not null default 0,
   created_at timestamptz not null default now()
+);
+
+-- 끼꼬 잔액은 계정이 아니라 '방 안'에 있다.
+--
+-- 계정 하나에 잔액 하나면, 혼자(또는 친구 한 명과) 방을 새로 만들어서
+-- 서로 몰아주기만 해도 본방 잔액이 불어난다. 방마다 지갑을 따로 두면
+-- 그렇게 만든 끼꼬는 그 방 밖으로 못 나간다.
+create table if not exists public.room_wallets (
+  room_id      bigint not null references public.rooms(id) on delete cascade,
+  user_id      text   not null,
+  points       int    not null default 10000,
+  points_month text   not null default public.now_month(),
+  primary key (room_id, user_id)
 );
 
 create table if not exists public.room_members (
@@ -238,12 +253,13 @@ begin
   -- 초기화 전에 박제. 끼꼬만 남기면 된다 - 내전 성적은 scrims에 그대로 있어
   -- 언제든 그 달만 떼어 다시 계산할 수 있다.
   insert into hall_of_fame (room_id, month, user_id, display_name, kkiko_points)
-  select rm.room_id, cur, rm.user_id, coalesce(nullif(p.nickname, ''), '이름없음'), p.points
-    from room_members rm
-    join profiles p on p.user_id = rm.user_id
+  select w.room_id, cur, w.user_id, coalesce(nullif(p.nickname, ''), '이름없음'), w.points
+    from room_wallets w
+    join profiles p on p.user_id = w.user_id
   on conflict (room_id, month, user_id) do nothing;
 
-  update profiles set points = 10000, points_month = m;
+  -- 방마다 따로 초기화된다. 한 방에서 잘 벌었다고 다른 방이 따라 오르지 않는다
+  update room_wallets set points = 10000, points_month = m;
   update app_season set current_month = m, rolled_at = now() where id = 1;
 end; $fn$;
 
@@ -262,6 +278,7 @@ end; $fn$;
 
 
 alter table public.rooms         enable row level security;
+alter table public.room_wallets  enable row level security;
 alter table public.room_members  enable row level security;
 alter table public.room_players  enable row level security;
 alter table public.scrims        enable row level security;
@@ -272,6 +289,9 @@ alter table public.hall_of_fame  enable row level security;
 grant select (id, name, owner_id, version, created_at) on public.rooms to authenticated;
 grant update (name) on public.rooms to authenticated;
 grant select on public.room_members to authenticated;
+-- 잔액은 같은 방 사람끼리 서로 본다 (포인트 탭의 순위가 그것이다).
+-- 쓰기는 안 연다. 열면 콘솔 한 줄로 자기 잔액을 고칠 수 있다.
+grant select on public.room_wallets to authenticated;
 grant select on public.hall_of_fame to authenticated;
 grant select, insert, update, delete on public.room_players to authenticated;
 grant select, insert, delete on public.scrims to authenticated;
@@ -287,6 +307,10 @@ create policy rooms_admin_edit on public.rooms
 
 drop policy if exists members_read on public.room_members;
 create policy members_read on public.room_members
+  for select to authenticated using (public.is_room_member(room_id));
+
+drop policy if exists wallets_read on public.room_wallets;
+create policy wallets_read on public.room_wallets
   for select to authenticated using (public.is_room_member(room_id));
 
 drop policy if exists players_read on public.room_players;
@@ -378,6 +402,16 @@ returns text language sql volatile as $fn$
   from generate_series(1, 6);
 $fn$;
 
+-- 방에 들어온 사람에게 지갑을 하나 준다. 이미 있으면 그대로 둔다
+-- (나갔다 다시 들어와도 잔액이 초기화되면 안 된다).
+create or replace function public.ensure_wallet(p_room bigint, p_user text)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  insert into room_wallets (room_id, user_id) values (p_room, p_user)
+  on conflict (room_id, user_id) do nothing;
+end; $fn$;
+
+
 create or replace function public.create_room(p_name text)
 returns public.rooms language plpgsql security definer set search_path = public as $fn$
 declare
@@ -408,6 +442,7 @@ begin
   end loop;
 
   insert into room_members (room_id, user_id, role) values (room.id, me, 'owner');
+  perform public.ensure_wallet(room.id, me);
   return room;
 end; $fn$;
 
@@ -434,6 +469,7 @@ begin
 
   insert into profiles (user_id) values (me) on conflict (user_id) do nothing;
   insert into room_members (room_id, user_id) values (rid, me);
+  perform public.ensure_wallet(rid, me);
   return rid;
 end; $fn$;
 
@@ -538,7 +574,7 @@ end; $fn$;
 -- ============================================================
 -- 5. 포인트 원장 · 방 피드
 -- ============================================================
--- 잔액(profiles.points)과 내역(point_ledger)을 둘 다 둔다.
+-- 잔액(room_wallets.points)과 내역(point_ledger)을 둘 다 둔다.
 -- 잔액을 매번 원장 합계로 계산하면 내역이 쌓일수록 느려지고,
 -- 원장이 없으면 "누가 누구에게 얼마 보냈는지"를 볼 방법이 없다.
 -- 어긋나지 않게 항상 같은 함수 안에서 함께 갱신한다.
@@ -621,15 +657,20 @@ begin
     raise exception '보낼 끼꼬를 1 이상으로 적어주세요.';
   end if;
 
+  perform public.ensure_wallet(p_room, me);
+  perform public.ensure_wallet(p_room, p_to);
+
   -- 잔액 확인과 차감을 한 문장으로 한다. 따로 하면 두 요청이 같은 잔액을
   -- 보고 둘 다 통과해서, 가진 것보다 많이 보낼 수 있다.
-  update profiles set points = points - p_amount
-   where user_id = me and points >= p_amount;
+  -- 이 방 지갑에서만 오간다. 다른 방으로는 못 넘긴다.
+  update room_wallets set points = points - p_amount
+   where room_id = p_room and user_id = me and points >= p_amount;
   if not found then
-    raise exception '끼꼬가 모자라요.';
+    raise exception '이 방의 끼꼬가 모자라요.';
   end if;
 
-  update profiles set points = points + p_amount where user_id = p_to;
+  update room_wallets set points = points + p_amount
+   where room_id = p_room and user_id = p_to;
 
   insert into point_ledger (user_id, room_id, delta, reason, counterpart_user_id)
   values (me,   p_room, -p_amount, 'transfer_out', p_to),
@@ -797,9 +838,9 @@ begin
     select uid, s.room_id, amt, 'scrim', p_scrim from paid
     returning user_id, delta
   )
-  update profiles pr set points = pr.points + x.d
+  update room_wallets w set points = w.points + x.d
     from (select user_id, sum(delta) d from ins group by user_id) x
-   where pr.user_id = x.user_id;
+   where w.room_id = s.room_id and w.user_id = x.user_id;
 end; $fn$;
 
 
@@ -930,10 +971,11 @@ begin
 
   -- 잔액 확인과 차감을 한 문장으로. 갈라놓으면 두 요청이 같은 잔액을 보고
   -- 둘 다 통과해서 가진 것보다 많이 걸 수 있다.
-  update profiles set points = points - total
-   where user_id = me and points >= total;
+  perform public.ensure_wallet(s.room_id, me);
+  update room_wallets set points = points - total
+   where room_id = s.room_id and user_id = me and points >= total;
   if not found then
-    raise exception '끼꼬가 모자라요.';
+    raise exception '이 방의 끼꼬가 모자라요.';
   end if;
 
   begin
@@ -1103,9 +1145,9 @@ begin
     select user_id, s.room_id, amt, 'payout', p_scrim from paid
     returning user_id, delta
   )
-  update profiles pr set points = pr.points + x.d
+  update room_wallets w set points = w.points + x.d
     from (select user_id, sum(delta) d from ins group by user_id) x
-   where pr.user_id = x.user_id;
+   where w.room_id = s.room_id and w.user_id = x.user_id;
 
   perform public.award_participation(p_scrim);
 
@@ -1145,9 +1187,9 @@ begin
     select user_id, s.room_id, -delta, 'undo', p_scrim, now() from back
     returning user_id, delta
   )
-  update profiles pr set points = pr.points + x.d
+  update room_wallets w set points = w.points + x.d
     from (select user_id, sum(delta) d from ins group by user_id) x
-   where pr.user_id = x.user_id;
+   where w.room_id = s.room_id and w.user_id = x.user_id;
 
   update bets set payout = null, odds = null where scrim_id = p_scrim;
 
@@ -1185,15 +1227,17 @@ begin
     select user_id, s.room_id, -delta, 'undo', p_scrim, now() from back
     returning user_id, delta
   )
-  update profiles pr set points = pr.points + x.d
+  update room_wallets w set points = w.points + x.d
     from (select user_id, sum(delta) d from ins group by user_id) x
-   where pr.user_id = x.user_id;
+   where w.room_id = s.room_id and w.user_id = x.user_id;
 
   delete from scrims where id = p_scrim;
 end; $fn$;
 
 
 revoke execute on function public.award_participation(bigint) from public;
+-- 지갑 만들기는 다른 함수들이 안에서만 부른다. 밖에서 부를 일이 없다
+revoke execute on function public.ensure_wallet(bigint, text) from public;
 
 grant execute on function
   public.agree_fairplay(),

@@ -390,6 +390,45 @@ const BetTab = ({
     );
   };
 
+  /* 선택지별로 흩어져 있는 걸 사람 단위로 다시 모은다.
+     '내가 이번 판에 결국 얼마 잃었나'는 그렇게 봐야 나온다 */
+  const PlayerTotals = ({ scrim }) => {
+    const rows = bets.filter((b) => b.scrim_id === scrim.id);
+    if (rows.length === 0) return null;
+
+    const byUser = new Map();
+    rows.forEach((b) => {
+      const cur = byUser.get(b.user_id) || { staked: 0, payout: 0, count: 0 };
+      cur.staked += b.amount;
+      cur.payout += b.payout || 0;
+      cur.count += 1;
+      byUser.set(b.user_id, cur);
+    });
+
+    const list = [...byUser.entries()]
+      .map(([userId, v]) => ({ userId, ...v, net: v.payout - v.staked }))
+      .sort((a, b) => b.net - a.net);
+
+    return (
+      <div className="bet-market">
+        <h4>이번 판 정산</h4>
+        <ul className="bet-totals">
+          {list.map((r) => (
+            <li key={r.userId} className={r.net > 0 ? 'is-plus' : r.net < 0 ? 'is-minus' : ''}>
+              <span className="bet-total-name">{memberName.get(r.userId) || '알 수 없음'}</span>
+              <span className="bet-total-detail">
+                {r.count}건 · {num(r.staked)} 걸어 {num(r.payout)} 회수
+              </span>
+              <span className={`kkiko-delta ${r.net >= 0 ? 'plus' : 'minus'}`}>
+                {r.net > 0 ? `+${num(r.net)}` : num(r.net)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
   return (
     <div className="room-settings">
       {!activeScrim ? (
@@ -569,6 +608,7 @@ const BetTab = ({
           {/* 배팅할 때와 같은 화면을 그대로 다시 보여준다. 적중한 칸은 초록,
               각 칸 아래에 누가 걸어서 얼마를 벌고 잃었는지 붙는다 */}
           <Markets scrim={s} />
+          <PlayerTotals scrim={s} />
           {isOwner && (
             <button className="ghost-btn bet-action" onClick={() => undo(s)}>
               <FaUndo /> 정산 되돌리기

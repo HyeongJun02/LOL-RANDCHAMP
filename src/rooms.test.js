@@ -229,13 +229,13 @@ test('시즌 롤은 잠근 뒤에 달을 다시 확인한다 (동시에 두 번 
 
 /* 잔액 확인과 차감이 갈라져 있으면, 두 요청이 같은 잔액을 보고 둘 다 통과해
    가진 것보다 많이 보낼 수 있다. 한 문장이어야 한다 */
-test('송금은 잔액 확인과 차감을 한 문장으로 한다', () => {
+test('송금은 잔액 확인과 차감을 한 문장으로 한다 (방 지갑에서)', () => {
   const body = sql.slice(
     sql.indexOf('function public.transfer_points'),
     sql.indexOf('$fn$;', sql.indexOf('function public.transfer_points'))
   );
   expect(body).toMatch(
-    /update profiles set points = points - p_amount\s+where user_id = me and points >= p_amount;/
+    /update room_wallets set points = points - p_amount\s+where room_id = p_room and user_id = me and points >= p_amount;/
   );
   expect(body).toContain('if not found then');
 });
@@ -284,10 +284,10 @@ test('마켓 이름과 상한이 앱과 DB에서 같다', () => {
   expect(body).toContain("when b->>'market' like 'kills%' then 3000");
 });
 
-test('배팅도 잔액 확인과 차감을 한 문장으로 한다', () => {
+test('배팅도 잔액 확인과 차감을 한 문장으로 한다 (방 지갑에서)', () => {
   const body = fnBody('place_bets');
   expect(body).toMatch(
-    /update profiles set points = points - total\s+where user_id = me and points >= total;/
+    /update room_wallets set points = points - total\s+where room_id = s\.room_id and user_id = me and points >= total;/
   );
   expect(body).toContain('if not found then');
 });
@@ -471,4 +471,51 @@ test('퍼블 배당은 티어가 낮을수록 높다 (전원 같으면 낮은 �
   expect(body).toContain('(3 - coalesce(t.idx, 3)) * 0.02');
   /* 조인에서 빠진 선택지도 배당이 비지 않게 채운다 */
   expect(body).toContain("market = 'first_blood' and odds is null");
+});
+
+/* ---------- 방별 지갑 (SQL 계약) ---------- */
+/* 계정 하나에 잔액 하나면, 방을 새로 만들어 친구와 몰아주기만 해도
+   본방 잔액이 불어난다. 이 규칙이 무너지면 조용히 인플레가 난다 */
+
+test('끼꼬가 오가는 모든 곳이 방 지갑을 본다 (계정 잔액을 건드리지 않는다)', () => {
+  /* profiles.points를 쓰는 UPDATE가 하나도 남아 있으면 안 된다 */
+  expect(sql).not.toMatch(/update profiles\s+set points/);
+  expect(sql).not.toMatch(/update profiles pr set points/);
+});
+
+test('지급·회수는 그 경기가 속한 방의 지갑에만 닿는다', () => {
+  /* room_id 조건 없이 user_id만 보고 더하면 다른 방 잔액까지 오른다 */
+  const updates = [...sql.matchAll(/update room_wallets w set points[\s\S]{0,200}?;/g)].map(
+    (m) => m[0]
+  );
+  expect(updates.length).toBeGreaterThan(0);
+  updates.forEach((u) => {
+    expect(u).toContain('w.room_id = s.room_id');
+    expect(u).toContain('w.user_id = x.user_id');
+  });
+});
+
+test('방에 들어오면 지갑이 생긴다 (만들 때도, 코드로 들어올 때도)', () => {
+  const create = fnBody('create_room');
+  const join = fnBody('join_room');
+  expect(create).toContain('ensure_wallet');
+  expect(join).toContain('ensure_wallet');
+});
+
+test('지갑은 방마다 하나뿐이고, 다시 들어와도 초기화되지 않는다', () => {
+  expect(sql).toContain('primary key (room_id, user_id)');
+  expect(fnBody('ensure_wallet')).toContain('on conflict (room_id, user_id) do nothing');
+});
+
+test('잔액은 같은 방 사람만 보고, 아무도 직접 못 고친다', () => {
+  expect(sql).toContain('grant select on public.room_wallets to authenticated');
+  /* insert/update/delete 권한을 주면 콘솔 한 줄로 자기 잔액을 고칠 수 있다 */
+  expect(sql).not.toMatch(/grant[^;]*(insert|update|delete)[^;]*on public\.room_wallets/);
+  expect(sql).toContain('create policy wallets_read on public.room_wallets');
+});
+
+test('시즌 초기화도 방 지갑 기준이다', () => {
+  const body = fnBody('roll_season');
+  expect(body).toContain('update room_wallets set points = 10000');
+  expect(body).toContain('from room_wallets w');
 });

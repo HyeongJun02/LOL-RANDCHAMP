@@ -1,6 +1,15 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaArrowRight, FaPlus, FaTimes, FaTrophy, FaClipboardList, FaDice, FaUsers } from 'react-icons/fa';
+import {
+  FaArrowRight,
+  FaPlus,
+  FaTimes,
+  FaTrophy,
+  FaClipboardList,
+  FaDice,
+  FaUsers,
+  FaRedo,
+} from 'react-icons/fa';
 import { getTier, tierName } from '../../tiers';
 import { statsFor, statOf } from '../../matches';
 import { loadLastSplit } from '../../lastSplit';
@@ -113,6 +122,29 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
   /* 다른 기기/탭에서 짜둔 게 있으면 팝업을 열 때 이어서 보여준다 */
   const lastSplit = loadLastSplit();
 
+  /* 직전 경기에 뛴 사람들. 내전은 같은 인원으로 연달아 하는 게 보통이라
+     매번 열 명을 다시 골라 넣는 게 제일 번거롭다 */
+  const lastGame = history[0];
+
+  const fillFromLastGame = () => {
+    if (!lastGame) return;
+    setTeamA(lastGame.teamA);
+    setTeamB(lastGame.teamB);
+    toast.success('직전 경기 인원을 가져왔어요.');
+  };
+
+  /* 탭을 열었는데 비어 있고 직전 경기가 있으면 한 번만 자동으로 채운다.
+     사람이 이미 뭔가 적어둔 상태를 덮어쓰지 않도록 '비어 있을 때'만 본다 */
+  const autoFilled = useRef(false);
+  useEffect(() => {
+    if (autoFilled.current || !canEdit || !lastGame) return;
+    const empty = [...teamA, ...teamB].every((n) => !n.trim());
+    if (!empty) return;
+    autoFilled.current = true;
+    setTeamA(lastGame.teamA);
+    setTeamB(lastGame.teamB);
+  }, [canEdit, lastGame, teamA, teamB]);
+
   const clearTeams = () => {
     setTeamA(blankTeam());
     setTeamB(blankTeam());
@@ -201,6 +233,11 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
             <button className="ghost-btn" onClick={() => setShowBalancer(true)}>
               <FaUsers /> 내전 팀 짜기
             </button>
+            {lastGame && (
+              <button className="ghost-btn" onClick={fillFromLastGame} title="직전 경기와 같은 인원">
+                <FaRedo /> 직전 인원
+              </button>
+            )}
             {lastSplit && (
               <button
                 className="ghost-btn"

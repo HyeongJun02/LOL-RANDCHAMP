@@ -1188,3 +1188,74 @@
 .bet-odds {
   flex: none;
 }
+
+/* 끼꼬는 방마다 따로다. 목록에서 방별 잔액이 바로 보여야 한다 */
+.rooms-kkiko {
+  flex: none;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 170, 110, 0.3);
+  background: rgba(200, 170, 110, 0.1);
+  color: var(--gg-gold-light);
+  font-size: 0.74rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rooms-me-note {
+  font-size: 0.74rem;
+  color: #6b7a94;
+}
+
+/* ---------- 또또: 사람별 이번 판 정산 ---------- */
+/* 선택지별 목록만 있으면 '결국 내가 얼마 잃었나'를 눈으로 더해야 한다 */
+
+.bet-totals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.bet-totals li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 9px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bet-totals li.is-plus {
+  border-color: rgba(74, 222, 128, 0.35);
+  background: rgba(74, 222, 128, 0.07);
+}
+
+.bet-totals li.is-minus {
+  border-color: rgba(249, 115, 98, 0.3);
+  background: rgba(249, 115, 98, 0.06);
+}
+
+.bet-total-name {
+  flex: none;
+  min-width: 4.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e6ecf7;
+}
+
+.bet-total-detail {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.74rem;
+  color: #7d8ba3;
+}
+
+.bet-totals .kkiko-delta {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}

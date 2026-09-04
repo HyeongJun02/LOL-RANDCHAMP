@@ -14,6 +14,7 @@ import TeamBalance from './pages/teamBalance/TeamBalance';
 import RandomPick from './pages/pick/RandomPick';
 import RoomList from './pages/rooms/RoomList';
 import Room from './pages/rooms/Room';
+import NotFound from './pages/NotFound';
 
 /* 저장소 모듈은 UI를 몰라야 해서 알림 통로만 여기서 꽂아준다.
    문구는 저장 실패든 한도 초과든 부르는 쪽이 정한다 */
@@ -51,6 +52,9 @@ const App = () => {
               <Route path="/pick" element={<RandomPick />} />
               <Route path="/rooms" element={<RoomList />} />
               <Route path="/rooms/:id" element={<Room />} />
+              {/* 없는 주소는 전부 여기로. 새로고침 시 서버가 index.html을
+                  돌려주므로(vercel.json) 라우팅은 여기서 끝난다 */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Router>
         </AuthProvider>

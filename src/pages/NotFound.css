@@ -1,0 +1,97 @@
+.nf-page {
+  --page-width: 640px;
+  text-align: center;
+  padding-top: 3rem;
+}
+
+.nf-dice {
+  font-size: 2.4rem;
+  color: var(--gg-gold);
+  filter: drop-shadow(0 0 18px rgba(200, 170, 110, 0.45));
+  animation: nf-tumble 2.4s ease-in-out infinite;
+}
+
+@keyframes nf-tumble {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  50% { transform: rotate(8deg) translateY(-6px); }
+}
+
+.nf-code {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(3rem, 12vw, 5rem);
+  line-height: 1;
+  margin: 0.6rem 0 0.2rem;
+  background: linear-gradient(180deg, #fff7e0, #e7c98a 55%, var(--gg-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.nf-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.nf-desc {
+  margin: 0 0 1.4rem;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--gg-text-muted);
+}
+
+.nf-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.3rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
+  color: #06111f;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 10px 26px -12px rgba(200, 170, 110, 0.9);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.nf-home:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+.nf-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.8rem;
+}
+
+.nf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #b9c3d6;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nf-link:hover {
+  color: var(--accent, var(--gg-gold-light));
+  border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 45%, transparent);
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 10%, transparent);
+}
+
+.nf-link-icon {
+  display: inline-flex;
+  font-size: 0.85rem;
+  color: var(--accent, var(--gg-gold));
+}

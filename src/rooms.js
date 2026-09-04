@@ -311,13 +311,23 @@ export const useMyRooms = (userId) => {
       await neon.from('rooms').select('id,name,owner_id,version,created_at')
     );
     const members = unwrap(await neon.from('room_members').select('room_id,user_id,role'));
+    /* 방마다 내 끼꼬가 다르므로 목록에서도 방별로 보여준다 */
+    const wallets = unwrap(await neon.from('room_wallets').select('room_id,user_id,points'));
+    const myPoints = new Map(
+      (wallets || []).filter((w) => w.user_id === userId).map((w) => [w.room_id, w.points])
+    );
     const countOf = new Map();
     members.forEach((m) => countOf.set(m.room_id, (countOf.get(m.room_id) || 0) + 1));
     const roleOf = new Map(
       members.filter((m) => m.user_id === userId).map((m) => [m.room_id, m.role])
     );
     return (rooms || [])
-      .map((r) => ({ ...r, memberCount: countOf.get(r.id) || 0, myRole: roleOf.get(r.id) }))
+      .map((r) => ({
+        ...r,
+        memberCount: countOf.get(r.id) || 0,
+        myRole: roleOf.get(r.id),
+        myPoints: myPoints.get(r.id) ?? 0,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   }, [userId]);
 
@@ -349,8 +359,14 @@ export const useRoom = (roomId, userId) => {
       await neon.from('rooms').select(ROOM_SELECT).eq('id', roomId).maybeSingle()
     );
     if (!room) throw new Error('방을 찾을 수 없어요. 나갔거나 삭제된 방입니다.');
-    const profiles = unwrap(await neon.from('profiles').select('user_id,nickname,points,agreed_fairplay_at'));
-    return { room, profiles: profiles || [] };
+    /* 잔액은 이제 방마다 따로다. 프로필에는 이름과 동의 여부만 남는다 */
+    const profiles = unwrap(
+      await neon.from('profiles').select('user_id,nickname,agreed_fairplay_at')
+    );
+    const wallets = unwrap(
+      await neon.from('room_wallets').select('user_id,points').eq('room_id', roomId)
+    );
+    return { room, profiles: profiles || [], wallets: wallets || [] };
   }, [roomId]);
 
   const enabled = Boolean(roomId) && Boolean(userId) && isNeonConfigured;
@@ -384,6 +400,7 @@ export const useRoom = (roomId, userId) => {
   const members = room?.room_members || [];
   const players = room?.room_players || [];
   const profileOf = new Map((data?.profiles || []).map((p) => [p.user_id, p]));
+  const walletOf = new Map((data?.wallets || []).map((w) => [w.user_id, w.points]));
 
   const scrims = room?.scrims || [];
 
@@ -401,7 +418,7 @@ export const useRoom = (roomId, userId) => {
       .map((m) => ({
         ...m,
         nickname: profileOf.get(m.user_id)?.nickname || '이름 없음',
-        points: profileOf.get(m.user_id)?.points ?? 0,
+        points: walletOf.get(m.user_id) ?? 0,
         agreed: Boolean(profileOf.get(m.user_id)?.agreed_fairplay_at),
       }))
       .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]),

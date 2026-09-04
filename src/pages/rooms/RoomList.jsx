@@ -7,6 +7,7 @@ import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from
 import { MAX_ROOMS } from '../../limits';
 import PageHeader from '../../components/common/PageHeader';
 import NicknameGate from '../../components/rooms/NicknameGate';
+import { SkelRows } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../seo';
 import './Rooms.css';
 
@@ -120,7 +121,7 @@ const RoomList = () => {
             </button>
           </>
         )}
-        <span className="rooms-me-points">{(me?.points ?? 0).toLocaleString()} 끼꼬</span>
+        <span className="rooms-me-note">끼꼬는 방마다 따로 쌓입니다</span>
       </div>
 
       <div className="rooms-forms">
@@ -166,7 +167,7 @@ const RoomList = () => {
       {error && <p className="rooms-blank">{error}</p>}
 
       {loading ? (
-        <p className="rooms-blank">불러오는 중…</p>
+        <SkelRows count={3} h={54} />
       ) : rooms.length === 0 ? (
         <p className="rooms-blank">
           아직 들어간 방이 없어요. 위에서 방을 만들거나 입장 코드를 넣어보세요.
@@ -180,6 +181,7 @@ const RoomList = () => {
                 <span className="rooms-meta">
                   <FaUsers /> {r.memberCount}명
                 </span>
+                <span className="rooms-kkiko">{(r.myPoints ?? 0).toLocaleString()} 끼꼬</span>
                 <span className={`rooms-role role-${r.myRole}`}>{ROLE_LABEL[r.myRole]}</span>
               </Link>
             </li>
