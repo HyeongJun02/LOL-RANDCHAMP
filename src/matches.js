@@ -29,14 +29,11 @@
      표시점수 = 누적 × 판수 / (판수 + PRIOR_GAMES)
    ------------------------------------------------------------------ */
 
-/* 한 판으로 움직일 수 있는 최대 점수.
-   체스 Elo가 K/SCALE ≈ 8%인 걸 참고해 3으로 잡았다. 이보다 크면
-   한 판 결과에 순위가 출렁이고, 작으면 판수가 쌓여도 잘 안 갈린다. */
-export const K_FACTOR = 3;
-/* 포인트 차이를 승률로 바꾸는 축척. tiers.js 눈금과 같은 크기로 맞췄다 */
-export const ELO_SCALE = 14;
-/* 판수가 이만큼 쌓여야 결과를 절반쯤 믿는다 */
-export const PRIOR_GAMES = 3;
+/* 굴려보고 정하는 숫자는 전부 tuning.js에 모아뒀다.
+   여기서는 가져다 쓰고, 쓰던 쪽이 안 고쳐지게 그대로 다시 내보낸다 */
+import { K_FACTOR, ELO_SCALE, PRIOR_GAMES } from './tuning';
+
+export { K_FACTOR, ELO_SCALE, PRIOR_GAMES };
 
 const clean = (names) => [...new Set((names || []).map((n) => String(n).trim()).filter(Boolean))];
 

@@ -6,6 +6,11 @@ import {
   streakBreakersOf,
   gameCountsOf,
 } from './matches';
+import {
+  TITLE_MIN_PAIR as MIN_PAIR,
+  TITLE_MIN_STREAK as MIN_STREAK,
+  TITLE_GHOST_DAYS as GHOST_DAYS,
+} from './tuning';
 
 /* 데이터가 붙여주는 별명.
 
@@ -17,9 +22,6 @@ import {
    순서 = 자랑스러운 순서가 아니라 '희소한 순서'다. 아무나 못 받는 걸
    위에 둬야 배지가 값이 있다. */
 
-const MIN_PAIR = 3;
-const MIN_STREAK = 3;
-const GHOST_DAYS = 14;
 const DAY = 24 * 60 * 60 * 1000;
 
 /* 퍼스트 블러드는 경기 원본(scrims)에만 있다. matches는 승패만 들고 있다 */

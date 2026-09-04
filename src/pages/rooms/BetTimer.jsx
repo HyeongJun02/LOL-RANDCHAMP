@@ -9,11 +9,8 @@ import React, { useEffect, useRef, useState } from 'react';
 
    0이 되면 onExpire를 한 번만 부른다. 실제 마감은 그걸 받은 쪽에서
    lock_betting을 불러 서버에 남긴다. */
-const WARN_SECONDS = 20;
+import { WARN_SECONDS, HEAT_SECONDS } from '../../tuning';
 
-/* 남은 30초 동안 카드 색이 초록에서 빨강으로 옮겨간다.
-   숫자를 안 보고 있어도 시야 끝에서 '급해졌다'가 읽힌다 */
-const HEAT_SECONDS = 30;
 
 const mmss = (sec) => {
   const m = Math.floor(sec / 60);

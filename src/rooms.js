@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
+import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP } from './tuning';
 
 /* 내전 방. 여기부터는 localStorage가 없다.
 
@@ -664,11 +665,11 @@ export const canEdit = (role) => role === 'owner' || role === 'admin';
 
    기준선 하나가 곧 마켓 하나다. 여러 개를 열면 언더·오버를 여러 번 걸 수
    있어서 '어디에 건 건지' 자체가 헷갈리므로 경기마다 하나만 연다. */
-export const KILLS_PER_PLAYER = 8.9;
+export { KILLS_PER_PLAYER };
 
 export const killLineFor = (playerCount) => {
   const n = Number(playerCount) || 0;
-  if (n === 0) return 53.5;
+  if (n === 0) return DEFAULT_KILL_LINE;
   return Math.round(KILLS_PER_PLAYER * n) + 0.5;
 };
 
@@ -696,8 +697,9 @@ export const winningSelection = (scrim, market) => {
   return null;
 };
 
-/* 고정 배당 마켓의 1인 상한. sql/setup.sql의 place_bets와 같아야 한다 */
-export const BET_CAP = { first_blood: 2000, kills: 3000 };
+/* 고정 배당 마켓의 1인 상한. sql/setup.sql의 place_bets와 같아야 한다.
+   숫자는 tuning.js에 있다 */
+export { BET_CAP };
 
 export const capOf = (market) =>
   market === 'first_blood' ? BET_CAP.first_blood : isKillMarket(market) ? BET_CAP.kills : null;

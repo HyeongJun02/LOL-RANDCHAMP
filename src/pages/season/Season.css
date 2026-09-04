@@ -78,6 +78,81 @@
 
 /* 순위표는 RankList(components/common)로 옮겼다 */
 
+.season-note {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  font-size: 0.72rem;
+  color: #5b6b85;
+}
+
+.season-note svg {
+  color: rgba(200, 170, 110, 0.6);
+}
+
+/* ---------- 숨은 기록 ---------- */
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.5rem;
+}
+
+.insight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--gg-panel-border);
+}
+
+.insight-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6b7a94;
+}
+
+.insight-head svg {
+  color: rgba(200, 170, 110, 0.7);
+}
+
+.insight-main {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e6ecf7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insight-main strong {
+  color: var(--gg-gold-light);
+}
+
+.insight-hint {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #4d5b73;
+}
+
+.insight-empty {
+  font-size: 0.8rem;
+  color: #4d5b73;
+}
+
+.insight-note {
+  margin: 0.2rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: #5b6b85;
+}
+
 .season-insights {
   margin-top: 1.4rem;
 }

@@ -5,23 +5,17 @@ import {
   FaPlus,
   FaTimes,
   FaTrophy,
-  FaClipboardList,
   FaDice,
   FaUsers,
   FaRedo,
 } from 'react-icons/fa';
-import { getTier, tierName } from '../../tiers';
-import { statsFor, statOf } from '../../matches';
 import { loadLastSplit } from '../../lastSplit';
 import Modal from '../../components/common/Modal';
 import TeamBalance from '../teamBalance/TeamBalance';
 import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
-import ScrimBadge from '../../components/common/ScrimBadge';
 import ClearInput from '../../components/common/ClearInput';
-import RankList from '../../components/common/RankList';
 import { useDialog } from '../../components/common/Dialog';
-import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import { timeAgo } from '../../timeAgo';
 import './ScrimRecord.css';
 
@@ -90,21 +84,10 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
   const [showBalancer, setShowBalancer] = useState(false);
   const [showBetOpen, setShowBetOpen] = useState(false);
 
-  const stats = useMemo(() => statsFor(matches), [matches]);
   const history = useMemo(
     () => [...matches].sort((a, b) => b.playedAt - a.playedAt),
     [matches]
   );
-
-  const board = useMemo(
-    () =>
-      [...stats.entries()]
-        .map(([name, s]) => ({ name, ...s, games: s.wins + s.losses }))
-        .sort((a, b) => b.points - a.points || b.wins / b.games - a.wins / a.games),
-    [stats]
-  );
-
-  const playerOf = (name) => players.find((p) => p.name.trim() === name.trim());
 
   const setAt = (setter) => (i, name) =>
     setter((prev) => prev.map((n, idx) => (idx === i ? name : n)));
@@ -330,37 +313,6 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
           )}
         </>
       )}
-
-      <section className="sr-board">
-        <h2>
-          <FaClipboardList /> 전적 리더보드
-          <span className="panel-count">{board.length}명</span>
-        </h2>
-        <RankList
-          empty="아직 기록된 경기가 없어요."
-          rows={board.map((r) => {
-            const player = playerOf(r.name);
-            return {
-              key: r.name,
-              name: r.name,
-              badge: player && (
-                <span className="tier-badge" style={{ '--tier': getTier(player.tier).color }}>
-                  {tierName(player)}
-                </span>
-              ),
-              stat: (
-                <>
-                  {r.wins}승 {r.losses}패 <b>{Math.round((r.wins / r.games) * 100)}%</b>
-                </>
-              ),
-              value: <ScrimBadge points={r.points} stat={statOf(stats, r.name)} />,
-              /* 막대는 승률. 판수가 적으면 과장돼 보이지만 옆에 전적이 같이 있다 */
-              ratio: r.wins / r.games,
-            };
-          })}
-        />
-        <ScrimPointsHelp />
-      </section>
 
       <section className="sr-history">
         <h2>

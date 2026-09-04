@@ -7,13 +7,7 @@ import { killLineFor } from '../../rooms';
 
    '직접 마감'이 기본이다. 시간을 정해두면 방장이 잊어도 알아서 닫히지만,
    경기 시작이 늦어지는 일이 잦아서 강제하지는 않는다. */
-const PRESETS = [
-  { label: '직접 마감', seconds: null },
-  { label: '1분', seconds: 60 },
-  { label: '2분', seconds: 120 },
-  { label: '3분', seconds: 180 },
-  { label: '5분', seconds: 300 },
-];
+import { CLOSE_PRESETS as PRESETS } from '../../tuning';
 
 const BetOpenModal = ({ onClose, onOpen, playerCount }) => {
   const [seconds, setSeconds] = useState(null);

@@ -815,3 +815,40 @@ test('취소는 로그에 남는다 (남의 돈이 오간 일이다)', () => {
   expect(line).toContain('3,500');
   expect(line).toContain('환불');
 });
+
+/* ---------- 화면과 DB가 같은 숫자를 보는가 ---------- */
+
+/* 굴려보고 정하는 값은 tuning.js에 모아뒀는데, 그중 몇 개는 DB에도
+   같은 숫자가 박혀 있다. 한쪽만 고치면 "3,000까지 걸 수 있어요"라고
+   해놓고 서버가 거절하는 꼴이 된다 */
+test('배팅 상한이 tuning.js와 DB에서 같다', () => {
+  const tuning = require('./tuning');
+  const body = fnBody('place_bets');
+  expect(body).toContain(`then ${tuning.BET_CAP.kills}`);
+  expect(body).toContain(String(tuning.BET_CAP.first_blood));
+});
+
+test('배당이 tuning.js와 DB에서 같다', () => {
+  const tuning = require('./tuning');
+  const body = fnBody('lock_betting');
+  expect(body).toContain(`n * ${tuning.FIRST_BLOOD_RATE}`);
+  expect(body).toContain(`* ${tuning.FIRST_BLOOD_TIER_BONUS}`);
+  expect(body).toContain(`odds = ${tuning.KILLS_ODDS}`);
+});
+
+test('참여 보상과 시즌 초기화 값이 tuning.js와 DB에서 같다', () => {
+  const tuning = require('./tuning');
+  expect(fnBody('award_participation')).toContain(
+    `then ${tuning.SCRIM_REWARD.win} else ${tuning.SCRIM_REWARD.lose}`
+  );
+  expect(fnBody('roll_season')).toContain(`points = ${tuning.MONTHLY_KKIKO}`);
+  expect(fnBody('adjust_points')).toContain(`> ${tuning.ADJUST_CAP}`);
+});
+
+test('setup.sql 첫머리가 고칠 만한 숫자들이 어디 있는지 알려준다', () => {
+  const head = sql.slice(0, 2000);
+  expect(head).toContain('src/tuning.js');
+  ['place_bets', 'lock_betting', 'award_participation', 'roll_season'].forEach((fn) => {
+    expect(head).toContain(fn);
+  });
+});

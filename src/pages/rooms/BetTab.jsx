@@ -18,6 +18,7 @@ import {
 import { useDialog } from '../../components/common/Dialog';
 import BetTimer from './BetTimer';
 import { timeAgo } from '../../timeAgo';
+import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS } from '../../tuning';
 
 const num = (n) => Number(n || 0).toLocaleString();
 
@@ -101,7 +102,7 @@ const BetTab = ({
 
   /* 폰으로 숫자 키보드 올려서 0을 네 번 치는 게 은근히 번거롭다.
      자주 거는 금액은 눌러서 더한다. 마켓 상한은 여기서 잘라준다 */
-  const BUMPS = [100, 500, 1000, 2000];
+  const BUMPS = BET_BUMPS;
 
   const bump = (market, delta) =>
     setCart((prev) => {
@@ -346,7 +347,7 @@ const BetTab = ({
 
   const renderMarkets = (scrim) => {
     const roster = [...(scrim.team_a || []), ...(scrim.team_b || [])];
-    const fixedFb = (roster.length * 0.85).toFixed(2);
+    const fixedFb = (roster.length * FIRST_BLOOD_RATE).toFixed(2);
     return (
       <>
         <div className="bet-market">
@@ -389,7 +390,7 @@ const BetTab = ({
             <div className="bet-market" key={market}>
               <h4>
                 총 킬 <strong className="bet-line">{line}</strong>
-                <em>고정 1.98배</em>
+                <em>고정 {KILLS_ODDS}배</em>
               </h4>
               <div className="bet-opts">
                 {renderOption({ scrim, market, selection: 'over', label: `오버 · ${line} 초과` })}

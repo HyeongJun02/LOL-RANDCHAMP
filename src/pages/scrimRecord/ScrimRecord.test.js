@@ -73,10 +73,13 @@ test('양 팀에 이름을 넣고 승리 팀을 고르면 기록이 남는다', 
 
   await click(byText(el, 'button', '1팀 승리'));
 
+  /* 순위표는 '내전 기록' 탭으로 옮겼다. 여기는 게임을 시작하는 화면이라
+     최근 기록만 남는다 */
   expect(el.querySelector('.rank-blank')).toBeNull();
-  expect([...el.querySelectorAll('.rank-list .rank-row')]).toHaveLength(2);
-  expect(byText(el, 'span', '철수').closest('li').textContent).toContain('1승 0패');
-  expect(byText(el, 'span', '영희').closest('li').textContent).toContain('0승 1패');
+  const rows = [...el.querySelectorAll('.history-list li')];
+  expect(rows).toHaveLength(1);
+  expect(rows[0].textContent).toContain('철수');
+  expect(rows[0].textContent).toContain('영희');
 
   const history = el.querySelector('.history-list li');
   expect(history.textContent).toContain('철수');
@@ -131,7 +134,7 @@ test('수정 권한이 없으면 입력과 삭제가 아예 안 보인다', asyn
   expect(byText(el, 'button', '1팀 승리')).toBeUndefined();
   expect(el.querySelector('.history-list .row-del')).toBeNull();
   // 기록 자체는 보인다
-  expect(el.querySelector('.rank-list .rank-row').textContent).toContain('철수');
+  expect(el.querySelector('.history-list li').textContent).toContain('철수');
 });
 
 test('짜둔 팀이 없으면 가져오기 버튼 자체를 안 보여준다', () => {
@@ -157,7 +160,9 @@ test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', async (
   expect(bNames).toEqual(expect.arrayContaining(['다', '라']));
 });
 
-test('입력 칸에는 승률을 안 보여준다 (리더보드에만)', () => {
+/* 게임 시작 탭은 '게임을 시작하는' 화면이다. 전적을 보는 곳이 아니다.
+   순위표를 여기와 내전 기록 탭에 둘 다 두니 같은 걸 두 번 보게 됐다 */
+test('게임 시작 화면에는 순위표를 두지 않는다', () => {
   const el = render({
     initial: [
       { id: 'g1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
@@ -166,8 +171,9 @@ test('입력 칸에는 승률을 안 보여준다 (리더보드에만)', () => {
   setValue(el.querySelectorAll('.sr-row input')[0], '철수');
 
   expect(el.querySelector('.sr-row .sr-winrate')).toBeNull();
-  // 순위표에는 그대로 있다
-  expect(el.querySelector('.rank-stat').textContent).toContain('%');
+  expect(el.querySelector('.rank-list')).toBeNull();
+  /* 대신 방금 뭘 했는지는 보인다 */
+  expect(el.querySelector('.history-list')).not.toBeNull();
 });
 
 test('확인창에서 취소하면 기록이 그대로 남는다', async () => {

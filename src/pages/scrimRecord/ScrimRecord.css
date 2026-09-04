@@ -206,12 +206,13 @@
 
 /* ---------- 리더보드 ---------- */
 
-.sr-board,
+/* 순위표(전적 리더보드)는 '내전 기록' 탭으로 옮겼다.
+   여기는 게임을 시작하는 화면이고, 전적은 거기서 본다 */
+
 .sr-history {
   margin-bottom: 1.6rem;
 }
 
-.sr-board h2,
 .sr-history h2 {
   display: flex;
   align-items: center;
@@ -221,13 +222,6 @@
   color: #e6ecf7;
   margin: 0 0 0.8rem;
 }
-
-.sr-board h2 svg {
-  color: var(--gg-gold);
-}
-
-/* 순위표는 RankList(components/common)로 옮겼다.
-   전적·시즌·끼꼬가 같은 모양을 쓴다 */
 
 .history-list {
   list-style: none;
