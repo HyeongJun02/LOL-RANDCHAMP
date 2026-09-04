@@ -6,6 +6,12 @@ import { useDialog } from '../../components/common/Dialog';
 import RankList from '../../components/common/RankList';
 
 /* 무엇 때문에 끼꼬가 움직였는지. 배팅/정산은 5단계에서 붙는다 */
+/* 자주 쓰는 금액. 폰에서 0을 네 번 치는 게 은근히 번거롭다 */
+const num = (n) => Number(n || 0).toLocaleString();
+
+/* 자주 쓰는 금액. 폰에서 0을 네 번 치는 게 은근히 번거롭다 */
+const QUICK = [100, 500, 1000];
+
 const REASON = {
   transfer_in: '받음',
   transfer_out: '보냄',
@@ -34,6 +40,7 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [adjTo, setAdjTo] = useState('');
+  const [adjSign, setAdjSign] = useState(1);
   const [adjAmount, setAdjAmount] = useState('');
   const [adjReason, setAdjReason] = useState('');
   const busy = useRef(false);
@@ -81,6 +88,14 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
     loadPage(page - 1, cursors);
   };
 
+  /* 무엇이 무엇인지 미리 보여준다. 고르고 적는 칸만 나란히 있으면
+     '누구에게 얼마를' 이 확인창을 띄워야만 보인다 */
+  const sendTarget = members.find((m) => m.user_id === to);
+  const sendValue = Math.floor(Number(amount)) || 0;
+  const myPoints = me?.points ?? 0;
+  const sendLeft = myPoints - sendValue;
+  const sendReady = Boolean(sendTarget) && sendValue > 0 && sendLeft >= 0;
+
   const send = async () => {
     if (busy.current) return;
     const value = Number(amount);
@@ -114,30 +129,36 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
     }
   };
 
-  /* 방장만. 더하기도 빼기도 같은 칸에서 한다 (음수를 적으면 뺀다) */
+  /* 방장만. 부호를 손으로 치게 하면(-1000) 빼먹고 반대로 준다.
+     방향은 버튼으로 고르고, 칸에는 숫자만 넣는다 */
+  const adjTarget = members.find((m) => m.user_id === adjTo);
+  const adjValue = Math.floor(Number(adjAmount)) || 0;
+  const adjDelta = adjValue * adjSign;
+  const adjAfter = adjTarget ? Math.max(0, adjTarget.points + adjDelta) : null;
+  const adjReady = Boolean(adjTarget) && adjValue > 0;
+
   const adjust = async () => {
     if (busy.current) return;
-    const value = Number(adjAmount);
-    if (!adjTo) {
+    if (!adjTarget) {
       toast.error('조정할 사람을 골라주세요.');
       return;
     }
-    if (!Number.isInteger(value) || value === 0) {
-      toast.error('더하거나 뺄 끼꼬를 숫자로 적어주세요. (빼려면 -1000처럼)');
+    if (adjValue <= 0) {
+      toast.error('조정할 끼꼬를 1 이상의 숫자로 적어주세요.');
       return;
     }
     const ok = await confirm({
       title: '끼꼬 조정',
-      message: `${nameOf.get(adjTo)} 님의 끼꼬를 ${value > 0 ? '+' : ''}${value.toLocaleString()} 할까요?`,
+      message: `${adjTarget.nickname} 님의 끼꼬를 ${adjTarget.points.toLocaleString()} → ${adjAfter.toLocaleString()} 로 바꿀까요?`,
       detail: '누가 누구의 끼꼬를 얼마나 왜 만졌는지 로그에 남고, 방 사람 모두가 봅니다.',
-      confirmText: '조정',
+      confirmText: adjSign > 0 ? '올리기' : '내리기',
       danger: true,
     });
     if (!ok) return;
 
     busy.current = true;
     try {
-      await adjustPoints(roomId, adjTo, value, adjReason);
+      await adjustPoints(roomId, adjTo, adjDelta, adjReason);
       setAdjAmount('');
       setAdjReason('');
       toast.success('조정했어요. 로그에 남았습니다.');
@@ -179,39 +200,73 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
         <h3>
           <FaPaperPlane /> 끼꼬 보내기
         </h3>
-        <p className="rooms-hint">
-          내 잔액 <strong>{(me?.points ?? 0).toLocaleString()}</strong> 끼꼬. 같은 방 멤버에게만
-          보낼 수 있어요.
-        </p>
         {others.length === 0 ? (
           <p className="rooms-hint">아직 이 방에 다른 사람이 없어요.</p>
         ) : (
-          <div className="rooms-form-row" style={{ marginTop: '0.6rem' }}>
-            <select
-              className="rooms-input"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              aria-label="받을 사람"
-            >
-              <option value="">받을 사람</option>
-              {others.map((m) => (
-                <option key={m.user_id} value={m.user_id}>
-                  {m.nickname}
-                </option>
+          <div className="kf">
+            <label className="kf-row">
+              <span className="kf-label">받는 사람</span>
+              <select className="rooms-input" value={to} onChange={(e) => setTo(e.target.value)}>
+                <option value="">고르기</option>
+                {others.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.nickname}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="kf-row">
+              <span className="kf-label">보낼 끼꼬</span>
+              <input
+                className="rooms-input"
+                type="number"
+                min="1"
+                value={amount}
+                placeholder="0"
+                onChange={(e) => setAmount(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && send()}
+              />
+            </label>
+
+            <div className="bet-chips kf-chips">
+              {QUICK.map((n) => (
+                <button
+                  key={n}
+                  className="bet-chip"
+                  onClick={() => setAmount(String(Math.min(myPoints, sendValue + n)))}
+                >
+                  +{n}
+                </button>
               ))}
-            </select>
-            <input
-              className="rooms-input"
-              type="number"
-              min="1"
-              value={amount}
-              placeholder="끼꼬"
-              onChange={(e) => setAmount(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && send()}
-            />
-            <button className="ghost-btn" onClick={send}>
-              보내기
-            </button>
+              <button className="bet-chip" onClick={() => setAmount(String(myPoints))}>
+                전액
+              </button>
+              <button
+                className="bet-chip is-clear"
+                onClick={() => setAmount('')}
+                disabled={!amount}
+              >
+                지우기
+              </button>
+            </div>
+
+            {/* 누르기 전에 무슨 일이 일어나는지 한 줄로 */}
+            <div className={`kf-preview ${sendLeft < 0 ? 'is-over' : ''}`}>
+              {sendReady ? (
+                <p>
+                  <b>{sendTarget.nickname}</b> 님에게 <b>{num(sendValue)}</b> 끼꼬 · 보내고 나면 내
+                  잔액 <b>{num(sendLeft)}</b>
+                </p>
+              ) : sendLeft < 0 ? (
+                <p>잔액보다 {num(-sendLeft)} 끼꼬 더 보내려 하고 있어요.</p>
+              ) : (
+                <p>받는 사람과 금액을 고르면 여기에 요약이 뜹니다. (내 잔액 {num(myPoints)})</p>
+              )}
+              <button className="ghost-btn" onClick={send} disabled={!sendReady}>
+                보내기
+              </button>
+            </div>
           </div>
         )}
       </section>
@@ -222,43 +277,108 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
             <FaSlidersH /> 끼꼬 조정
           </h3>
           <p className="rooms-hint">
-            정산이 꼬였거나 벌칙·상을 줄 때 방장이 직접 더하고 뺍니다. 빼려면{' '}
-            <b>-1000</b>처럼 적으세요. <b>조정한 내역은 예외 없이 로그 탭에 남습니다.</b>
+            정산이 꼬였거나 벌칙·상을 줄 때 방장이 직접 올리고 내립니다.{' '}
+            <b>조정한 내역은 예외 없이 로그 탭에 남습니다.</b>
           </p>
-          <div className="rooms-form-row" style={{ marginTop: '0.6rem' }}>
-            <select
-              className="rooms-input"
-              value={adjTo}
-              onChange={(e) => setAdjTo(e.target.value)}
-              aria-label="조정할 사람"
-            >
-              <option value="">조정할 사람</option>
-              {members.map((m) => (
-                <option key={m.user_id} value={m.user_id}>
-                  {m.nickname}
-                </option>
+
+          <div className="kf">
+            <label className="kf-row">
+              <span className="kf-label">대상</span>
+              <select
+                className="rooms-input"
+                value={adjTo}
+                onChange={(e) => setAdjTo(e.target.value)}
+              >
+                <option value="">고르기</option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.nickname} ({num(m.points)})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="kf-row">
+              <span className="kf-label">방향</span>
+              {/* 부호를 손으로 치게 하면(-1000) 빼먹고 반대로 준다 */}
+              <div className="seg-tabs kf-sign">
+                <button
+                  className={`seg-tab ${adjSign > 0 ? 'active' : ''}`}
+                  onClick={() => setAdjSign(1)}
+                >
+                  올리기
+                </button>
+                <button
+                  className={`seg-tab ${adjSign < 0 ? 'active' : ''}`}
+                  onClick={() => setAdjSign(-1)}
+                >
+                  내리기
+                </button>
+              </div>
+            </div>
+
+            <label className="kf-row">
+              <span className="kf-label">얼마나</span>
+              <input
+                className="rooms-input"
+                type="number"
+                min="1"
+                value={adjAmount}
+                placeholder="0"
+                onChange={(e) => setAdjAmount(e.target.value)}
+              />
+            </label>
+
+            <div className="bet-chips kf-chips">
+              {QUICK.map((n) => (
+                <button
+                  key={n}
+                  className="bet-chip"
+                  onClick={() => setAdjAmount(String(adjValue + n))}
+                >
+                  +{n}
+                </button>
               ))}
-            </select>
-            <input
-              className="rooms-input"
-              type="number"
-              value={adjAmount}
-              placeholder="+1000 / -1000"
-              onChange={(e) => setAdjAmount(e.target.value)}
-            />
-          </div>
-          <div className="rooms-form-row" style={{ marginTop: '0.4rem' }}>
-            <input
-              className="rooms-input"
-              value={adjReason}
-              maxLength={20}
-              placeholder="사유 (로그에 같이 남습니다)"
-              onChange={(e) => setAdjReason(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && adjust()}
-            />
-            <button className="ghost-btn" onClick={adjust}>
-              조정
-            </button>
+              <button
+                className="bet-chip is-clear"
+                onClick={() => setAdjAmount('')}
+                disabled={!adjAmount}
+              >
+                지우기
+              </button>
+            </div>
+
+            <label className="kf-row">
+              <span className="kf-label">사유</span>
+              <input
+                className="rooms-input"
+                value={adjReason}
+                maxLength={20}
+                placeholder="로그에 같이 남습니다"
+                onChange={(e) => setAdjReason(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && adjust()}
+              />
+            </label>
+
+            {/* 조정은 '결과 잔액'이 제일 중요하다. 얼마가 되는지를 보여준다 */}
+            <div className="kf-preview">
+              {adjReady ? (
+                <p>
+                  <b>{adjTarget.nickname}</b> {num(adjTarget.points)}
+                  <i className="kf-arrow">→</i>
+                  <b className={adjSign > 0 ? 'is-plus' : 'is-minus'}>{num(adjAfter)}</b>
+                  <em>
+                    ({adjSign > 0 ? '+' : '-'}
+                    {num(adjValue)})
+                  </em>
+                </p>
+              ) : (
+                <p>대상과 금액을 고르면 바뀌는 잔액이 여기에 뜹니다.</p>
+              )}
+              <button className="ghost-btn" onClick={adjust} disabled={!adjReady}>
+                {adjSign > 0 ? '올리기' : '내리기'}
+              </button>
+            </div>
           </div>
         </section>
       )}
