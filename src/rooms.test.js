@@ -519,3 +519,60 @@ test('시즌 초기화도 방 지갑 기준이다', () => {
   expect(body).toContain('update room_wallets set points = 10000');
   expect(body).toContain('from room_wallets w');
 });
+
+/* ---------- 멤버 ↔ 참가자 연결 ---------- */
+
+test('연결은 방장·부방장만, 그리고 그 방 멤버에게만 걸 수 있다', () => {
+  const body = fnBody('link_room_player');
+  expect(body).toContain('is_room_admin(p_room)');
+  /* 남의 방 사람을 참가자에 묶으면 참여 포인트가 방 밖으로 샌다 */
+  expect(body).toMatch(/room_members where room_id = p_room and user_id = p_user/);
+});
+
+test('연결을 옮길 때 옛 연결을 먼저 푼다 (한 사람이 두 참가자가 되면 포인트를 두 번 받는다)', () => {
+  const body = fnBody('link_room_player');
+  const clear = body.indexOf('set linked_user_id = null');
+  const set = body.indexOf('set linked_user_id = p_user');
+  expect(clear).toBeGreaterThan(-1);
+  expect(set).toBeGreaterThan(clear);
+  /* DB 쪽 잠금장치도 그대로 있어야 한다 */
+  expect(sql).toContain('create unique index if not exists room_players_one_account');
+});
+
+test('이미 다른 사람이 가져간 참가자는 뺏을 수 없다', () => {
+  expect(fnBody('link_room_player')).toContain(
+    "raise exception '그 참가자는 이미 다른 멤버와 연결돼 있어요.'"
+  );
+});
+
+test('방을 떠나면 참가자 연결도 같이 풀린다', () => {
+  ['kick_member', 'leave_room'].forEach((fn) => {
+    expect(fnBody(fn)).toMatch(/update room_players set linked_user_id = null/);
+  });
+});
+
+test('유령 멤버는 실제 계정과 겹치지 않는 id를 받는다', () => {
+  const body = fnBody('add_ghost_member');
+  expect(body).toContain("'ghost:' || gen_random_uuid()");
+  expect(body).toContain('is_room_admin(p_room)');
+  /* 방 인원 제한은 유령에게도 그대로 걸린다 */
+  expect(body).toContain('>= 50');
+});
+
+test('유령 멤버 삭제는 유령에게만 듣는다 (진짜 계정을 지우면 안 된다)', () => {
+  const body = fnBody('remove_ghost_member');
+  expect(body).toMatch(/where room_id = p_room and user_id = p_user and is_ghost/);
+  expect(body).toContain('delete from room_members');
+  expect(body).toContain('delete from room_wallets');
+});
+
+test('유령 멤버 컬럼이 기존 방에도 추가된다', () => {
+  expect(sql).toContain('alter table public.room_members add column if not exists is_ghost');
+});
+
+test('연결 함수들은 로그인한 사람에게만 열려 있다', () => {
+  ['link_room_player(bigint, text, bigint)', 'add_ghost_member(bigint, text)',
+   'remove_ghost_member(bigint, text)'].forEach((sig) => {
+    expect(sql).toContain(`public.${sig}`);
+  });
+});

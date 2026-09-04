@@ -125,6 +125,11 @@ create table if not exists public.room_members (
 );
 create index if not exists room_members_user on public.room_members (user_id);
 
+-- 유령 멤버: 사이트에 가입하기 싫다는 친구를 방장이 대신 만들어 준다.
+-- 계정이 없으니 로그인해서 들어올 수는 없고, 참가자와 묶어 두기 위한
+-- 자리표시자다. user_id는 'ghost:<uuid>'로 실제 계정과 절대 겹치지 않는다.
+alter table public.room_members add column if not exists is_ghost boolean not null default false;
+
 -- 그 방에서 뛰는 사람. 계정 없는 손님도 linked_user_id 없이 들어온다.
 create table if not exists public.room_players (
   id             bigint generated always as identity primary key,
@@ -546,7 +551,99 @@ begin
   if p_user = (select owner_id from rooms where id = p_room) then
     raise exception '방장은 내보낼 수 없어요.';
   end if;
+  -- 나간 사람이 참가자에 묶인 채로 남으면, 그 참가자는 없는 계정을
+  -- 가리키게 되고 참여 포인트가 허공으로 나간다
+  update room_players set linked_user_id = null
+   where room_id = p_room and linked_user_id = p_user;
   delete from room_members where room_id = p_room and user_id = p_user;
+end; $fn$;
+
+
+-- 멤버 ↔ 참가자 묶기.
+--
+-- '이 계정이 곧 이 참가자다'를 방장이 정해준다. 묶어두면 경기 참여
+-- 포인트가 자동으로 가고, 나중에 '자기 경기에는 못 걸게' 같은 것도
+-- 이 연결 하나로 판단할 수 있다.
+--
+-- 한 사람은 한 참가자에만, 한 참가자는 한 사람에게만 묶인다.
+-- (room_players.linked_user_id 컬럼 + room_players_one_account 유니크)
+-- p_player가 null이면 연결을 끊는다.
+create or replace function public.link_room_player(
+  p_room bigint, p_user text, p_player bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare owner_of text;
+begin
+  if not public.is_room_admin(p_room) then
+    raise exception '방장과 부방장만 참가자를 연결할 수 있어요.';
+  end if;
+  if not exists (select 1 from room_members where room_id = p_room and user_id = p_user) then
+    raise exception '그 사람은 이 방 멤버가 아니에요.';
+  end if;
+
+  -- 옮겨 묶는 것도 되어야 한다. 먼저 이 사람의 옛 연결부터 푼다
+  update room_players set linked_user_id = null
+   where room_id = p_room and linked_user_id = p_user;
+
+  if p_player is null then return; end if;
+
+  select linked_user_id into owner_of from room_players
+   where id = p_player and room_id = p_room;
+  if not found then
+    raise exception '그 참가자는 이 방에 없어요.';
+  end if;
+  if owner_of is not null and owner_of <> p_user then
+    raise exception '그 참가자는 이미 다른 멤버와 연결돼 있어요.';
+  end if;
+
+  update room_players set linked_user_id = p_user where id = p_player;
+end; $fn$;
+
+
+-- 유령 멤버 추가. 사이트를 안 쓰는 친구도 참가자와 묶어두려면
+-- 묶일 상대가 필요하다. 로그인할 수 없는 자리표시자 계정을 만든다.
+create or replace function public.add_ghost_member(p_room bigint, p_name text)
+returns text language plpgsql security definer set search_path = public as $fn$
+declare
+  uid  text := 'ghost:' || gen_random_uuid()::text;
+  nm   text := nullif(trim(p_name), '');
+  n    int;
+begin
+  if not public.is_room_admin(p_room) then
+    raise exception '방장과 부방장만 유령 멤버를 만들 수 있어요.';
+  end if;
+  if nm is null then raise exception '이름을 적어주세요.'; end if;
+  if length(nm) > 16 then raise exception '이름은 16자까지예요.'; end if;
+
+  select count(*) into n from room_members where room_id = p_room;
+  if n >= 50 then raise exception '이 방은 인원이 가득 찼어요.'; end if;
+
+  insert into profiles (user_id, nickname) values (uid, nm);
+  insert into room_members (room_id, user_id, is_ghost) values (p_room, uid, true);
+  perform public.ensure_wallet(p_room, uid);
+  return uid;
+end; $fn$;
+
+
+-- 유령 멤버 지우기. 진짜 계정은 kick_member로만 나간다.
+create or replace function public.remove_ghost_member(p_room bigint, p_user text)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  if not public.is_room_admin(p_room) then
+    raise exception '방장과 부방장만 지울 수 있어요.';
+  end if;
+  if not exists (
+    select 1 from room_members
+     where room_id = p_room and user_id = p_user and is_ghost
+  ) then
+    raise exception '유령 멤버가 아니에요.';
+  end if;
+
+  update room_players set linked_user_id = null
+   where room_id = p_room and linked_user_id = p_user;
+  delete from room_members where room_id = p_room and user_id = p_user;
+  delete from room_wallets where room_id = p_room and user_id = p_user;
+  -- 프로필은 그 방에서만 쓰던 자리표시자라 같이 지운다
+  delete from profiles where user_id = p_user;
 end; $fn$;
 
 
@@ -557,6 +654,8 @@ begin
   if public.is_room_owner(p_room) then
     raise exception '방장은 나갈 수 없어요. 방을 넘기거나 삭제해 주세요.';
   end if;
+  update room_players set linked_user_id = null
+   where room_id = p_room and linked_user_id = auth.user_id();
   delete from room_members where room_id = p_room and user_id = auth.user_id();
 end; $fn$;
 
@@ -700,6 +799,9 @@ grant execute on function
   public.set_member_role(bigint, text, text),
   public.transfer_room(bigint, text),
   public.kick_member(bigint, text),
+  public.link_room_player(bigint, text, bigint),
+  public.add_ghost_member(bigint, text),
+  public.remove_ghost_member(bigint, text),
   public.leave_room(bigint),
   public.delete_room(bigint),
   public.transfer_points(bigint, text, int),

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaLock, FaCheck, FaUndo } from 'react-icons/fa';
+import { FaLock, FaCheck, FaUndo, FaChevronRight } from 'react-icons/fa';
 import {
   killLineOfScrim,
   killMarket,
@@ -173,6 +173,11 @@ const BetTab = ({
     [onChanged, load]
   );
 
+  /* 펼침 상태를 PlayerTotals 안에 두면 폴링 한 번에 접힌다.
+     이 컴포넌트들은 렌더마다 새로 만들어져 정체성이 유지되지 않는다 */
+  const [openRows, setOpenRows] = useState({});
+  const toggleRow = (key) => setOpenRows((o) => ({ ...o, [key]: !o[key] }));
+
   const [winner, setWinner] = useState('');
   const [kills, setKills] = useState('');
   const [fb, setFb] = useState('');
@@ -215,6 +220,17 @@ const BetTab = ({
 
   /* ---------- 그리기 ---------- */
 
+  /* 마켓마다 선택지 표기가 다르다. 내 배팅·정산 펼치기 두 곳이 같은 말을
+     써야 헷갈리지 않아서 한 군데서만 만든다 */
+  const selectionLabel = (market, selection) => {
+    if (market === 'first_blood') return nameOf.get(Number(selection)) || '?';
+    if (selection === 'A') return '1팀';
+    if (selection === 'B') return '2팀';
+    if (selection === 'over') return '오버';
+    if (selection === 'under') return '언더';
+    return selection;
+  };
+
   const Team = ({ ids: teamIds, label, hot }) => (
     <div className={`bet-team ${hot ? 'bet-team-win' : ''}`}>
       <strong>{label}</strong>
@@ -253,8 +269,11 @@ const BetTab = ({
         >
           <span className="bet-opt-label">
             {label}
-            {isMine && <em className="bet-mine-tag">내 배팅</em>}
-            {won && <em className="bet-win-tag">적중</em>}
+            {/* 라벨은 '내가 어떻게 됐나'만 말한다. 정답 자체는 초록 칸이
+                이미 말해주고 있어서 안 건 칸에까지 적중을 붙일 이유가 없다 */}
+            {isMine && won && <em className="bet-win-tag">적중</em>}
+            {isMine && lost && <em className="bet-lost-tag">낙첨</em>}
+            {isMine && !won && !lost && <em className="bet-mine-tag">내 배팅</em>}
           </span>
           {/* 마감 뒤에는 내가 고른 것만이 아니라 전부 보여준다.
               다른 쪽이 얼마였는지 모르면 내 배당이 좋은 건지도 모른다 */}
@@ -360,15 +379,7 @@ const BetTab = ({
                 {marketLabel(b.market)}
                 <em>
                   {' · '}
-                  {b.market === 'first_blood'
-                    ? nameOf.get(Number(b.selection)) || '?'
-                    : b.selection === 'A'
-                      ? '1팀'
-                      : b.selection === 'B'
-                        ? '2팀'
-                        : b.selection === 'over'
-                          ? '오버'
-                          : '언더'}
+                  {selectionLabel(b.market, b.selection)}
                 </em>
               </span>
               <span className="kkiko-when">{num(b.amount)} 끼꼬</span>
@@ -413,17 +424,61 @@ const BetTab = ({
       <div className="bet-market">
         <h4>이번 판 정산</h4>
         <ul className="bet-totals">
-          {list.map((r) => (
-            <li key={r.userId} className={r.net > 0 ? 'is-plus' : r.net < 0 ? 'is-minus' : ''}>
-              <span className="bet-total-name">{memberName.get(r.userId) || '알 수 없음'}</span>
-              <span className="bet-total-detail">
-                {r.count}건 · {num(r.staked)} 걸어 {num(r.payout)} 회수
-              </span>
-              <span className={`kkiko-delta ${r.net >= 0 ? 'plus' : 'minus'}`}>
-                {r.net > 0 ? `+${num(r.net)}` : num(r.net)}
-              </span>
-            </li>
-          ))}
+          {list.map((r) => {
+            const key = `${scrim.id}:${r.userId}`;
+            const open = Boolean(openRows[key]);
+            return (
+              <li key={r.userId} className={r.net > 0 ? 'is-plus' : r.net < 0 ? 'is-minus' : ''}>
+                {/* 줄 전체가 펼침 버튼이다. 따로 아이콘 칸을 두면
+                    그만큼 이름 자리가 줄어든다 */}
+                <button
+                  type="button"
+                  className={`bet-total-row ${open ? 'is-open' : ''}`}
+                  onClick={() => toggleRow(key)}
+                  aria-expanded={open}
+                >
+                  <FaChevronRight className="bet-total-caret" />
+                  <span className="bet-total-name">{memberName.get(r.userId) || '알 수 없음'}</span>
+                  {/* '걸어/회수'라고 쓰면 한 줄이 길어져 이름이 밀린다.
+                      건 돈 → 받은 돈 두 숫자만 화살표로 잇는 게 한눈에 읽힌다 */}
+                  <span className="bet-total-detail">
+                    {num(r.staked)}
+                    <i className="bet-total-arrow">→</i>
+                    {num(r.payout)}
+                    {r.count > 1 && <em>{r.count}건</em>}
+                  </span>
+                  <span className={`kkiko-delta ${r.net >= 0 ? 'plus' : 'minus'}`}>
+                    {r.net > 0 ? `+${num(r.net)}` : num(r.net)}
+                  </span>
+                </button>
+
+                {open && (
+                  <ul className="bet-total-lines">
+                    {rows
+                      .filter((b) => b.user_id === r.userId)
+                      .map((b) => {
+                        const hit = (b.payout || 0) > 0;
+                        return (
+                          <li key={b.id} className={hit ? 'is-plus' : 'is-minus'}>
+                            <span className="bet-line-what">
+                              {marketLabel(b.market)}
+                              <em>{selectionLabel(b.market, b.selection)}</em>
+                            </span>
+                            <span className="bet-line-amt">
+                              {num(b.amount)}
+                              {b.odds != null && <i>×{Number(b.odds).toFixed(2)}</i>}
+                            </span>
+                            <span className={`kkiko-delta ${hit ? 'plus' : 'minus'}`}>
+                              {hit ? `+${num(b.payout - b.amount)}` : `-${num(b.amount)}`}
+                            </span>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     );

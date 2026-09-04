@@ -14,6 +14,8 @@ import {
   FaCoins,
   FaListUl,
   FaCog,
+  FaGhost,
+  FaLink,
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import {
@@ -32,6 +34,9 @@ import {
   setMemberRole,
   transferRoom,
   kickMember,
+  linkRoomPlayer,
+  addGhostMember,
+  removeGhostMember,
   leaveRoom,
   deleteRoom,
 } from '../../rooms';
@@ -51,15 +56,19 @@ import { usePageMeta, PAGE_META } from '../../seo';
 import './Rooms.css';
 
 /* 탭 순서 = 실제로 쓰는 순서. 방에 들어와서 게임을 시작하고, 또또를 열고,
-   끝나면 기록을 본다. 홈은 이 전부로 가는 갈림길이라 맨 앞이다 */
+   끝나면 기록을 본다. 홈은 이 전부로 가는 갈림길이라 맨 앞이다.
+
+   group은 성격이 다른 탭 사이에 선을 긋기 위한 것이다. 일곱 개가
+   나란히 붙어 있으면 게임 얘기와 돈 얘기가 구분이 안 된다.
+   홈 | 게임·기록 | 또또·포인트 | 로그 | 설정 */
 const TABS = [
-  { key: 'home', label: '홈', icon: <FaHome />, desc: '이 방에서 할 수 있는 것들' },
-  { key: 'record', label: '게임 시작', icon: <FaPlay />, desc: '팀을 넣고 승패를 기록합니다' },
-  { key: 'bet', label: '또또', icon: <FaDice />, desc: '끼꼬를 걸고 결과를 맞힙니다' },
-  { key: 'season', label: '기록', icon: <FaChartBar />, desc: '전적·순위·시즌 정산' },
-  { key: 'kkiko', label: '포인트', icon: <FaCoins />, desc: '끼꼬 잔액과 주고받기' },
-  { key: 'feed', label: '로그', icon: <FaListUl />, desc: '방에서 일어난 일들' },
-  { key: 'settings', label: '설정', icon: <FaCog />, desc: '참가자·멤버·입장 코드' },
+  { key: 'home', group: 0, label: '홈', icon: <FaHome />, desc: '이 방에서 할 수 있는 것들' },
+  { key: 'record', group: 1, label: '게임 시작', icon: <FaPlay />, desc: '팀을 넣고 승패를 기록합니다' },
+  { key: 'season', group: 1, label: '내전 기록', icon: <FaChartBar />, desc: '전적·순위·시즌 정산' },
+  { key: 'bet', group: 2, label: '또또', icon: <FaDice />, desc: '끼꼬를 걸고 결과를 맞힙니다' },
+  { key: 'kkiko', group: 2, label: '포인트', icon: <FaCoins />, desc: '끼꼬 잔액과 주고받기' },
+  { key: 'feed', group: 3, label: '로그', icon: <FaListUl />, desc: '방에서 일어난 일들' },
+  { key: 'settings', group: 4, label: '설정', icon: <FaCog />, desc: '참가자·멤버·입장 코드' },
 ];
 
 /* 이름은 타이핑마다 저장하면 안 된다. 키 하나마다 UPDATE 한 번에
@@ -128,6 +137,7 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
   const [name, setName] = useState(room.name);
   const [code, setCode] = useState(null);
   const [newName, setNewName] = useState('');
+  const [ghostName, setGhostName] = useState('');
   const [showLoader, setShowLoader] = useState(false);
   const busy = useRef(false);
   const { confirm } = useDialog();
@@ -204,6 +214,34 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
     });
     if (!ok) return;
     await removeRoomPlayer(p.id);
+    reload();
+  });
+
+  /* 멤버 한 명당 참가자 하나. 이미 다른 멤버가 가져간 참가자는 아래에서
+     못 고르게 막아두므로 여기서는 그대로 보낸다 */
+  const link = guard(async (m, playerId) => {
+    await linkRoomPlayer(room.id, m.user_id, playerId);
+    reload();
+  });
+
+  const addGhost = guard(async () => {
+    if (!ghostName.trim()) return;
+    await addGhostMember(room.id, ghostName.trim());
+    setGhostName('');
+    toast.success('유령 멤버를 만들었어요.');
+    reload();
+  });
+
+  const dropGhost = guard(async (m) => {
+    const ok = await confirm({
+      title: '유령 멤버 삭제',
+      message: `'${m.nickname}' 유령 멤버를 지울까요?`,
+      detail: '참가자 연결이 풀리고 이 멤버 몫의 끼꼬도 사라집니다.',
+      confirmText: '삭제',
+      danger: true,
+    });
+    if (!ok) return;
+    await removeGhostMember(room.id, m.user_id);
     reload();
   });
 
@@ -363,16 +401,63 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
         <h3>
           멤버<span className="panel-count">{members.length}명</span>
         </h3>
+        {isAdmin && (
+          <p className="rooms-hint">
+            멤버를 참가자 명단의 이름과 이어두면, 그 사람이 뛴 경기의 참여 포인트가
+            자동으로 들어갑니다. 사이트를 안 쓰는 친구는 <b>유령 멤버</b>로 만들어
+            이어주면 됩니다.
+          </p>
+        )}
         <ul className="room-members">
           {members.map((m) => (
             <li key={m.user_id}>
               <span className="rooms-name">
+                {m.is_ghost && <FaGhost className="member-ghost-icon" title="유령 멤버" />}
                 {m.nickname}
                 {m.user_id === myId && <em> (나)</em>}
               </span>
-              <span className={`rooms-role role-${m.role}`}>{ROLE_LABEL[m.role]}</span>
+              <span className={`rooms-role role-${m.role}`}>
+                {m.is_ghost ? '유령' : ROLE_LABEL[m.role]}
+              </span>
               <span className="room-member-points">{m.points.toLocaleString()} 끼꼬</span>
-              {isOwner && m.user_id !== myId && (
+
+              {/* 연결은 방장·부방장만 건드린다. 멤버에게는 결과만 보인다 */}
+              {isAdmin ? (
+                <label className="member-link">
+                  <FaLink />
+                  <select
+                    value={m.player?.id ?? ''}
+                    onChange={(e) => link(m, e.target.value ? Number(e.target.value) : null)}
+                    aria-label={`${m.nickname} 참가자 연결`}
+                  >
+                    <option value="">연결 안 함</option>
+                    {players.map((p) => {
+                      const taken = p.linked_user_id && p.linked_user_id !== m.user_id;
+                      return (
+                        <option key={p.id} value={p.id} disabled={taken}>
+                          {p.name}
+                          {taken ? ' (연결됨)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+              ) : (
+                m.player && (
+                  <span className="member-linked">
+                    <FaLink /> {m.player.name}
+                  </span>
+                )
+              )}
+
+              {isAdmin && m.is_ghost && (
+                <span className="room-member-acts">
+                  <button className="ghost-btn" onClick={() => dropGhost(m)}>
+                    삭제
+                  </button>
+                </span>
+              )}
+              {isOwner && !m.is_ghost && m.user_id !== myId && (
                 <span className="room-member-acts">
                   <button
                     className="ghost-btn"
@@ -391,6 +476,22 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
             </li>
           ))}
         </ul>
+
+        {isAdmin && (
+          <div className="rooms-form-row">
+            <input
+              className="rooms-input"
+              value={ghostName}
+              maxLength={16}
+              placeholder="유령 멤버 이름 (가입 안 하는 친구)"
+              onChange={(e) => setGhostName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addGhost()}
+            />
+            <button className="ghost-btn" onClick={addGhost}>
+              <FaGhost /> 만들기
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="room-panel room-danger">
@@ -511,15 +612,19 @@ const Room = () => {
       </header>
 
       <div className="room-tabs no-rise">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`room-tab ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}
-          >
-            <span className="room-tab-icon">{t.icon}</span>
-            {t.label}
-          </button>
+        {TABS.map((t, i) => (
+          <React.Fragment key={t.key}>
+            {i > 0 && TABS[i - 1].group !== t.group && (
+              <span className="room-tab-sep" aria-hidden="true" />
+            )}
+            <button
+              className={`room-tab ${tab === t.key ? 'active' : ''}`}
+              onClick={() => setTab(t.key)}
+            >
+              <span className="room-tab-icon">{t.icon}</span>
+              {t.label}
+            </button>
+          </React.Fragment>
         ))}
       </div>
 

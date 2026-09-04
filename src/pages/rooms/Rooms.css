@@ -321,6 +321,16 @@
   font-size: 0.8rem;
 }
 
+/* 성격이 다른 탭 묶음 사이의 선. 게임 얘기와 돈 얘기를 눈으로 가른다 */
+.room-tab-sep {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 0.22rem;
+  background: var(--gg-panel-border);
+}
+
 .room-tab:hover {
   color: #e6ecf7;
   background: rgba(255, 255, 255, 0.05);
@@ -465,6 +475,14 @@
   background: rgba(30, 41, 59, 0.45);
 }
 
+/* 한 줄에 이름·권한·끼꼬·연결·버튼이 다 들어간다. flex:1인 이름칸은
+   자리가 모자라면 0까지 줄어들어 이름이 통째로 사라진다.
+   최소 폭을 박아 이름 대신 줄이 넘어가게 한다 */
+.room-members .rooms-name {
+  flex: 1 1 7rem;
+  min-width: 5.5rem;
+}
+
 .room-member-points {
   font-size: 0.78rem;
   font-weight: 700;
@@ -476,6 +494,50 @@
   display: flex;
   gap: 0.35rem;
   flex-wrap: wrap;
+}
+
+/* 유령 멤버 표시. 아이콘 하나로 '이 사람은 계정이 없다'가 읽힌다 */
+.member-ghost-icon {
+  margin-right: 0.3rem;
+  color: #94a3b8;
+  vertical-align: -1px;
+}
+
+/* 참가자 연결 고르기. 셀렉트가 이름칸을 밀어내지 않게 폭을 묶어둔다 */
+.member-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.member-link select {
+  max-width: 8rem;
+  padding: 0.1rem 0.1rem;
+  border: 0;
+  background: none;
+  color: #cbd5e1;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.member-link select option {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.member-linked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #94a3b8;
 }
 
 .room-member-acts .ghost-btn {
@@ -929,6 +991,7 @@
 }
 
 .bet-mine-tag,
+.bet-lost-tag,
 .bet-win-tag {
   flex: none;
   font-style: normal;
@@ -946,6 +1009,11 @@
 .bet-win-tag {
   color: #06111f;
   background: var(--gg-green);
+}
+
+.bet-lost-tag {
+  color: #fca5a5;
+  background: rgba(249, 115, 98, 0.18);
 }
 
 /* 정산 뒤: 맞은 칸은 초록, 틀린 칸은 눌러앉힌다.
@@ -1216,17 +1284,16 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.3rem;
+  gap: 0.18rem;
 }
 
+/* 정산은 한 판이 끝나면 인원수만큼 쌓인다. 줄마다 두툼하면
+   10명짜리 한 판이 화면을 통째로 먹는다. 최대한 납작하게 */
 .bet-totals li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.45rem 0.65rem;
-  border-radius: 9px;
+  border-radius: 7px;
   border: 1px solid var(--gg-panel-border);
   background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
 }
 
 .bet-totals li.is-plus {
@@ -1239,10 +1306,38 @@
   background: rgba(249, 115, 98, 0.06);
 }
 
+.bet-total-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.26rem 0.45rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bet-total-caret {
+  flex: none;
+  font-size: 0.6rem;
+  color: #64748b;
+  transition: transform 0.18s ease;
+}
+
+.bet-total-row.is-open .bet-total-caret {
+  transform: rotate(90deg);
+}
+
 .bet-total-name {
   flex: none;
-  min-width: 4.5rem;
-  font-size: 0.85rem;
+  max-width: 6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #e6ecf7;
 }
@@ -1250,12 +1345,95 @@
 .bet-total-detail {
   flex: 1;
   min-width: 0;
-  font-size: 0.74rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
   color: #7d8ba3;
+  font-variant-numeric: tabular-nums;
 }
 
-.bet-totals .kkiko-delta {
+.bet-total-arrow {
+  font-style: normal;
+  color: #4b5a72;
+}
+
+.bet-total-detail em {
+  font-style: normal;
+  font-size: 0.62rem;
+  color: #55637a;
+}
+
+/* 펼친 내역. 줄당 한 줄, 딱 필요한 세 가지(무엇·얼마·결과)만 */
+.bet-total-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.45rem 0.3rem 1.35rem;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.bet-total-lines li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.16rem 0.3rem;
+  border: 0;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 0.68rem;
+}
+
+.bet-total-lines li.is-plus {
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.bet-total-lines li.is-minus {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.bet-line-what {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #94a3b8;
+}
+
+.bet-line-what em {
+  font-style: normal;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.bet-line-what em::before {
+  content: ' · ';
+  font-weight: 400;
+  color: #4b5a72;
+}
+
+.bet-line-amt {
   flex: none;
+  color: #7d8ba3;
+  font-variant-numeric: tabular-nums;
+}
+
+.bet-line-amt i {
+  font-style: normal;
+  color: #4b5a72;
+}
+
+.bet-total-lines .kkiko-delta {
+  flex: none;
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.bet-total-row .kkiko-delta {
+  flex: none;
+  font-size: 0.76rem;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
 }

@@ -54,6 +54,18 @@ export const transferRoom = (roomId, userId) =>
   rpc('transfer_room', { p_room: roomId, p_user: userId });
 export const kickMember = (roomId, userId) =>
   rpc('kick_member', { p_room: roomId, p_user: userId });
+
+/* 멤버 ↔ 참가자 묶기. playerId가 null이면 연결을 끊는다.
+   묶어두면 경기 참여 포인트가 이 계정으로 간다 */
+export const linkRoomPlayer = (roomId, userId, playerId) =>
+  rpc('link_room_player', { p_room: roomId, p_user: userId, p_player: playerId ?? null });
+
+/* 사이트를 안 쓰는 친구 몫의 자리표시자 계정. 로그인은 못 하고
+   참가자와 묶이기 위해서만 존재한다 */
+export const addGhostMember = (roomId, name) =>
+  rpc('add_ghost_member', { p_room: roomId, p_name: name });
+export const removeGhostMember = (roomId, userId) =>
+  rpc('remove_ghost_member', { p_room: roomId, p_user: userId });
 export const leaveRoom = (roomId) => rpc('leave_room', { p_room: roomId });
 export const deleteRoom = (roomId) => rpc('delete_room', { p_room: roomId });
 
@@ -343,7 +355,7 @@ export const useMyRooms = (userId) => {
    프로필만 FK가 없어 따로 받는다 (RLS가 같은 방 사람으로 이미 좁혀준다) */
 const ROOM_SELECT =
   'id,name,owner_id,version,created_at,' +
-  'room_members(user_id,role,joined_at),' +
+  'room_members(user_id,role,joined_at,is_ghost),' +
   'room_players(id,name,tier,division,linked_user_id),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +
   'first_blood_player_id,bet_total,bet_count,undo_count,locked_at)';
@@ -420,6 +432,8 @@ export const useRoom = (roomId, userId) => {
         nickname: profileOf.get(m.user_id)?.nickname || '이름 없음',
         points: walletOf.get(m.user_id) ?? 0,
         agreed: Boolean(profileOf.get(m.user_id)?.agreed_fairplay_at),
+        /* 이 계정이 명단의 누구인지. 연결이 없으면 null */
+        player: players.find((p) => p.linked_user_id === m.user_id) || null,
       }))
       .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]),
     myRole: members.find((m) => m.user_id === userId)?.role || null,
