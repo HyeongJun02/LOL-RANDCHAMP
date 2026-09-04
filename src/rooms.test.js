@@ -31,6 +31,17 @@ const builder = (table) => {
       state.eq = [col, val];
       return self;
     },
+    in(col, vals) {
+      state.in = [col, vals];
+      return self;
+    },
+    not(col, op, val) {
+      state.not = [col, op, val];
+      return self;
+    },
+    limit() {
+      return self;
+    },
     maybeSingle() {
       return self;
     },
@@ -162,7 +173,7 @@ describe('addScrimByNames', () => {
       players,
     });
 
-    const [added] = calls.filter((c) => c.table === 'room_players');
+    const [added] = calls.filter((c) => c.table === 'room_players' && c.op === 'insert');
     expect(added.payload).toEqual([{ room_id: 7, name: '지훈' }]);
     expect(rpcCalls[0].args.p_team_a).toEqual([1, 50]);
   });
@@ -180,7 +191,7 @@ describe('addScrimByNames', () => {
       players,
     });
 
-    const [added] = calls.filter((c) => c.table === 'room_players');
+    const [added] = calls.filter((c) => c.table === 'room_players' && c.op === 'insert');
     expect(added.payload).toHaveLength(1);
   });
 });
@@ -357,7 +368,7 @@ test('경기 테이블 쓰기는 회수돼 있다', () => {
 });
 
 test('한 사람이 한 방에서 두 참가자에 묶일 수 없다 (참여 포인트 이중 수령)', () => {
-  expect(sql).toContain('create unique index if not exists room_players_one_account');
+  expect(sql).toContain('create unique index room_players_one_account');
 });
 
 
@@ -536,7 +547,7 @@ test('연결을 옮길 때 옛 연결을 먼저 푼다 (한 사람이 두 참가
   expect(clear).toBeGreaterThan(-1);
   expect(set).toBeGreaterThan(clear);
   /* DB 쪽 잠금장치도 그대로 있어야 한다 */
-  expect(sql).toContain('create unique index if not exists room_players_one_account');
+  expect(sql).toContain('create unique index room_players_one_account');
 });
 
 test('이미 다른 사람이 가져간 참가자는 뺏을 수 없다', () => {
@@ -851,4 +862,55 @@ test('setup.sql 첫머리가 고칠 만한 숫자들이 어디 있는지 알려�
   ['place_bets', 'lock_betting', 'award_participation', 'roll_season'].forEach((fn) => {
     expect(head).toContain(fn);
   });
+});
+
+/* 명단에서 지웠던 사람을 다시 넣으면 새 사람이 되어버려서, 지난 경기에서
+   그 사람이 사라지고 전적도 갈렸다. 그 행을 되살려 써야 한다 */
+test('지웠던 참가자는 새로 만들지 않고 되살려 쓴다', async () => {
+  responses['room_players.select'] = (s) => (s.not ? [{ id: 42, name: '지훈' }] : null);
+
+  await addScrimByNames({
+    roomId: 7,
+    mode: 'normal',
+    teamA: ['철수', '지훈'],
+    teamB: ['영희'],
+    winner: 'A',
+    players,
+  });
+
+  /* 새로 넣지 않는다 */
+  expect(calls.filter((c) => c.table === 'room_players' && c.op === 'insert')).toHaveLength(0);
+  /* 지운 표시만 지운다 */
+  const [revived] = calls.filter((c) => c.table === 'room_players' && c.op === 'update');
+  expect(revived.payload).toEqual({ deleted_at: null });
+  /* 그리고 옛 id를 그대로 쓴다 */
+  expect(rpcCalls[0].args.p_team_a).toEqual([1, 42]);
+});
+
+test('참가자 삭제는 행을 지우지 않고 표시만 남긴다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const body = src.slice(src.indexOf('export const removeRoomPlayer'), src.indexOf('/* ---------- 경기'));
+  expect(body).not.toContain('.delete()');
+  expect(body).toContain('deleted_at');
+});
+
+test('경기 이름표는 지운 참가자까지 보고 붙인다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  /* 명단(players)에는 안 보여도, 지난 경기의 이름은 붙어야 한다 */
+  expect(src).toContain('toMatches(room?.scrims, allPlayers)');
+  expect(src).toMatch(/const players = allPlayers\.filter\(\(p\) => !p\.deleted_at\)/);
+});
+
+test('총 킬 기준선은 방장이 정했으면 그 값을 쓴다', () => {
+  expect(killLineOfScrim({ kill_line: '61.5', team_a: [1, 2, 3], team_b: [4, 5, 6] })).toBe(61.5);
+  /* 안 정했으면 인원으로 계산한다 */
+  expect(killLineOfScrim({ team_a: [1, 2, 3], team_b: [4, 5, 6] })).toBe(53.5);
+});
+
+test('직접 정한 기준선은 경기에 박아둔다 (나중에 명단이 바뀌어도 안 흔들리게)', () => {
+  expect(sql).toContain('alter table public.scrims add column if not exists kill_line');
+  const body = fnBody('open_betting');
+  expect(body).toContain('p_kill_line');
+  /* .5로 안 끝나면 무승부가 생긴다 */
+  expect(body).toContain("raise exception '총 킬 기준선은 53.5처럼 .5로 끝나야 해요.'");
 });

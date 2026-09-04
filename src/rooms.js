@@ -326,12 +326,34 @@ export const feedLine = (log) =>
 /* ---------- 참가자 명단 ---------- */
 /* RLS가 방장·부방장만 쓰게 막는다. 돈이 안 걸린 데이터라 함수까지는 필요 없다 */
 
+/* 같은 이름이 예전에 있었다면 그 행을 되살린다.
+   새로 넣어버리면 id가 달라져서 지난 경기의 그 사람과 남남이 된다 */
 export const addRoomPlayer = async (roomId, player) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
+  const name = String(player.name || '').trim();
+
+  const gone = unwrap(
+    await neon
+      .from('room_players')
+      .select('id')
+      .eq('room_id', roomId)
+      .eq('name', name)
+      .not('deleted_at', 'is', null)
+      .limit(1)
+  );
+  if (gone && gone.length > 0) {
+    return unwrap(
+      await neon
+        .from('room_players')
+        .update({ deleted_at: null, tier: 'GOLD', division: 4, ...player, name })
+        .eq('id', gone[0].id)
+    );
+  }
+
   return unwrap(
     await neon
       .from('room_players')
-      .insert({ room_id: roomId, tier: 'GOLD', division: 4, ...player })
+      .insert({ room_id: roomId, tier: 'GOLD', division: 4, ...player, name })
   );
 };
 
@@ -341,9 +363,17 @@ export const updateRoomPlayer = async (id, patch) => {
   return unwrap(await neon.from('room_players').update(patch).eq('id', id));
 };
 
+/* 진짜로 지우지 않는다. 경기가 이 행의 id를 들고 있어서, 지우면
+   지난 기록에서 그 사람이 '?'가 되고 전적도 남남이 된다.
+   명단에서만 감추고, 같은 이름을 다시 넣으면 이 행이 되살아난다 */
 export const removeRoomPlayer = async (id) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
-  return unwrap(await neon.from('room_players').delete().eq('id', id));
+  return unwrap(
+    await neon
+      .from('room_players')
+      .update({ deleted_at: new Date().toISOString(), linked_user_id: null })
+      .eq('id', id)
+  );
 };
 
 /* ---------- 경기 ---------- */
@@ -369,12 +399,39 @@ const toIds = async (roomId, teamA, teamB, players) => {
 
   const idOf = new Map(players.map((p) => [p.name, p.id]));
   const missing = [...new Set([...teamA, ...teamB])].filter((n) => !idOf.has(n));
+  if (missing.length === 0) {
+    return [teamA.map((n) => idOf.get(n)), teamB.map((n) => idOf.get(n))];
+  }
 
-  if (missing.length > 0) {
+  /* 명단에서 지웠던 사람이면 그 행을 되살린다. 새로 넣으면 id가 달라져서
+     지난 경기의 그 사람과 전적이 갈린다 */
+  const gone =
+    unwrap(
+      await neon
+        .from('room_players')
+        .select('id,name')
+        .eq('room_id', roomId)
+        .in('name', missing)
+        .not('deleted_at', 'is', null)
+    ) || [];
+
+  if (gone.length > 0) {
+    await neon
+      .from('room_players')
+      .update({ deleted_at: null })
+      .in(
+        'id',
+        gone.map((r) => r.id)
+      );
+    gone.forEach((r) => idOf.set(r.name, r.id));
+  }
+
+  const fresh = missing.filter((n) => !idOf.has(n));
+  if (fresh.length > 0) {
     const rows = unwrap(
       await neon
         .from('room_players')
-        .insert(missing.map((name) => ({ room_id: roomId, name })))
+        .insert(fresh.map((name) => ({ room_id: roomId, name })))
         .select()
     );
     (rows || []).forEach((r) => idOf.set(r.name, r.id));
@@ -395,9 +452,10 @@ export const openBettingByNames = async ({
   teamB,
   players,
   closeSeconds = null,
+  killLine = null,
 }) => {
   const [a, b] = await toIds(roomId, teamA, teamB, players);
-  return openBetting(roomId, mode, a, b, closeSeconds);
+  return openBetting(roomId, mode, a, b, closeSeconds, killLine);
 };
 
 /* scrims는 이름 대신 room_players.id를 담는다. 이름은 여기서 붙인다.
@@ -556,7 +614,7 @@ export const useMyRooms = (userId) => {
 const ROOM_SELECT =
   'id,name,owner_id,version,created_at,accent,emblem,' +
   'room_members(user_id,role,joined_at,is_ghost),' +
-  'room_players(id,name,tier,division,linked_user_id),' +
+  'room_players(id,name,tier,division,linked_user_id,deleted_at),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +
   /* betting_closes_at을 빼먹으면 마감 타이머가 조용히 안 그려진다.
      값이 undefined라 화면에서는 '자동 마감이 없는 경기'와 구분이 안 된다 */
@@ -612,7 +670,9 @@ export const useRoom = (roomId, userId) => {
 
   const room = data?.room || null;
   const members = room?.room_members || [];
-  const players = room?.room_players || [];
+  /* 지운 사람도 들고 있는다. 지난 경기의 이름을 붙이려면 필요하다 */
+  const allPlayers = room?.room_players || [];
+  const players = allPlayers.filter((p) => !p.deleted_at);
   const profileOf = new Map((data?.profiles || []).map((p) => [p.user_id, p]));
   const walletOf = new Map((data?.wallets || []).map((w) => [w.user_id, w.points]));
 
@@ -627,7 +687,7 @@ export const useRoom = (roomId, userId) => {
     /* 아직 안 끝난 배팅 경기는 방에 하나뿐이다 (open_betting이 막는다) */
     activeScrim: scrims.find((s) => s.status === 'betting' || s.status === 'locked') || null,
     players: [...players].sort((a, b) => a.name.localeCompare(b.name, 'ko')),
-    matches: toMatches(room?.scrims, players),
+    matches: toMatches(room?.scrims, allPlayers),
     members: members
       .map((m) => ({
         ...m,
@@ -675,8 +735,15 @@ export const killLineFor = (playerCount) => {
 
 /* 이 경기의 기준선. team_a/team_b는 배팅을 열 때 박혀서 그 뒤에 명단이
    바뀌어도 흔들리지 않는다. 그래서 언제 계산해도 같은 마켓 이름이 나온다 */
+/* 이 경기의 기준선.
+
+   방장이 또또를 열 때 직접 정했으면 그 값(scrims.kill_line)을 쓴다.
+   안 정했으면 인원으로 계산한다. team_a/team_b는 열 때 박혀서 그 뒤에
+   명단이 바뀌어도 흔들리지 않으니, 언제 계산해도 같은 마켓 이름이 나온다 */
 export const killLineOfScrim = (scrim) =>
-  killLineFor((scrim?.team_a?.length || 0) + (scrim?.team_b?.length || 0));
+  scrim?.kill_line != null
+    ? Number(scrim.kill_line)
+    : killLineFor((scrim?.team_a?.length || 0) + (scrim?.team_b?.length || 0));
 export const killMarket = (line) => `kills_${line}`;
 export const killLineOf = (market) => Number(market.split('_')[1]);
 

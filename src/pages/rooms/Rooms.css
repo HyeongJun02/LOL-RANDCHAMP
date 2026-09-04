@@ -1789,3 +1789,94 @@
   color: #fca5a5;
   background: rgba(249, 115, 98, 0.08);
 }
+
+/* 방 명단과 내 팀원 명단의 티어가 어긋났을 때. 조용히 두면
+   팀 짜기가 엉뚱한 평점으로 돌아간다 */
+.tier-gap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px dashed rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.06);
+  font-size: 0.78rem;
+  color: #cbd5e1;
+}
+
+.tier-gap > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.tier-gap svg {
+  color: #fbbf24;
+}
+
+.tier-gap b {
+  color: #fde68a;
+}
+
+.tier-gap em {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #8b98ae;
+}
+
+.tier-gap-acts {
+  display: flex;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.tier-gap-acts .ghost-btn {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.73rem;
+}
+
+/* 총 킬 기준선 고르기. 숫자를 키보드로 치게 하면 .5를 빼먹는다 */
+.line-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.line-picker .ghost-btn {
+  padding: 0.4rem 0.6rem;
+}
+
+.line-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 5.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.line-value strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--gg-gold-light);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.line-value em {
+  font-style: normal;
+  font-size: 0.66rem;
+  color: #6b7a94;
+}
+
+.line-reset {
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.72rem;
+}

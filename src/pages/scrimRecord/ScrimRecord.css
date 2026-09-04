@@ -310,3 +310,33 @@
 }
 
 
+
+/* 팝업을 여는 버튼. 옆의 '직전 인원'·'팀 비우기'는 여기서 바로 끝나는
+   동작이라, 같은 회색으로 두면 무슨 일이 날지 모르고 누른다 */
+.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent, var(--gg-gold)) 55%, transparent);
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 14%, transparent);
+  color: var(--accent-light, var(--gg-gold-light));
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tool-btn:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 24%, transparent);
+  box-shadow: 0 8px 20px -14px var(--accent, var(--gg-gold));
+}
+
+/* 창이 뜬다는 걸 미리 알려주는 표시 */
+.tool-btn-out {
+  font-size: 0.6rem;
+  opacity: 0.7;
+}

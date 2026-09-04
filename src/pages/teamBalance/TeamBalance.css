@@ -655,3 +655,87 @@
   transform: translateY(-2px);
   filter: brightness(1.08);
 }
+
+/* ============================================================
+   팝업 안에서 (방의 '게임 시작' 탭에서 띄울 때)
+   ============================================================
+   페이지용 레이아웃을 그대로 쓰면 오른쪽 사이드바가 좁게 눌려서
+   평점 기준·랜덤성·결과가 세로로 한없이 늘어진다. 팝업에서는
+   가로로 눕히고 설명은 접는다. */
+
+.tb-embedded .tb-layout {
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+}
+
+.tb-embedded .tb-side {
+  position: static;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
+  gap: 0.7rem;
+}
+
+.tb-embedded .tb-side .tb-panel {
+  padding: 0.7rem 0.75rem;
+}
+
+/* 팝업에서는 긴 설명을 접는다. 페이지에서 한 번 읽으면 되는 내용이라
+   좁은 창에서 매번 자리를 먹을 이유가 없다 */
+.tb-embedded .range-hint,
+.tb-embedded .shuffle-hint {
+  display: none;
+}
+
+.tb-embedded .range-label {
+  margin-bottom: 0.4rem;
+}
+
+/* 팀 짜기 / 완전 무작위를 한 줄에 */
+.tb-embedded .build-btn,
+.tb-embedded .shuffle-btn {
+  margin-top: 0.55rem;
+}
+
+.tb-embedded .build-btn {
+  padding: 0.5rem 0.8rem;
+}
+
+/* 결과는 설정 칸 아래 통째로 */
+.tb-embedded .tb-result {
+  grid-column: 1 / -1;
+}
+
+/* '이 팀으로 내전 진행하기'가 이 팝업의 결론이다. 아래로 밀려나
+   스크롤해야 보이면 안 된다 */
+.tb-embedded .tb-use-teams {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+.tb-embedded .player-rows {
+  max-height: 42vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.tb-embedded .player-rows::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tb-embedded .player-rows::-webkit-scrollbar-thumb {
+  background: rgba(200, 170, 110, 0.35);
+  border-radius: 10px;
+}
+
+/* 결과 요약은 버튼 위로. 아래에 있으면 버튼을 누른 뒤에야 눈에 들어온다 */
+.tb-embedded .tb-result {
+  display: flex;
+  flex-direction: column;
+}
+
+.tb-embedded .result-summary {
+  order: -1;
+  margin-bottom: 0.1rem;
+}

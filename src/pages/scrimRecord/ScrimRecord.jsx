@@ -8,6 +8,7 @@ import {
   FaDice,
   FaUsers,
   FaRedo,
+  FaExternalLinkAlt,
 } from 'react-icons/fa';
 import { loadLastSplit } from '../../lastSplit';
 import Modal from '../../components/common/Modal';
@@ -166,7 +167,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
   };
 
   /* 팀 짜는 화면을 또또용으로 한 번 더 만들 이유가 없다. 같은 패널에서 연다 */
-  const openBetting = async (closeSeconds = null) => {
+  const openBetting = async (closeSeconds = null, killLine = null) => {
     if (saving.current) return;
     const a = teamA.map((n) => n.trim()).filter(Boolean);
     const b = teamB.map((n) => n.trim()).filter(Boolean);
@@ -181,7 +182,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     }
     saving.current = true;
     try {
-      await onOpenBetting({ mode: MODE, teamA: a, teamB: b, closeSeconds });
+      await onOpenBetting({ mode: MODE, teamA: a, teamB: b, closeSeconds, killLine });
       setShowBetOpen(false);
       toast.success(
         closeSeconds
@@ -221,8 +222,11 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
       {canEdit && (
         <>
           <div className="sr-toolbar">
-            <button className="ghost-btn" onClick={() => setShowBalancer(true)}>
+            {/* 이것만 팝업을 여는 버튼이다. 나머지는 이 화면에서 바로 끝나는
+                동작이라, 같은 회색 버튼으로 두면 무슨 일이 날지 모르고 누른다 */}
+            <button className="tool-btn is-open" onClick={() => setShowBalancer(true)}>
               <FaUsers /> 내전 팀 짜기
+              <FaExternalLinkAlt className="tool-btn-out" />
             </button>
             {lastGame && (
               <button className="ghost-btn" onClick={fillFromLastGame} title="직전 경기와 같은 인원">

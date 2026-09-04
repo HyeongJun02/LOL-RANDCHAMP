@@ -177,6 +177,20 @@ create table if not exists public.room_players (
 );
 create index if not exists room_players_room on public.room_players (room_id);
 
+-- 참가자는 지워도 행이 남는다.
+--
+-- 경기(scrims.team_a/team_b)는 이 행의 id를 들고 있다. 행을 진짜로 지우면
+-- 지난 경기에서 그 사람이 '?'가 되거나 아예 사라지고, 같은 이름으로 다시
+-- 넣어도 새 id라 예전 전적과 남남이 된다. 명단에서만 감춘다.
+alter table public.room_players add column if not exists deleted_at timestamptz;
+
+-- 살아 있는 참가자 안에서만 이름이 겹치지 않으면 된다.
+-- 옛 유니크 제약은 지운 사람 이름까지 붙잡고 있어서 재등록을 막는다.
+alter table public.room_players drop constraint if exists room_players_room_id_name_key;
+drop index if exists room_players_alive_name;
+create unique index room_players_alive_name
+  on public.room_players (room_id, name) where deleted_at is null;
+
 -- 팀은 room_players.id 배열로 담는다. 이름으로 담으면 이름을 바꿀 때마다
 -- 경기를 전부 훑어 갈아야 하고, 놓치면 한 사람이 두 명으로 갈라진다.
 create table if not exists public.scrims (
@@ -384,7 +398,9 @@ returns trigger language plpgsql as $fn$
 declare n int;
 begin
   if tg_table_name = 'room_players' then
-    select count(*) into n from room_players where room_id = new.room_id;
+    -- 지운 사람은 명단에 없는 셈이라 한도에도 안 센다
+    select count(*) into n from room_players
+     where room_id = new.room_id and deleted_at is null;
     if n >= 50 then
       raise exception '방 참가자는 최대 50명까지예요.' using errcode = 'check_violation';
     end if;
@@ -910,6 +926,10 @@ alter table public.scrims add column if not exists bet_count int not null defaul
 alter table public.scrims add column if not exists locked_at timestamptz;
 -- 배팅 자동 마감 시각. null이면 방장이 직접 닫을 때까지 열려 있다
 alter table public.scrims add column if not exists betting_closes_at timestamptz;
+-- 총 킬 언더/오버의 기준선. 비어 있으면 화면이 인원으로 계산한다.
+-- 방장이 팝업에서 직접 정할 수 있어서, 정한 값을 경기에 박아둔다.
+-- (안 박아두면 나중에 명단이 바뀔 때 기준선이 슬쩍 달라진다)
+alter table public.scrims add column if not exists kill_line numeric(5, 1);
 alter table public.scrims add column if not exists settled_at timestamptz;
 
 alter table public.scrims drop constraint if exists scrims_status_chk;
@@ -919,9 +939,10 @@ alter table public.scrims add constraint scrims_status_chk
 create index if not exists scrims_room_status on public.scrims (room_id, status);
 
 -- 한 사람이 한 방에서 두 참가자에 묶이면 참여 포인트를 두 번 받는다
-create unique index if not exists room_players_one_account
+drop index if exists room_players_one_account;
+create unique index room_players_one_account
   on public.room_players (room_id, linked_user_id)
-  where linked_user_id is not null;
+  where linked_user_id is not null and deleted_at is null;
 
 -- 되돌리기가 같은 줄을 두 번 뒤집지 않게 표시해 둔다
 alter table public.point_ledger add column if not exists reversed_at timestamptz;
@@ -1016,7 +1037,7 @@ begin
            case when sides.side = s.winner then 1500 else 1000 end as amt
       from sides
       join room_players rp on rp.id = sides.pid
-     where rp.linked_user_id is not null
+     where rp.linked_user_id is not null and rp.deleted_at is null
   ),
   ins as (
     insert into point_ledger (user_id, room_id, delta, reason, ref_id)
@@ -1065,9 +1086,10 @@ drop function if exists public.open_betting(bigint, text, jsonb, jsonb);
 -- p_close_seconds: 몇 초 뒤에 자동으로 마감할지. null이면 방장이 직접 닫는다.
 -- 마감 시각을 서버가 정해서 내려줘야 한다. 각자 브라우저 시계로 재면
 -- 시계가 몇 초씩 어긋난 사람들 사이에서 '누구는 됐고 누구는 안 되는' 일이 생긴다.
+drop function if exists public.open_betting(bigint, text, jsonb, jsonb, int);
 create or replace function public.open_betting(
   p_room bigint, p_mode text, p_team_a jsonb, p_team_b jsonb,
-  p_close_seconds int default null)
+  p_close_seconds int default null, p_kill_line numeric default null)
 returns bigint language plpgsql security definer set search_path = public as $fn$
 declare sid bigint; n int; closes timestamptz;
 begin
@@ -1091,8 +1113,18 @@ begin
     closes := now() + make_interval(secs => p_close_seconds);
   end if;
 
-  insert into scrims (room_id, mode, team_a, team_b, status, betting_closes_at)
-    values (p_room, p_mode, p_team_a, p_team_b, 'betting', closes)
+  if p_kill_line is not null then
+    if p_kill_line < 5 or p_kill_line > 300 then
+      raise exception '총 킬 기준선은 5에서 300 사이로 정해주세요.';
+    end if;
+    -- .5로 끊어야 무승부가 없다
+    if (p_kill_line * 2) % 2 = 0 then
+      raise exception '총 킬 기준선은 53.5처럼 .5로 끝나야 해요.';
+    end if;
+  end if;
+
+  insert into scrims (room_id, mode, team_a, team_b, status, betting_closes_at, kill_line)
+    values (p_room, p_mode, p_team_a, p_team_b, 'betting', closes, p_kill_line)
     returning id into sid;
 
   perform public.log_room(p_room, 'betting_open', jsonb_build_object(
@@ -1470,7 +1502,7 @@ revoke execute on function public.ensure_wallet(bigint, text) from public;
 grant execute on function
   public.agree_fairplay(),
   public.record_scrim(bigint, text, jsonb, jsonb, text),
-  public.open_betting(bigint, text, jsonb, jsonb, int),
+  public.open_betting(bigint, text, jsonb, jsonb, int, numeric),
   public.place_bets(bigint, jsonb),
   public.lock_betting(bigint),
   public.settle_scrim(bigint, text, int, bigint),

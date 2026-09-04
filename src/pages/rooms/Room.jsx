@@ -18,6 +18,7 @@ import {
   FaLink,
   FaRegCopy,
   FaPalette,
+  FaExchangeAlt,
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import {
@@ -59,6 +60,7 @@ import { useDialog } from '../../components/common/Dialog';
 import { copyText } from '../../clipboard';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
+import { useRoster, mergeMembers } from '../../roster';
 import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelLine, SkelRows } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../seo';
@@ -150,6 +152,15 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
   const [showLoader, setShowLoader] = useState(false);
   const busy = useRef(false);
   const { confirm } = useDialog();
+  const roster = useRoster();
+
+  /* 같은 사람인데 방 명단과 내 팀원 명단의 티어가 다른 경우.
+     한쪽만 고치고 잊으면 팀 짜기가 엉뚱한 평점으로 돌아간다 */
+  const tierGap = players
+    .map((p) => ({ p, mine: roster.find((m) => m.name.trim() === p.name.trim()) }))
+    .filter(
+      ({ p, mine }) => mine && (mine.tier !== p.tier || Number(mine.division) !== Number(p.division))
+    );
 
   const guard = (fn) => async (...args) => {
     if (busy.current) return;
@@ -219,6 +230,21 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
     } else {
       toast.success(`${take.length}명을 명단에 넣었어요.`);
     }
+    reload();
+  });
+
+  /* 방 명단 → 내 팀원 명단. 방 참가자는 방장이 관리하니 그쪽이 기준이다 */
+  const pullTiers = guard(async () => {
+    mergeMembers(tierGap.map(({ p }) => ({ name: p.name, tier: p.tier, division: p.division })));
+    toast.success(`${tierGap.length}명의 티어를 내 팀원 명단에 맞췄어요.`);
+  });
+
+  /* 내 팀원 명단 → 방 명단 */
+  const pushTiers = guard(async () => {
+    for (const { p, mine } of tierGap) {
+      await updateRoomPlayer(p.id, { tier: mine.tier, division: mine.division });
+    }
+    toast.success(`${tierGap.length}명의 티어를 방 명단에 반영했어요.`);
     reload();
   });
 
@@ -417,9 +443,27 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
             />
           </div>
           <p className="rooms-hint">
-            게임 시작 탭에서 새 이름을 적으면 여기에 자동으로 추가됩니다. 이름을 고쳐도 지난
-            전적은 그대로 따라옵니다.
+            게임 시작 탭에서 새 이름을 적으면 여기에 자동으로 추가됩니다. 이름을 고쳐도, 지웠다
+            다시 넣어도 지난 전적은 그대로 따라옵니다.
           </p>
+
+          {/* 같은 사람인데 두 명단의 티어가 다르면 팀 짜기가 엉뚱한 평점으로 돈다 */}
+          {tierGap.length > 0 && (
+            <div className="tier-gap">
+              <span>
+                <FaExchangeAlt /> 내 팀원 명단과 티어가 다른 사람 <b>{tierGap.length}명</b>
+                <em>{tierGap.map(({ p }) => p.name).join(', ')}</em>
+              </span>
+              <span className="tier-gap-acts">
+                <button className="ghost-btn" onClick={pullTiers}>
+                  내 명단에 맞추기
+                </button>
+                <button className="ghost-btn" onClick={pushTiers}>
+                  방 명단에 반영
+                </button>
+              </span>
+            </div>
+          )}
 
           <div className="room-player-list">
             {players.map((p) => (
