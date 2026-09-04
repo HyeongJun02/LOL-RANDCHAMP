@@ -742,3 +742,43 @@ test("방 목록은 '못 읽었음'과 '방이 없음'을 다르게 보여준다
   expect(err).toBeGreaterThan(-1);
   expect(err).toBeLessThan(empty);
 });
+
+/* ---------- 방 색·엠블럼 ---------- */
+
+test('방 색은 정해둔 목록에서만 고를 수 있다 (DB가 막는다)', () => {
+  /* 화면에서만 막으면 콘솔 한 줄로 아무 CSS 값이나 넣을 수 있다 */
+  expect(sql).toContain('rooms_accent_chk');
+  expect(sql).toMatch(/check \(accent in \('gold', 'blue', 'green', 'purple', 'red', 'cyan'\)\)/);
+  expect(sql).toContain('rooms_emblem_chk');
+});
+
+test('색과 엠블럼은 읽고 쓸 수 있게 열려 있다', () => {
+  const grant = sql.match(/grant select \(([^)]+)\) on public\.rooms/);
+  expect(grant[1]).toContain('accent');
+  expect(grant[1]).toContain('emblem');
+  expect(sql).toContain('grant update (name, accent, emblem) on public.rooms');
+});
+
+/* ---------- 방 기록 경신 ---------- */
+
+test('기록이 깨지면 로그에 남는다', () => {
+  const body = fnBody('settle_scrim');
+  expect(body).toMatch(/log_room\(s\.room_id, 'record'/);
+  /* 방금 넣은 경기를 빼고 견줘야 자기 자신을 이길 수 없다 */
+  expect(body).toMatch(/id <> p_scrim/);
+});
+
+test('신기록 로그가 문장으로 읽힌다', () => {
+  const { tag, parts } = feedParts({
+    type: 'record',
+    payload: { kind: 'kills', value: 81, prev: 74 },
+  });
+  expect(tag.label).toBe('신기록');
+  const line = parts.map((x) => x.v).join('');
+  expect(line).toContain('한 판 최다 킬');
+  expect(line).toContain('81');
+  expect(line).toContain('74');
+
+  const first = feedParts({ type: 'record', payload: { kind: 'bet', value: 5000, prev: null } });
+  expect(first.parts.map((x) => x.v).join('')).toContain('첫 기록');
+});

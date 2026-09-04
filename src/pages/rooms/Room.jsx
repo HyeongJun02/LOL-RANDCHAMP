@@ -17,10 +17,12 @@ import {
   FaGhost,
   FaLink,
   FaRegCopy,
+  FaPalette,
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import {
   useRoom,
+  useHallOfFame,
   canEdit as canEditRole,
   ROLE_LABEL,
   addRoomPlayer,
@@ -35,6 +37,7 @@ import {
   setMemberRole,
   transferRoom,
   kickMember,
+  setRoomStyle,
   linkRoomPlayer,
   addGhostMember,
   removeGhostMember,
@@ -42,12 +45,16 @@ import {
   deleteRoom,
 } from '../../rooms';
 import { TIERS, DIVISIONS, getTier } from '../../tiers';
+import { ACCENTS, EMBLEMS, accentVars } from '../../roomStyle';
+import { titlesOf } from '../../titles';
 import { MAX_ROOM_PLAYERS } from '../../limits';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
 import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
 import FeedTab from './FeedTab';
+import RoomHome from './RoomHome';
+import HallOfFame from './HallOfFame';
 import { useDialog } from '../../components/common/Dialog';
 import { copyText } from '../../clipboard';
 import RosterLoader from '../../components/common/RosterLoader';
@@ -133,7 +140,7 @@ const PlayerRow = ({ player, onPatch, onDrop }) => {
 };
 
 /* 방장·부방장만 보이는 설정 묶음. 멤버에게는 멤버 목록과 나가기만 남는다 */
-const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
+const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone }) => {
   const isOwner = myRole === 'owner';
   const isAdmin = canEditRole(myRole);
   const [name, setName] = useState(room.name);
@@ -176,6 +183,11 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
     if (!ok) return;
     setCode(await resetJoinCode(room.id));
     toast.success('새 코드를 뽑았어요.');
+  });
+
+  const saveStyle = guard(async (patch) => {
+    await setRoomStyle(room.id, patch);
+    reload();
   });
 
   const saveName = guard(async () => {
@@ -344,6 +356,40 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
 
       {isAdmin && (
         <section className="room-panel">
+          <h3>
+            <FaPalette /> 방 꾸미기
+          </h3>
+          <p className="rooms-hint">
+            고른 색이 이 방 전체에 돕니다. 방 목록에서도 이 색으로 보여요.
+          </p>
+          <div className="style-row">
+            {ACCENTS.map((a) => (
+              <button
+                key={a.key}
+                className={`style-swatch ${room.accent === a.key ? 'is-on' : ''}`}
+                style={{ '--sw': a.main }}
+                onClick={() => saveStyle({ accent: a.key })}
+                aria-label={a.label}
+                title={a.label}
+              />
+            ))}
+          </div>
+          <div className="style-row style-emblems">
+            {EMBLEMS.map((e) => (
+              <button
+                key={e}
+                className={`style-emblem ${room.emblem === e ? 'is-on' : ''}`}
+                onClick={() => saveStyle({ emblem: e })}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {isAdmin && (
+        <section className="room-panel">
           <h3>방 이름</h3>
           <div className="rooms-form-row">
             <input
@@ -430,6 +476,11 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
                 {m.nickname}
                 {m.user_id === myId && <em> (나)</em>}
               </span>
+              {m.player && titles.get(m.player.name) && (
+                <span className={`title-badge tone-${titles.get(m.player.name).tone}`}>
+                  {titles.get(m.player.name).icon} {titles.get(m.player.name).label}
+                </span>
+              )}
               <span className={`rooms-role role-${m.role}`}>
                 {m.is_ghost ? '유령' : ROLE_LABEL[m.role]}
               </span>
@@ -548,6 +599,7 @@ const Room = () => {
     error,
     reload,
   } = useRoom(roomId, user?.id);
+  const { hofRows, champion } = useHallOfFame(roomId);
   /* 탭을 주소(#bet)에 둔다. useState에만 담아두면 새로고침하거나
      링크를 공유했을 때 항상 첫 탭으로 돌아간다.
      replace라 뒤로 가기는 탭을 되짚지 않고 방 목록으로 나간다 */
@@ -604,8 +656,12 @@ const Room = () => {
 
   const myPoints = members.find((m) => m.user_id === user.id)?.points ?? 0;
 
+  /* 별명은 방 여기저기서 같은 값을 써야 한다. 한 번만 계산해서 나눠 준다 */
+  const titles = titlesOf({ matches, scrims, players });
+
   return (
-    <div className="page room-page">
+    /* 방 색을 여기 한 번만 얹으면 안쪽 배지·버튼·테두리가 전부 따라온다 */
+    <div className="page room-page" style={accentVars(room.accent)}>
       {/* 링크로 바로 들어온 사람도 여기서 걸린다 */}
       {!myNickname && <NicknameGate onSaved={reload} />}
 
@@ -614,6 +670,7 @@ const Room = () => {
           <Link className="room-back" to="/rooms" title="방 목록으로">
             <FaArrowLeft />
           </Link>
+          <span className="room-emblem">{room.emblem}</span>
           <div>
             <h1 className="room-name">{room.name}</h1>
             <p className="room-meta">
@@ -653,15 +710,17 @@ const Room = () => {
       </div>
 
       {tab === 'home' && (
-        <div className="room-home fade-in">
-          {TABS.filter((t) => t.key !== 'home').map((t) => (
-            <button key={t.key} className="room-home-card" onClick={() => setTab(t.key)}>
-              <span className="room-home-icon">{t.icon}</span>
-              <strong>{t.label}</strong>
-              <em>{t.desc}</em>
-            </button>
-          ))}
-        </div>
+        <RoomHome
+          room={room}
+          matches={matches}
+          scrims={scrims}
+          players={players}
+          members={members}
+          activeScrim={activeScrim}
+          champion={champion}
+          tabs={TABS.filter((t) => t.key !== 'home')}
+          onGo={setTab}
+        />
       )}
 
       {!editable && tab === 'record' && (
@@ -682,7 +741,12 @@ const Room = () => {
             onOpenBetting={editable ? openBet : undefined}
           />
         )}
-        {tab === 'season' && <Season matches={matches} players={players} />}
+        {tab === 'season' && (
+          <>
+            <HallOfFame rows={hofRows} matches={matches} members={members} />
+            <Season matches={matches} players={players} />
+          </>
+        )}
         {tab === 'bet' && (
           <BetTab
             scrims={scrims}
@@ -711,6 +775,7 @@ const Room = () => {
             room={room}
             members={members}
             players={players}
+            titles={titles}
             myRole={myRole}
             myId={user.id}
             reload={reload}

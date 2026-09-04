@@ -161,14 +161,25 @@
 
 .room-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(200, 170, 110, 0.45);
-  box-shadow: 0 14px 30px -20px rgba(200, 170, 110, 0.8);
+  border-color: color-mix(in srgb, var(--accent, #c8aa6e) 50%, transparent);
+  box-shadow: 0 14px 30px -20px color-mix(in srgb, var(--accent, #c8aa6e) 85%, transparent);
 }
 
 .room-card-head {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.room-card-emblem {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent, #c8aa6e) 18%, transparent);
+  font-size: 0.95rem;
 }
 
 .room-card-name {
@@ -471,18 +482,20 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* 고른 방 색을 따라간다. 탭만 금색으로 남으면 방 색이 겉도는 느낌이다 */
 .room-tab.active {
-  background: linear-gradient(135deg, var(--gg-gold-light), var(--gg-gold));
+  background: linear-gradient(
+    135deg,
+    var(--accent-light, var(--gg-gold-light)),
+    var(--accent, var(--gg-gold))
+  );
   color: #06111f;
 }
 
 /* ---------- 방 홈 ---------- */
 
-.room-home {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.7rem;
-}
+/* .room-home 자체의 배치는 RoomHome.css에 있다.
+   카드 모양(.room-home-card)은 대문 아래 '할 일'에서 그대로 쓴다 */
 
 .room-home-card {
   display: flex;

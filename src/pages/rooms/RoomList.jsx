@@ -5,6 +5,7 @@ import { FaPlus, FaSignInAlt, FaUsers, FaPen, FaCoins, FaDoorOpen } from 'react-
 import { useAuth } from '../../auth/AuthContext';
 import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../rooms';
 import { MAX_ROOMS } from '../../limits';
+import { accentVars } from '../../roomStyle';
 import PageHeader from '../../components/common/PageHeader';
 import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelRows } from '../../components/common/Skeleton';
@@ -157,8 +158,14 @@ const RoomList = () => {
         <ul className="rooms-grid">
           {rooms.map((r) => (
             <li key={r.id}>
-              <Link className={`room-card ${r.live ? 'is-live' : ''}`} to={`/rooms/${r.id}`}>
+              {/* 방마다 고른 색과 엠블럼. 목록에서도 우리 방이 바로 눈에 띈다 */}
+              <Link
+                className={`room-card ${r.live ? 'is-live' : ''}`}
+                style={accentVars(r.accent)}
+                to={`/rooms/${r.id}`}
+              >
                 <span className="room-card-head">
+                  <span className="room-card-emblem">{r.emblem}</span>
                   <strong className="room-card-name">{r.name}</strong>
                   <span className={`rooms-role role-${r.myRole}`}>{ROLE_LABEL[r.myRole]}</span>
                 </span>

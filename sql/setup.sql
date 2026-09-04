@@ -125,6 +125,18 @@ create table if not exists public.room_members (
 );
 create index if not exists room_members_user on public.room_members (user_id);
 
+-- 방 색과 엠블럼. 방마다 다른 색이 돌면 '우리 방'이라는 게 생긴다.
+-- 색은 키만 저장한다. 임의의 CSS 값을 넣게 두면 그걸로 화면을 망가뜨릴 수 있다.
+alter table public.rooms add column if not exists accent text not null default 'gold';
+alter table public.rooms drop constraint if exists rooms_accent_chk;
+alter table public.rooms add constraint rooms_accent_chk
+  check (accent in ('gold', 'blue', 'green', 'purple', 'red', 'cyan'));
+
+alter table public.rooms add column if not exists emblem text not null default '⚔️';
+alter table public.rooms drop constraint if exists rooms_emblem_chk;
+alter table public.rooms add constraint rooms_emblem_chk
+  check (length(emblem) between 1 and 8);
+
 -- 유령 멤버: 사이트에 가입하기 싫다는 친구를 방장이 대신 만들어 준다.
 -- 계정이 없으니 로그인해서 들어올 수는 없고, 참가자와 묶어 두기 위한
 -- 자리표시자다. user_id는 'ghost:<uuid>'로 실제 계정과 절대 겹치지 않는다.
@@ -291,8 +303,8 @@ alter table public.hall_of_fame  enable row level security;
 
 -- 입장 코드는 컬럼 단위로 뺀다. 멤버 전원이 코드를 볼 수 있으면
 -- 재발급이 아무 의미가 없다. 방장·부방장은 get_join_code()로 본다.
-grant select (id, name, owner_id, version, created_at) on public.rooms to authenticated;
-grant update (name) on public.rooms to authenticated;
+grant select (id, name, owner_id, version, created_at, accent, emblem) on public.rooms to authenticated;
+grant update (name, accent, emblem) on public.rooms to authenticated;
 grant select on public.room_members to authenticated;
 -- 잔액은 같은 방 사람끼리 서로 본다 (포인트 탭의 순위가 그것이다).
 -- 쓰기는 안 연다. 열면 콘솔 한 줄로 자기 잔액을 고칠 수 있다.
@@ -1234,6 +1246,7 @@ declare
   winner_void boolean;
   fb_void     boolean;
   kills_void  boolean;
+  prev        int;
 begin
   perform public.roll_season();
 
@@ -1304,6 +1317,26 @@ begin
   perform public.log_room(s.room_id, 'settled', jsonb_build_object(
     'scrim', p_scrim, 'winner', p_winner,
     'kills', p_total_kills, 'bet_total', s.bet_total));
+
+  -- 방 기록 경신. 깨진 줄 모르고 지나가면 기록이 있으나 마나다.
+  -- 한 방에 경기가 1000판까지라 매번 훑어도 부담이 없다.
+  if p_total_kills is not null then
+    select max(total_kills) into prev from scrims
+     where room_id = s.room_id and id <> p_scrim and total_kills is not null;
+    if prev is null or p_total_kills > prev then
+      perform public.log_room(s.room_id, 'record', jsonb_build_object(
+        'kind', 'kills', 'value', p_total_kills, 'prev', prev));
+    end if;
+  end if;
+
+  if s.bet_total > 0 then
+    select max(bet_total) into prev from scrims
+     where room_id = s.room_id and id <> p_scrim and status = 'settled';
+    if prev is null or s.bet_total > prev then
+      perform public.log_room(s.room_id, 'record', jsonb_build_object(
+        'kind', 'bet', 'value', s.bet_total, 'prev', prev));
+    end if;
+  end if;
 end; $fn$;
 
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
 
 /* 내전 방. 여기부터는 localStorage가 없다.
@@ -94,6 +94,44 @@ export const adjustPoints = (roomId, userId, delta, reason) =>
 export const leaveRoom = (roomId) => rpc('leave_room', { p_room: roomId });
 export const deleteRoom = (roomId) => rpc('delete_room', { p_room: roomId });
 
+/* 방 색과 엠블럼. 값 검사는 DB의 CHECK가 한다(rooms_accent_chk).
+   화면에서 막아도 콘솔로는 얼마든지 보낼 수 있어서 마지막 문은 저쪽이다 */
+export const setRoomStyle = async (roomId, patch) => {
+  if (!isNeonConfigured) throw new Error(NOT_READY);
+  return unwrap(await neon.from('rooms').update(patch).eq('id', roomId));
+};
+
+/* 지난 달들의 박제. 방 대문과 명예의 전당이 같은 값을 봐야 해서
+   방 화면에서 한 번만 읽고 나눠 쓴다 */
+export const useHallOfFame = (roomId) => {
+  const fetcher = useCallback(() => fetchHallOfFame(roomId), [roomId]);
+  const { data } = useFetch(fetcher, Boolean(roomId) && isNeonConfigured);
+  /* data가 null인 동안 매번 새 []를 만들면 아래 useMemo가 렌더마다 다시 돈다 */
+  const rows = useMemo(() => data || [], [data]);
+
+  /* 제일 최근에 끝난 달의 1등. 대문에 걸어두는 그 사람이다 */
+  const champion = useMemo(() => {
+    if (rows.length === 0) return null;
+    const latest = rows.reduce((a, b) => (b.month > a.month ? b : a)).month;
+    return rows
+      .filter((r) => r.month === latest)
+      .sort((a, b) => b.kkiko_points - a.kkiko_points)[0];
+  }, [rows]);
+
+  return { hofRows: rows, champion };
+};
+
+export const fetchHallOfFame = async (roomId) => {
+  if (!isNeonConfigured) throw new Error(NOT_READY);
+  return unwrap(
+    await neon
+      .from('hall_of_fame')
+      .select('month,user_id,display_name,kkiko_points')
+      .eq('room_id', roomId)
+      .order('month', { ascending: false })
+  );
+};
+
 export const renameRoom = async (roomId, name) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
   return unwrap(await neon.from('rooms').update({ name: name.trim() }).eq('id', roomId));
@@ -156,6 +194,13 @@ export const LOG_TAGS = {
   settled: { label: '경기', tone: 'gold' },
   settle_undone: { label: '정정', tone: 'red' },
   adjust: { label: '조정', tone: 'red' },
+  record: { label: '신기록', tone: 'gold' },
+};
+
+/* 방 기록 종류. 서버가 kind만 보내고 문구는 여기서 만든다 */
+const RECORD_LABEL = {
+  kills: '한 판 최다 킬',
+  bet: '한 판 최다 또또 판돈',
 };
 
 /* '2분 뒤 자동 마감'처럼 사람이 읽는 길이로. 초 단위는 필요 없다 */
@@ -233,6 +278,17 @@ export const feedParts = (log) => {
           t(p.delta > 0 ? ' 올렸어요' : ' 내렸어요'),
           t(` · 남은 ${num(p.after)}`),
           ...(p.reason ? [t(' · '), nameOf_(p.reason)] : []),
+        ],
+      };
+    /* 방 기록이 깨졌다. 지나가면 기록이 있으나 마나라 금색으로 세워둔다 */
+    case 'record':
+      return {
+        tag,
+        parts: [
+          { k: 'hot', v: '🏆 신기록' },
+          t(` · ${RECORD_LABEL[p.kind] || p.kind} `),
+          nameOf_(String(num(p.value))),
+          ...(p.prev ? [t(` (지난 기록 ${num(p.prev)})`)] : [t(' (첫 기록)')]),
         ],
       };
     case 'settle_undone':
@@ -434,7 +490,7 @@ export const useMyRooms = (userId) => {
   const fetcher = useCallback(async () => {
     /* RLS가 내가 멤버인 방만 돌려준다. 따로 걸 조건이 없다 */
     const rooms = unwrap(
-      await neon.from('rooms').select('id,name,owner_id,version,created_at')
+      await neon.from('rooms').select('id,name,owner_id,version,created_at,accent,emblem')
     );
     const members = unwrap(await neon.from('room_members').select('room_id,user_id,role'));
     /* 방마다 내 끼꼬가 다르므로 목록에서도 방별로 보여준다 */
@@ -479,7 +535,7 @@ export const useMyRooms = (userId) => {
    PostgREST가 FK를 따라 한 번에 묶어주므로 방+멤버+참가자+경기는 한 요청이다.
    프로필만 FK가 없어 따로 받는다 (RLS가 같은 방 사람으로 이미 좁혀준다) */
 const ROOM_SELECT =
-  'id,name,owner_id,version,created_at,' +
+  'id,name,owner_id,version,created_at,accent,emblem,' +
   'room_members(user_id,role,joined_at,is_ghost),' +
   'room_players(id,name,tier,division,linked_user_id),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +

@@ -1,0 +1,515 @@
+/* ============================================================
+   방 대문 (RoomHome) · 명예의 전당 · 칭호 · 방 꾸미기
+   ============================================================ */
+
+.room-home {
+  display: grid;
+  gap: 0.9rem;
+}
+
+/* 지금 걸 수 있는 판. 대문에서 제일 먼저 눈에 걸려야 한다 */
+.rh-live {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  border-radius: 12px;
+  background: rgba(74, 222, 128, 0.1);
+  color: #dcfce7;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.rh-live:hover {
+  background: rgba(74, 222, 128, 0.16);
+}
+
+.rh-live strong {
+  font-weight: 800;
+}
+
+.rh-live em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.74rem;
+  color: #86efac;
+}
+
+.rh-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 9px #4ade80;
+  animation: bet-live-blink 1.5s ease-in-out infinite;
+}
+
+/* 방 이름과 엠블럼. 여기서 우리 방이 시작된다 */
+.rh-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--accent, #c8aa6e) 35%, transparent);
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      120% 120% at 0% 0%,
+      color-mix(in srgb, var(--accent, #c8aa6e) 16%, transparent),
+      transparent 60%
+    ),
+    rgba(15, 23, 42, 0.5);
+}
+
+.rh-emblem {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent, #c8aa6e) 16%, transparent);
+  font-size: 1.6rem;
+}
+
+.rh-hero-text {
+  min-width: 0;
+}
+
+.rh-hero-text h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.rh-hero-text p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--gg-text-muted);
+}
+
+.rh-hero-text b {
+  color: var(--accent-light, var(--gg-gold-light));
+}
+
+.rh-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+}
+
+.rh-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.rh-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent, #c8aa6e) 45%, transparent);
+}
+
+.rh-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6b7a94;
+}
+
+.rh-card strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.rh-card strong.is-empty {
+  color: #55637a;
+  font-weight: 700;
+}
+
+.rh-card em {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #8b98ae;
+}
+
+/* 지난 달 챔피언은 한 칸 위에 둔다. 여기 오르려고 뛰는 것이다 */
+.rh-champ {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: linear-gradient(160deg, rgba(251, 191, 36, 0.1), rgba(15, 23, 42, 0.45) 60%);
+}
+
+.rh-champ .rh-card-label {
+  color: #fbbf24;
+}
+
+.rh-panel {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.rh-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.7rem;
+  font-size: 0.9rem;
+  color: #e2e8f0;
+}
+
+/* 별명 붙은 사람들 */
+.rh-crew {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.4rem;
+}
+
+.rh-crew li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 9px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rh-crew-icon {
+  flex: none;
+  font-size: 0.95rem;
+}
+
+.rh-crew strong {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.rh-crew em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #8b98ae;
+  white-space: nowrap;
+}
+
+.rh-crew li.tone-hot {
+  border-color: rgba(249, 115, 98, 0.35);
+  background: rgba(249, 115, 98, 0.07);
+}
+
+.rh-crew li.tone-cold {
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.rh-crew li.tone-ghost {
+  opacity: 0.65;
+}
+
+/* 우리 방 기록 */
+.rh-records {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.rh-records li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 0.82rem;
+}
+
+.rh-records li span {
+  color: #8b98ae;
+}
+
+.rh-records li strong {
+  margin-left: auto;
+  font-weight: 800;
+  color: var(--accent-light, var(--gg-gold-light));
+}
+
+.rh-records li strong.is-empty {
+  color: #55637a;
+  font-weight: 700;
+}
+
+.rh-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.6rem;
+}
+
+/* ---------- 명예의 전당 ---------- */
+
+.hof {
+  margin-bottom: 1.2rem;
+  padding: 1rem;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 130% at 50% 0%, rgba(251, 191, 36, 0.12), transparent 62%),
+    rgba(15, 23, 42, 0.45);
+}
+
+.hof-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+
+.hof-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: #fbbf24;
+}
+
+.hof-note {
+  font-size: 0.72rem;
+  color: #6b7a94;
+}
+
+/* 아직 안 끝난 달. 이대로면 네가 박제된다는 게 요점이다 */
+.hof-running {
+  margin-bottom: 0.8rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px dashed rgba(251, 191, 36, 0.35);
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.hof-running-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+.hof-running p {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.hof-running b {
+  color: #fde68a;
+}
+
+.hof-blank {
+  margin: 0;
+  padding: 1.2rem 0;
+  text-align: center;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--gg-text-muted);
+}
+
+.hof-season + .hof-season {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.hof-season-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.45rem;
+}
+
+.hof-season-head strong {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.hof-king {
+  font-size: 0.72rem;
+  color: #8b98ae;
+}
+
+.hof-podium {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.hof-podium li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 9px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hof-podium li.rank-1 {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.16), rgba(251, 191, 36, 0.04));
+  box-shadow: 0 0 22px -12px rgba(251, 191, 36, 0.9);
+}
+
+.hof-podium li.rank-2 {
+  border-color: rgba(203, 213, 225, 0.32);
+}
+
+.hof-podium li.rank-3 {
+  border-color: rgba(180, 120, 70, 0.35);
+}
+
+.hof-medal {
+  flex: none;
+  font-size: 1rem;
+}
+
+.hof-podium strong {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.hof-podium li.rank-1 strong {
+  font-size: 0.98rem;
+  color: #fde68a;
+}
+
+.hof-podium em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gg-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 칭호 배지 · 방 꾸미기 ---------- */
+
+.title-badge {
+  flex: none;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: #a8b4c8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.title-badge.tone-hot {
+  border-color: rgba(249, 115, 98, 0.4);
+  color: #fca5a5;
+}
+
+.title-badge.tone-cold {
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+}
+
+.title-badge.tone-ghost {
+  opacity: 0.7;
+}
+
+.room-emblem {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent, #c8aa6e) 16%, transparent);
+  font-size: 1.05rem;
+}
+
+.style-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.style-swatch {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background: var(--sw);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.style-swatch:hover {
+  transform: scale(1.08);
+}
+
+.style-swatch.is-on {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18), 0 0 16px -4px var(--sw);
+}
+
+.style-emblems {
+  gap: 0.3rem;
+}
+
+.style-emblem {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.style-emblem:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.style-emblem.is-on {
+  border-color: var(--accent, var(--gg-gold));
+  background: color-mix(in srgb, var(--accent, #c8aa6e) 18%, transparent);
+}
