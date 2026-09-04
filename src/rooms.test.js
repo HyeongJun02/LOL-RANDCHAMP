@@ -719,3 +719,26 @@ test('방 코드는 눌러서 복사한다', () => {
   /* 아직 안 열어본 상태에서 눌러도 받아와서 복사해야 한다 */
   expect(src).toMatch(/code \|\| \(await getJoinCode\(room\.id\)\)/);
 });
+
+/* Neon 무료 플랜은 놀고 있으면 컴퓨트를 재운다. 깨어나는 첫 요청이 끊기면
+   '아직 들어간 방이 없어요'가 떠서, 새로고침해야만 방이 보였다 */
+test('첫 조회가 실패하면 다시 시도하는 동안 계속 읽는 중이다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const body = src.slice(src.indexOf('const useFetch ='), src.indexOf('export const useMe'));
+
+  /* 다시 시도할 참이면 loading을 내리지 않는다 = 빈 목록으로 보이지 않는다 */
+  expect(body).toContain('loading: again');
+  expect(body).toContain('error: again ? null : e.message');
+  /* 로그인 확인이 끝나 enabled가 켜지는 한 렌더 동안에도 빈 화면이 보였다 */
+  expect(body).toMatch(/enabled && state\.data === null && state\.error === null/);
+});
+
+test("방 목록은 '못 읽었음'과 '방이 없음'을 다르게 보여준다", () => {
+  const src = fs.readFileSync(path.join(__dirname, 'pages', 'rooms', 'RoomList.jsx'), 'utf8');
+  expect(src).toContain('방 목록을 불러오지 못했어요');
+  /* 오류일 때 빈 상태 문구가 같이 뜨면 방을 다 잃은 것처럼 보인다 */
+  const empty = src.indexOf('아직 들어간 방이 없어요');
+  const err = src.indexOf('방 목록을 불러오지 못했어요');
+  expect(err).toBeGreaterThan(-1);
+  expect(err).toBeLessThan(empty);
+});

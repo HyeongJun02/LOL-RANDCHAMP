@@ -127,12 +127,22 @@ const RoomList = () => {
         </span>
       </div>
 
-      {error && <p className="rooms-blank">{error}</p>}
-
       {/* 방 목록이 먼저다. 여기 오는 이유의 대부분은 '내 방에 들어가기'인데
-          만들기·입장 폼이 위를 차지하면 정작 방이 화면 밖으로 밀린다 */}
+          만들기·입장 폼이 위를 차지하면 정작 방이 화면 밖으로 밀린다.
+
+          '못 읽었음'과 '방이 없음'은 다른 이야기다. 둘을 같이 두면
+          잠깐 끊겼을 뿐인데 방을 다 잃은 것처럼 보인다 */}
       {loading ? (
         <SkelRows count={3} h={92} />
+      ) : error ? (
+        <div className="rooms-empty">
+          <FaDoorOpen />
+          <strong>방 목록을 불러오지 못했어요</strong>
+          <span>{error}</span>
+          <button className="ghost-btn" style={{ marginTop: '0.5rem' }} onClick={reload}>
+            다시 시도
+          </button>
+        </div>
       ) : rooms.length === 0 ? (
         <div className="rooms-empty">
           <FaDoorOpen />

@@ -39,7 +39,14 @@ const rpc = async (fn, args) => {
 /* ---------- 프로필 ---------- */
 
 /* 로그인 직후 딱 한 번. 프로필을 만들고, 달이 넘어갔으면 시즌도 여기서 롤린다 */
-export const fetchMe = () => rpc('get_me').then(first);
+/* 못 받아왔으면 null로 조용히 넘기지 않는다. null은 '아직 안 읽음'과
+   구분이 안 돼서 화면이 영영 로딩에 머문다 */
+export const fetchMe = () =>
+  rpc('get_me').then((d) => {
+    const me = first(d);
+    if (!me) throw new Error('내 정보를 불러오지 못했어요.');
+    return me;
+  });
 
 export const setNickname = async (nickname) => {
   const name = nickname.trim();
@@ -346,10 +353,16 @@ export const toMatches = (scrims = [], players = []) => {
 
 /* 로딩/에러/재조회를 매번 손으로 쓰지 않으려고 한 겹만 둔다.
    fetcher는 호출하는 쪽에서 useCallback으로 묶어서 넘길 것 */
-/* 한 번 어긋났다고 포기하지 않는다. 정산처럼 요청이 한꺼번에 몰리는
-   자리에서 하나만 실패해도 화면이 비어버리면 안 된다 */
-const RETRY_MS = 900;
-const MAX_RETRIES = 2;
+/* 한 번 어긋났다고 포기하지 않는다.
+
+   두 가지 자리에서 실제로 실패한다.
+   - 정산처럼 요청이 한꺼번에 몰릴 때
+   - Neon 무료 플랜은 놀고 있으면 컴퓨트를 재우는데, 깨어나는 첫 요청이
+     몇 초 걸리거나 그대로 끊긴다 ('가끔 들어가면 방이 없다'가 이것)
+
+   1초, 2초, 3초 뒤로 미루며 세 번까지. 6초쯤이면 깨어난다 */
+const RETRY_MS = 1000;
+const MAX_RETRIES = 3;
 
 const useFetch = (fetcher, enabled = true) => {
   const [state, setState] = useState({ loading: enabled, data: null, error: null });
@@ -378,15 +391,15 @@ const useFetch = (fetcher, enabled = true) => {
     } catch (e) {
       if (seq.current !== mine) return;
       fails.current += 1;
+      const again = fails.current <= MAX_RETRIES;
+      if (again) timer.current = setTimeout(reload, RETRY_MS * fails.current);
       setState((s) => {
         /* 들고 있던 게 있으면 그대로 둔다. 정산하자마자 방이 사라져
-           목록으로 나갔다 다시 들어와야 하던 게 이것 때문이었다.
-           잠시 뒤 한두 번 더 시도하고, 그래도 안 되면 폴링이 이어받는다 */
-        if (s.data !== null) {
-          if (fails.current <= MAX_RETRIES) timer.current = setTimeout(reload, RETRY_MS);
-          return { ...s, loading: false };
-        }
-        return { loading: false, data: null, error: e.message };
+           목록으로 나갔다 다시 들어와야 하던 게 이것 때문이었다 */
+        if (s.data !== null) return { ...s, loading: false };
+        /* 첫 판부터 실패한 경우. 다시 시도하는 동안은 계속 '읽는 중'이다.
+           여기서 loading을 내려버리면 '방이 없음'으로 보인다 */
+        return { loading: again, data: null, error: again ? null : e.message };
       });
     }
   }, [fetcher, enabled]);
@@ -399,7 +412,13 @@ const useFetch = (fetcher, enabled = true) => {
     };
   }, [reload]);
 
-  return { ...state, reload };
+  /* enabled가 false → true로 바뀌는 순간(로그인 확인이 끝나는 때)에는
+     아직 state가 옛 값이라 loading: false, data: null이다. 그 한 렌더 동안
+     화면이 '아직 아무것도 없음'으로 보인다. 받아온 게 없고 오류도 없으면
+     아직 읽는 중인 것이다 */
+  const loading = state.loading || (enabled && state.data === null && state.error === null);
+
+  return { ...state, loading, reload };
 };
 
 export const useMe = (userId) => {
