@@ -11,13 +11,17 @@ import React, { useEffect, useRef, useState } from 'react';
    lock_betting을 불러 서버에 남긴다. */
 const WARN_SECONDS = 20;
 
+/* 남은 30초 동안 카드 색이 초록에서 빨강으로 옮겨간다.
+   숫자를 안 보고 있어도 시야 끝에서 '급해졌다'가 읽힌다 */
+const HEAT_SECONDS = 30;
+
 const mmss = (sec) => {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
 };
 
-const BetTimer = ({ closesAt, openedAt, onExpire }) => {
+const BetTimer = ({ closesAt, openedAt, onExpire, onHeat }) => {
   const end = new Date(closesAt).getTime();
   const start = new Date(openedAt || closesAt).getTime();
   const [now, setNow] = useState(() => Date.now());
@@ -38,6 +42,16 @@ const BetTimer = ({ closesAt, openedAt, onExpire }) => {
       onExpire?.();
     }
   }, [left, onExpire]);
+
+  /* 0(여유) → 1(마감 직전). 0.5초마다 부모를 다시 그리면 낭비라
+     1초 단위로 끊어서, 마지막 30초에만 30번 올려보낸다.
+     색을 잇는 건 CSS transition이 한다 */
+  const heat =
+    left > HEAT_SECONDS ? 0 : Math.round(HEAT_SECONDS - Math.min(left, HEAT_SECONDS)) / HEAT_SECONDS;
+
+  useEffect(() => {
+    onHeat?.(heat);
+  }, [heat, onHeat]);
 
   const warn = left > 0 && left <= WARN_SECONDS;
 

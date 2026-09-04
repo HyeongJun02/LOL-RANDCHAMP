@@ -100,7 +100,7 @@ const BetTab = ({
 
   /* 폰으로 숫자 키보드 올려서 0을 네 번 치는 게 은근히 번거롭다.
      자주 거는 금액은 눌러서 더한다. 마켓 상한은 여기서 잘라준다 */
-  const BUMPS = [500, 1000, 2000];
+  const BUMPS = [100, 500, 1000, 2000];
 
   const bump = (market, delta) =>
     setCart((prev) => {
@@ -187,6 +187,14 @@ const BetTab = ({
     },
     [onChanged, load]
   );
+
+  /* 마감이 다가올수록 0 → 1. BetTimer가 1초 단위로 올려준다.
+     이 값 하나로 카드 테두리·빛줄·그림자 색이 한꺼번에 옮겨간다 */
+  const [heat, setHeat] = useState(0);
+  const liveId = activeScrim?.id;
+  useEffect(() => {
+    setHeat(0);
+  }, [liveId]);
 
   /* 펼침 상태를 PlayerTotals 안에 두면 폴링 한 번에 접힌다.
      이 컴포넌트들은 렌더마다 새로 만들어져 정체성이 유지되지 않는다 */
@@ -509,6 +517,11 @@ const BetTab = ({
           className={`room-panel bet-live ${
             activeScrim.status === 'betting' ? 'is-betting' : 'is-locked'
           }`}
+          style={
+            heat > 0
+              ? { '--live': `color-mix(in srgb, #f97362 ${Math.round(heat * 100)}%, #4ade80)` }
+              : undefined
+          }
         >
           <h3>
             내전
@@ -523,6 +536,7 @@ const BetTab = ({
                   closesAt={activeScrim.betting_closes_at}
                   openedAt={activeScrim.played_at}
                   onExpire={() => autoLock(activeScrim.id)}
+                  onHeat={setHeat}
                 />
               )}
             </span>
@@ -580,9 +594,11 @@ const BetTab = ({
                     />
                   </div>
                   <div className="bet-chips">
+                    {/* 좁은 화면에서 초기화까지 한 줄에 들어가야 해서
+                        천 단위 쉼표는 뺀다 (+1,000 → +1000) */}
                     {BUMPS.map((n) => (
                       <button key={n} className="bet-chip" onClick={() => bump(market, n)}>
-                        +{num(n)}
+                        +{n}
                       </button>
                     ))}
                     <button

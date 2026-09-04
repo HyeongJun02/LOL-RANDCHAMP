@@ -791,6 +791,8 @@
   --live: #4ade80;
   position: relative;
   border-color: color-mix(in srgb, var(--live) 50%, transparent);
+  /* --live는 1초에 한 번씩 갈린다. 그 사이를 이어야 뚝뚝 끊기지 않는다 */
+  transition: border-color 1s linear, background-color 1s linear;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--live) 8%, transparent), transparent 55%),
     rgba(15, 23, 42, 0.55);
@@ -1337,22 +1339,38 @@
   transition: width 0.5s linear;
 }
 
-/* 20초 남으면 색을 바꿔 서두르게 한다 */
-.bet-timer.is-warn {
-  border-color: rgba(249, 115, 98, 0.45);
-  background: rgba(249, 115, 98, 0.1);
-}
-
+/* 색은 이제 카드의 --live가 함께 끌고 간다(마지막 30초).
+   여기서는 숫자를 조금 키워 눈에 걸리게만 한다 */
 .bet-timer.is-warn .bet-timer-left {
-  color: #fca5a5;
-}
-
-.bet-timer.is-warn .bet-timer-fill {
-  background: linear-gradient(90deg, var(--gg-red), #fca5a5);
+  font-size: 0.86rem;
 }
 
 .bet-timer.is-done {
   opacity: 0.7;
+}
+
+/* 카드가 빨개지는데 상태 칩과 타이머만 파랗게 남으면 따로 논다.
+   진행 중인 카드 안에서는 전부 --live를 따라간다 */
+.bet-live .bet-status.s-betting,
+.bet-live .bet-status.s-locked {
+  color: var(--live);
+  background: color-mix(in srgb, var(--live) 16%, transparent);
+  transition: color 1s linear, background-color 1s linear;
+}
+
+.bet-live .bet-timer {
+  border-color: color-mix(in srgb, var(--live) 45%, transparent);
+  background: color-mix(in srgb, var(--live) 10%, transparent);
+  transition: border-color 1s linear, background-color 1s linear;
+}
+
+.bet-live .bet-timer-left {
+  color: color-mix(in srgb, var(--live) 55%, #ffffff);
+  transition: color 1s linear;
+}
+
+.bet-live .bet-timer-fill {
+  background: linear-gradient(90deg, var(--live), color-mix(in srgb, var(--live) 50%, #ffffff));
 }
 
 /* ---------- 배팅 금액 빠른 입력 ---------- */
@@ -1365,11 +1383,11 @@
 .bet-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .bet-chip {
-  padding: 0.25rem 0.55rem;
+  padding: 0.25rem 0.45rem;
   border-radius: 999px;
   border: 1px solid rgba(56, 189, 248, 0.3);
   background: rgba(56, 189, 248, 0.08);
@@ -1392,7 +1410,6 @@
 }
 
 .bet-chip.is-clear {
-  margin-left: auto;
   border-color: var(--gg-panel-border);
   background: rgba(255, 255, 255, 0.03);
   color: #8b98ae;
