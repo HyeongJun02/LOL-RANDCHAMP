@@ -10,6 +10,7 @@ import {
 } from '../../matches';
 import { getTier, tierName } from '../../tiers';
 import ScrimBadge from '../../components/common/ScrimBadge';
+import RankList from '../../components/common/RankList';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import Insights from './Insights';
 import { buildInsights } from './insightData';
@@ -18,7 +19,6 @@ import { downloadReport } from './reportImage';
 import './Season.css';
 
 
-const MEDALS = ['🥇', '🥈', '🥉'];
 /* 달 탭과 같은 자리에 놓는 '전체 시즌' */
 const ALL = 'all';
 
@@ -124,36 +124,28 @@ const Season = ({ matches = [], players = [] }) => {
             </span>
           </div>
 
-          {ranking.length === 0 ? (
-            <p className="season-blank">
-              {isAll ? '전체 기간에' : `${monthLabel(active)}에는`} 내전 기록이 없습니다.
-            </p>
-          ) : (
-            <ol className="season-board">
-              {ranking.map((r, i) => {
-                const member = players.find((m) => m.name === r.name);
-                return (
-                  <li key={r.name} className={i < 3 ? `top top-${i + 1}` : ''}>
-                    <span className="season-rank">{MEDALS[i] || i + 1}</span>
-                    <span className="season-name">{r.name}</span>
-                    {member && (
-                      <span
-                        className="tier-badge"
-                        style={{ '--tier': getTier(member.tier).color }}
-                      >
-                        {tierName(member)}
-                      </span>
-                    )}
-                    <span className="season-record">
-                      {r.wins}승 {r.losses}패
-                      <em>{Math.round((r.wins / r.games) * 100)}%</em>
-                    </span>
-                    <ScrimBadge points={r.points} stat={r} />
-                  </li>
-                );
-              })}
-            </ol>
-          )}
+          <RankList
+            empty={`${isAll ? '전체 기간에' : `${monthLabel(active)}에는`} 내전 기록이 없습니다.`}
+            rows={ranking.map((r) => {
+              const member = players.find((m) => m.name === r.name);
+              return {
+                key: r.name,
+                name: r.name,
+                badge: member && (
+                  <span className="tier-badge" style={{ '--tier': getTier(member.tier).color }}>
+                    {tierName(member)}
+                  </span>
+                ),
+                stat: (
+                  <>
+                    {r.wins}승 {r.losses}패 <b>{Math.round((r.wins / r.games) * 100)}%</b>
+                  </>
+                ),
+                value: <ScrimBadge points={r.points} stat={r} />,
+                ratio: r.wins / r.games,
+              };
+            })}
+          />
 
           <ScrimPointsHelp />
 

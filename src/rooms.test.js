@@ -274,9 +274,9 @@ const fnBody = (name) => {
 };
 
 test('마켓 이름과 상한이 앱과 DB에서 같다', () => {
-  expect(killMarket(45.5)).toBe('kills_45.5');
+  expect(killMarket(53.5)).toBe('kills_53.5');
   expect(capOf('first_blood')).toBe(2000);
-  expect(capOf(killMarket(45.5))).toBe(3000);
+  expect(capOf(killMarket(53.5))).toBe(3000);
   expect(capOf('winner')).toBeNull();
 
   const body = fnBody('place_bets');
@@ -394,13 +394,13 @@ test('결과를 안 넣은 마켓은 정답이 없다 (전액 환불되는 경�
 });
 
 /* ---------- 킬 기준선 ---------- */
-/* 칼바람 6명에서 45.5가 반반이었다. 8명이면 킬도 그만큼 더 나오니
-   같은 값을 쓰면 오버가 거의 확정이 된다 */
+/* 인당 7.5킬(6명 45.5)로 잡았더니 매번 오버만 떴다. 실제로는 그보다
+   훨씬 많이 나온다는 뜻이라 인당 8.9킬로 올렸다 */
 
-test('인원에 따라 기준선이 올라간다 (6명 45.5 · 8명 60.5)', () => {
-  expect(killLineFor(6)).toBe(45.5);
-  expect(killLineFor(8)).toBe(60.5);
-  expect(killLineFor(10)).toBe(75.5);
+test('인원에 따라 기준선이 올라간다 (6명 53.5 · 8명 71.5)', () => {
+  expect(killLineFor(6)).toBe(53.5);
+  expect(killLineFor(8)).toBe(71.5);
+  expect(killLineFor(10)).toBe(89.5);
 });
 
 test('기준선은 항상 .5로 끊긴다 (무승부가 없어야 한다)', () => {
@@ -417,20 +417,20 @@ test('인원이 늘면 기준선도 반드시 같이 오른다', () => {
 
 test('경기의 기준선은 배팅을 열 때 박힌 팀에서 계산한다', () => {
   const scrim = { team_a: [1, 2, 3], team_b: [4, 5, 6] };
-  expect(killLineOfScrim(scrim)).toBe(45.5);
+  expect(killLineOfScrim(scrim)).toBe(53.5);
   /* 팀이 비어 있어도 터지지 않는다 */
-  expect(killLineOfScrim({})).toBe(45.5);
-  expect(killLineOfScrim(null)).toBe(45.5);
+  expect(killLineOfScrim({})).toBe(53.5);
+  expect(killLineOfScrim(null)).toBe(53.5);
 });
 
 test('기준선이 그대로 마켓 이름이 되고, 다시 읽어도 같은 값이다', () => {
   const line = killLineFor(8);
-  expect(killMarket(line)).toBe('kills_60.5');
+  expect(killMarket(line)).toBe('kills_71.5');
   const scrim = {
     status: 'settled',
     team_a: [1, 2, 3, 4],
     team_b: [5, 6, 7, 8],
-    total_kills: 61,
+    total_kills: 72,
   };
   expect(winningSelection(scrim, killMarket(killLineOfScrim(scrim)))).toBe('over');
 });

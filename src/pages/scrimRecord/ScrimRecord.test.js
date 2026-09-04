@@ -73,8 +73,8 @@ test('양 팀에 이름을 넣고 승리 팀을 고르면 기록이 남는다', 
 
   await click(byText(el, 'button', '1팀 승리'));
 
-  expect(el.querySelector('.board-blank')).toBeNull();
-  expect([...el.querySelectorAll('.board-list li')]).toHaveLength(2);
+  expect(el.querySelector('.rank-blank')).toBeNull();
+  expect([...el.querySelectorAll('.rank-list .rank-row')]).toHaveLength(2);
   expect(byText(el, 'span', '철수').closest('li').textContent).toContain('1승 0패');
   expect(byText(el, 'span', '영희').closest('li').textContent).toContain('0승 1패');
 
@@ -89,7 +89,7 @@ test('양 팀에 같은 이름이 있으면 기록하지 않는다', async () =>
 
   await click(byText(el, 'button', '1팀 승리'));
 
-  expect(el.querySelector('.board-blank')).not.toBeNull();
+  expect(el.querySelector('.rank-blank')).not.toBeNull();
 });
 
 /* 모드를 나누지 않으므로 옛 칼바람 기록도 같은 리더보드에 함께 뜬다 */
@@ -100,7 +100,7 @@ test('예전 칼바람 기록도 같은 전적에 함께 잡힌다', async () =>
     ],
   });
 
-  expect(el.querySelector('.board-blank')).toBeNull();
+  expect(el.querySelector('.rank-blank')).toBeNull();
   expect(el.textContent).toContain('철수');
 });
 
@@ -114,7 +114,7 @@ test('기록 삭제 버튼을 누르면 전적에서 사라진다', async () => 
      모달은 body로 포탈되므로 document에서 찾는다 */
   await click(document.querySelector('.dialog-ok'));
 
-  expect(el.querySelector('.board-blank')).not.toBeNull();
+  expect(el.querySelector('.rank-blank')).not.toBeNull();
   expect(el.querySelector('.history-list')).toBeNull();
 });
 
@@ -131,7 +131,7 @@ test('수정 권한이 없으면 입력과 삭제가 아예 안 보인다', asyn
   expect(byText(el, 'button', '1팀 승리')).toBeUndefined();
   expect(el.querySelector('.history-list .row-del')).toBeNull();
   // 기록 자체는 보인다
-  expect(el.querySelector('.board-list li').textContent).toContain('철수');
+  expect(el.querySelector('.rank-list .rank-row').textContent).toContain('철수');
 });
 
 test('짜둔 팀이 없으면 가져오기 버튼 자체를 안 보여준다', () => {
@@ -167,7 +167,7 @@ test('입력 칸에는 승률을 안 보여준다 (리더보드에만)', () => {
 
   expect(el.querySelector('.sr-row .sr-winrate')).toBeNull();
   // 순위표에는 그대로 있다
-  expect(el.querySelector('.board-record').textContent).toContain('%');
+  expect(el.querySelector('.rank-stat').textContent).toContain('%');
 });
 
 test('확인창에서 취소하면 기록이 그대로 남는다', async () => {

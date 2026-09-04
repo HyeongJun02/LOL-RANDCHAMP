@@ -19,6 +19,7 @@ import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ClearInput from '../../components/common/ClearInput';
+import RankList from '../../components/common/RankList';
 import { useDialog } from '../../components/common/Dialog';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import { timeAgo } from '../../timeAgo';
@@ -35,39 +36,45 @@ const blankTeam = () => Array.from({ length: TEAM_SIZE }, () => '');
 /* 컴포넌트 함수 안에서 매 렌더마다 새로 만들면 리액트가 다른 컴포넌트로 보고
    통째로 재마운트한다 (인풋 포커스가 키 입력마다 날아가는 버그로 이어짐).
    그래서 모듈 스코프에 한 번만 선언하고 필요한 값은 전부 props로 받는다. */
-const TeamPanel = ({ label, team, otherTeam, players, onChangeAt, onRemoveAt, onAdd, accent }) => (
-  <div className={`sr-team ${accent}`}>
-    <div className="sr-team-head">
-      <h3>{label}</h3>
-      <span className="sr-team-count">{team.filter((n) => n.trim()).length}명</span>
-    </div>
-    {team.map((name, i) => (
-      <div className="sr-row" key={i}>
-        <span className="row-no">{i + 1}</span>
-        <span className="input-with-clear">
-          <input
-            value={name}
-            placeholder="이름"
-            onChange={(e) => onChangeAt(i, e.target.value)}
-          />
-          <ClearInput value={name} onClear={() => onChangeAt(i, '')} />
+const TeamPanel = ({ label, team, otherTeam, players, onChangeAt, onRemoveAt, onAdd, accent }) => {
+  const filled = team.filter((n) => n.trim()).length;
+  return (
+    <div className={`sr-team ${accent}`}>
+      <div className="sr-team-head">
+        <h3>{label}</h3>
+        {/* 몇 명 중 몇 명인지. '3명'만 있으면 자리가 남았는지 안 보인다 */}
+        <span className="sr-team-count">
+          <b>{filled}</b>/{team.length}
         </span>
-        <RosterPicker
-          people={players}
-          title="방 참가자 불러오기"
-          taken={[...team.filter((_, idx) => idx !== i), ...otherTeam]}
-          onPick={(m) => onChangeAt(i, m.name)}
-        />
-        <button className="row-del" onClick={() => onRemoveAt(i)} aria-label="자리 삭제">
-          <FaTimes />
-        </button>
       </div>
-    ))}
-    <button className="ghost-btn sr-add-slot" onClick={onAdd}>
-      <FaPlus /> 자리 추가
-    </button>
-  </div>
-);
+      {team.map((name, i) => (
+        <div className={`sr-row ${name.trim() ? 'is-filled' : ''}`} key={i}>
+          <span className="row-no">{i + 1}</span>
+          <span className="input-with-clear">
+            <input
+              value={name}
+              placeholder="이름"
+              onChange={(e) => onChangeAt(i, e.target.value)}
+            />
+            <ClearInput value={name} onClear={() => onChangeAt(i, '')} />
+          </span>
+          <RosterPicker
+            people={players}
+            title="방 참가자 불러오기"
+            taken={[...team.filter((_, idx) => idx !== i), ...otherTeam]}
+            onPick={(m) => onChangeAt(i, m.name)}
+          />
+          <button className="row-del" onClick={() => onRemoveAt(i)} aria-label="자리 삭제">
+            <FaTimes />
+          </button>
+        </div>
+      ))}
+      <button className="ghost-btn sr-add-slot" onClick={onAdd}>
+        <FaPlus /> 자리 추가
+      </button>
+    </div>
+  );
+};
 
 /* 방의 '기록' 탭.
    matches: rooms.js가 이름을 붙여 넘겨준 경기 목록
@@ -329,34 +336,29 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
           <FaClipboardList /> 전적 리더보드
           <span className="panel-count">{board.length}명</span>
         </h2>
-        {board.length === 0 ? (
-          <p className="board-blank">아직 기록된 경기가 없어요.</p>
-        ) : (
-          <ul className="board-list">
-            {board.map((r, i) => {
-              const player = playerOf(r.name);
-              return (
-                <li key={r.name}>
-                  <span className="board-rank">{i + 1}</span>
-                  <span className="board-name">{r.name}</span>
-                  {player && (
-                    <span
-                      className="tier-badge"
-                      style={{ '--tier': getTier(player.tier).color }}
-                    >
-                      {tierName(player)}
-                    </span>
-                  )}
-                  <span className="board-record">
-                    {r.wins}승 {r.losses}패
-                    <em>{Math.round((r.wins / r.games) * 100)}%</em>
-                  </span>
-                  <ScrimBadge points={r.points} stat={statOf(stats, r.name)} />
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <RankList
+          empty="아직 기록된 경기가 없어요."
+          rows={board.map((r) => {
+            const player = playerOf(r.name);
+            return {
+              key: r.name,
+              name: r.name,
+              badge: player && (
+                <span className="tier-badge" style={{ '--tier': getTier(player.tier).color }}>
+                  {tierName(player)}
+                </span>
+              ),
+              stat: (
+                <>
+                  {r.wins}승 {r.losses}패 <b>{Math.round((r.wins / r.games) * 100)}%</b>
+                </>
+              ),
+              value: <ScrimBadge points={r.points} stat={statOf(stats, r.name)} />,
+              /* 막대는 승률. 판수가 적으면 과장돼 보이지만 옆에 전적이 같이 있다 */
+              ratio: r.wins / r.games,
+            };
+          })}
+        />
         <ScrimPointsHelp />
       </section>
 
@@ -365,7 +367,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
           최근 기록<span className="panel-count">{history.length}경기</span>
         </h2>
         {history.length === 0 ? (
-          <p className="board-blank">아직 기록된 경기가 없어요.</p>
+          <p className="rank-blank">아직 기록된 경기가 없어요.</p>
         ) : (
           <ul className="history-list">
             {history.map((m) => (

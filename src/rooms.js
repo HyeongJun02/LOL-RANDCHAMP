@@ -654,18 +654,21 @@ export const canEdit = (role) => role === 'owner' || role === 'admin';
 
 /* 킬 기준선.
 
-   인원에 따라 달라진다. 칼바람 6명(3대3)에서 45.5가 반반이었는데,
-   8명이면 킬도 그만큼 더 나오니 같은 45.5로 두면 오버가 거의 확정이다.
-   6명 45.5 · 8명 60.5로 잡으면 인당 7.5킬이라, 그 비율을 그대로 쓴다.
+   인원에 따라 달라진다. 8명이면 6명보다 킬이 그만큼 더 나오니
+   같은 값을 쓰면 한쪽이 거의 확정이 된다.
+
+   처음엔 인당 7.5킬(6명 45.5)로 잡았는데 매번 오버만 떴다. 실제로는
+   그보다 훨씬 많이 나온다는 뜻이라 인당 8.9킬로 올린다.
+   6명 53.5 · 8명 71.5 · 10명 89.5.
    무승부가 없도록 .5로 끊는다.
 
    기준선 하나가 곧 마켓 하나다. 여러 개를 열면 언더·오버를 여러 번 걸 수
    있어서 '어디에 건 건지' 자체가 헷갈리므로 경기마다 하나만 연다. */
-export const KILLS_PER_PLAYER = 7.5;
+export const KILLS_PER_PLAYER = 8.9;
 
 export const killLineFor = (playerCount) => {
   const n = Number(playerCount) || 0;
-  if (n === 0) return 45.5;
+  if (n === 0) return 53.5;
   return Math.round(KILLS_PER_PLAYER * n) + 0.5;
 };
 

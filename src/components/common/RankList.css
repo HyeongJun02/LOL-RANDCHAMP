@@ -1,0 +1,180 @@
+/* 순위 목록. 전적·시즌·끼꼬가 같은 모양을 쓴다 */
+
+.rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.rank-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.8rem 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.035);
+  overflow: hidden;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+/* 3위까지는 색을 준다. 1등이 그냥 첫 줄이면 오를 이유가 없다 */
+.rank-row.is-top-1 {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.12), rgba(255, 255, 255, 0.03) 55%);
+}
+
+.rank-row.is-top-2 {
+  border-color: rgba(203, 213, 225, 0.28);
+  background: linear-gradient(90deg, rgba(203, 213, 225, 0.08), rgba(255, 255, 255, 0.03) 55%);
+}
+
+.rank-row.is-top-3 {
+  border-color: rgba(193, 129, 74, 0.3);
+  background: linear-gradient(90deg, rgba(193, 129, 74, 0.09), rgba(255, 255, 255, 0.03) 55%);
+}
+
+/* 순위는 숫자 하나로. 메달 이모지는 폰트마다 크기가 달라 줄이 흔들린다 */
+.rank-no {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #7d8ba3;
+  font-size: 0.76rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-row.is-top-1 .rank-no {
+  background: linear-gradient(135deg, #fde68a, #fbbf24);
+  color: #3b2708;
+}
+
+.rank-row.is-top-2 .rank-no {
+  background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
+  color: #1e293b;
+}
+
+.rank-row.is-top-3 .rank-no {
+  background: linear-gradient(135deg, #e0b28a, #c1814a);
+  color: #331d0a;
+}
+
+.rank-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rank-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.rank-row.is-top-1 .rank-name {
+  font-size: 0.94rem;
+  color: #fef3c7;
+}
+
+.rank-name em {
+  font-style: normal;
+  font-weight: 400;
+  color: #64748b;
+}
+
+.rank-stat {
+  flex: none;
+  font-size: 0.76rem;
+  color: #8b98ae;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rank-stat b {
+  color: #cbd5e5;
+}
+
+.rank-value {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.84rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-light, var(--gg-gold-light));
+  white-space: nowrap;
+}
+
+/* 줄 밑에 깔리는 막대. 숫자만 오른쪽에 몰아두면 1등과 5등이
+   얼마나 차이 나는지 눈으로 안 읽힌다 */
+.rank-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rank-bar::after {
+  content: '';
+  display: block;
+  width: var(--fill, 0%);
+  height: 100%;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--accent, #c8aa6e) 45%, transparent),
+    var(--accent, #c8aa6e)
+  );
+  transition: width 0.4s ease;
+}
+
+.rank-row.is-top-1 .rank-bar::after {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.45), #fbbf24);
+}
+
+.rank-blank {
+  margin: 0;
+  padding: 1.4rem 0;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--gg-text-muted);
+}
+
+@media (max-width: 520px) {
+  /* 좁아지면 이름과 수치만 남기고 전적은 아랫줄로 내린다 */
+  .rank-row {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+
+  .rank-stat {
+    order: 3;
+    flex: 1 0 100%;
+    padding-left: 2.05rem;
+  }
+}
+
+/* '끼꼬' 같은 단위는 숫자보다 작게. 숫자가 먼저 읽혀야 한다 */
+.rank-unit {
+  font-style: normal;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #6b7a94;
+}

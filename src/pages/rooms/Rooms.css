@@ -724,12 +724,7 @@
 
 /* ---------- 끼꼬 ---------- */
 
-.kkiko-rank {
-  width: 1.8rem;
-  text-align: center;
-  font-weight: 700;
-  color: #94a3b8;
-}
+/* 끼꼬 순위도 RankList를 쓴다 (components/common) */
 
 .kkiko-ledger {
   list-style: none;

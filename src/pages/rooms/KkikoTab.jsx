@@ -3,8 +3,7 @@ import toast from 'react-hot-toast';
 import { FaPaperPlane, FaSlidersH, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { transferPoints, adjustPoints, fetchLedger, LEDGER_PAGE } from '../../rooms';
 import { useDialog } from '../../components/common/Dialog';
-
-const MEDALS = ['🥇', '🥈', '🥉'];
+import RankList from '../../components/common/RankList';
 
 /* 무엇 때문에 끼꼬가 움직였는지. 배팅/정산은 5단계에서 붙는다 */
 const REASON = {
@@ -43,6 +42,7 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
   const { confirm } = useDialog();
   const me = members.find((m) => m.user_id === myId);
   const ranked = [...members].sort((a, b) => b.points - a.points);
+  const top = ranked[0]?.points || 0;
   const others = members.filter((m) => m.user_id !== myId);
 
   const loadPage = useCallback(async (at, list) => {
@@ -156,18 +156,22 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
         <h3>
           끼꼬 순위<span className="panel-count">{members.length}명</span>
         </h3>
-        <ul className="room-members">
-          {ranked.map((m, i) => (
-            <li key={m.user_id}>
-              <span className="kkiko-rank">{MEDALS[i] || i + 1}</span>
-              <span className="rooms-name">
-                {m.nickname}
-                {m.user_id === myId && <em> (나)</em>}
-              </span>
-              <span className="room-member-points">{m.points.toLocaleString()} 끼꼬</span>
-            </li>
-          ))}
-        </ul>
+        <RankList
+          empty="아직 아무도 없어요."
+          rows={ranked.map((m) => ({
+            key: m.user_id,
+            name: m.nickname,
+            me: m.user_id === myId,
+            value: (
+              <>
+                {m.points.toLocaleString()}
+                <i className="rank-unit">끼꼬</i>
+              </>
+            ),
+            /* 막대는 1위 대비. 얼마나 벌어졌는지가 한눈에 보인다 */
+            ratio: top > 0 ? m.points / top : 0,
+          }))}
+        />
         <p className="rooms-hint">매월 1일 모두 10,000 끼꼬로 돌아갑니다. 지난 달 성적은 전당에 남습니다.</p>
       </section>
 

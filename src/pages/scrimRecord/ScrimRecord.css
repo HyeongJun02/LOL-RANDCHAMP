@@ -28,9 +28,11 @@
   --team: var(--gg-blue);
   padding: 0.85rem;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--gg-panel-border);
-  border-top: 3px solid var(--team);
+  border: 1px solid color-mix(in srgb, var(--team) 25%, transparent);
+  /* 위쪽에서 팀 색이 옅게 흘러내린다. 3px 선 하나보다 팀이 팀처럼 보인다 */
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--team) 12%, transparent), transparent 45%),
+    rgba(255, 255, 255, 0.03);
 }
 
 .sr-team.team-red {
@@ -39,21 +41,46 @@
 
 .sr-team-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
   margin-bottom: 0.7rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--team) 20%, transparent);
 }
 
 .sr-team-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   margin: 0;
   font-size: 0.9rem;
   font-weight: 800;
   color: var(--team);
 }
 
+/* 팀 이름 앞의 색 점. 파랑/빨강이 글자색만으로는 약하다 */
+.sr-team-head h3::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--team);
+  box-shadow: 0 0 8px var(--team);
+}
+
 .sr-team-count {
-  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.72rem;
+  font-weight: 700;
   color: #6b7a94;
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-team-count b {
+  color: #e2e8f0;
 }
 
 .sr-row {
@@ -79,7 +106,41 @@
 }
 
 .sr-row input:focus {
-  border-color: rgba(200, 170, 110, 0.55);
+  border-color: color-mix(in srgb, var(--team) 60%, transparent);
+}
+
+/* 채운 자리와 빈 자리를 구분한다. 다 똑같이 보이면 몇 명인지 세게 된다 */
+.sr-row .row-no {
+  display: grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #55637a;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sr-row.is-filled .row-no {
+  color: var(--team);
+  background: color-mix(in srgb, var(--team) 16%, transparent);
+}
+
+.sr-row:not(.is-filled) input {
+  border-style: dashed;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+/* 아이콘 단추 둘은 조용히. 이름 칸이 주인공이다 */
+.sr-row .row-del {
+  opacity: 0.45;
+  transition: opacity 0.15s ease;
+}
+
+.sr-row:hover .row-del,
+.sr-row .row-del:focus-visible {
+  opacity: 1;
 }
 
 .sr-add-slot {
@@ -165,17 +226,9 @@
   color: var(--gg-gold);
 }
 
-.board-blank {
-  padding: 1.4rem;
-  text-align: center;
-  color: var(--gg-text-muted);
-  font-size: 0.85rem;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  border: 1px solid var(--gg-panel-border);
-}
+/* 순위표는 RankList(components/common)로 옮겼다.
+   전적·시즌·끼꼬가 같은 모양을 쓴다 */
 
-.board-list,
 .history-list {
   list-style: none;
   margin: 0;
@@ -183,50 +236,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-}
-
-/* 한 줄에 다 넣는다. 두 줄이면 사람 수만큼 세로가 길어져 훑기 힘들다.
-   flex라 티어 배지가 없는 사람(로스터 미등록)이 섞여도 안 흔들린다 */
-.board-list li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid var(--gg-panel-border);
-}
-
-.board-rank {
-  flex: none;
-  width: 1.3rem;
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #6b7a94;
-  text-align: center;
-}
-
-.board-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: #e6ecf7;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.board-record {
-  flex: none;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 0.35rem;
-  min-width: 6.4rem;
-  font-size: 0.75rem;
-  color: #93a5c4;
-  white-space: nowrap;
 }
 
 /* ---------- 최근 기록 ---------- */
@@ -265,9 +274,29 @@
   white-space: nowrap;
 }
 
+/* 이긴 쪽. 굵기만으로는 훑을 때 어느 쪽이 이겼는지 잘 안 걸린다.
+   앞에 작은 왕관을 붙여 눈이 먼저 그쪽으로 가게 한다 */
 .hist-winner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   color: var(--gg-gold-light);
   font-weight: 700;
+}
+
+.hist-winner::before {
+  content: '👑';
+  flex: none;
+  font-size: 0.68rem;
+  filter: saturate(0.9);
+}
+
+.history-list li {
+  transition: border-color 0.15s ease;
+}
+
+.history-list li:hover {
+  border-color: rgba(200, 170, 110, 0.3);
 }
 
 .hist-vs {
@@ -286,23 +315,4 @@
   }
 }
 
-.board-record em {
-  font-style: normal;
-  font-weight: 800;
-  color: #cbd5e5;
-}
 
-@media (max-width: 480px) {
-  /* 아주 좁으면 전적만 아랫줄로 */
-  .board-list li {
-    flex-wrap: wrap;
-    row-gap: 0.25rem;
-  }
-
-  .board-record {
-    flex: 1 0 100%;
-    justify-content: flex-start;
-    min-width: 0;
-    padding-left: 1.8rem;
-  }
-}
