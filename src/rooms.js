@@ -346,12 +346,20 @@ export const toMatches = (scrims = [], players = []) => {
 
 /* 로딩/에러/재조회를 매번 손으로 쓰지 않으려고 한 겹만 둔다.
    fetcher는 호출하는 쪽에서 useCallback으로 묶어서 넘길 것 */
+/* 한 번 어긋났다고 포기하지 않는다. 정산처럼 요청이 한꺼번에 몰리는
+   자리에서 하나만 실패해도 화면이 비어버리면 안 된다 */
+const RETRY_MS = 900;
+const MAX_RETRIES = 2;
+
 const useFetch = (fetcher, enabled = true) => {
   const [state, setState] = useState({ loading: enabled, data: null, error: null });
   /* 응답이 늦게 도착한 옛 요청이 새 화면을 덮어쓰지 않게 한다 */
   const seq = useRef(0);
+  const fails = useRef(0);
+  const timer = useRef(null);
 
   const reload = useCallback(async () => {
+    clearTimeout(timer.current);
     if (!enabled) {
       setState({ loading: false, data: null, error: null });
       return;
@@ -364,9 +372,22 @@ const useFetch = (fetcher, enabled = true) => {
     setState((s) => ({ ...s, loading: s.data === null }));
     try {
       const data = await fetcher();
-      if (seq.current === mine) setState({ loading: false, data, error: null });
+      if (seq.current !== mine) return;
+      fails.current = 0;
+      setState({ loading: false, data, error: null });
     } catch (e) {
-      if (seq.current === mine) setState({ loading: false, data: null, error: e.message });
+      if (seq.current !== mine) return;
+      fails.current += 1;
+      setState((s) => {
+        /* 들고 있던 게 있으면 그대로 둔다. 정산하자마자 방이 사라져
+           목록으로 나갔다 다시 들어와야 하던 게 이것 때문이었다.
+           잠시 뒤 한두 번 더 시도하고, 그래도 안 되면 폴링이 이어받는다 */
+        if (s.data !== null) {
+          if (fails.current <= MAX_RETRIES) timer.current = setTimeout(reload, RETRY_MS);
+          return { ...s, loading: false };
+        }
+        return { loading: false, data: null, error: e.message };
+      });
     }
   }, [fetcher, enabled]);
 
@@ -374,6 +395,7 @@ const useFetch = (fetcher, enabled = true) => {
     reload();
     return () => {
       seq.current += 1;
+      clearTimeout(timer.current);
     };
   }, [reload]);
 

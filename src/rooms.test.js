@@ -697,3 +697,25 @@ test('끼꼬 내역도 한 쪽씩 끊어서 본다', () => {
   expect(body.slice(0, 400)).toContain("q.lt('id', beforeId)");
   expect(src).toMatch(/export const LEDGER_PAGE = \d+/);
 });
+
+/* ---------- 새로고침 실패 ---------- */
+
+/* 정산 직후처럼 요청이 몰릴 때 하나만 어긋나도 방이 통째로 사라져서,
+   목록으로 나갔다 다시 들어와야 했다 */
+test('한 번 못 읽었다고 들고 있던 방을 버리지 않는다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const body = src.slice(src.indexOf('const useFetch ='), src.indexOf('export const useMe'));
+
+  /* 예전엔 catch에서 data를 통째로 null로 밀어버렸다 */
+  expect(body).not.toMatch(/catch[\s\S]{0,200}setState\(\{ loading: false, data: null/);
+  expect(body).toContain('if (s.data !== null)');
+  /* 잠시 뒤 다시 시도하고, 무한히 두드리지는 않는다 */
+  expect(body).toContain('fails.current <= MAX_RETRIES');
+});
+
+test('방 코드는 눌러서 복사한다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'pages', 'rooms', 'Room.jsx'), 'utf8');
+  expect(src).toContain('copyText');
+  /* 아직 안 열어본 상태에서 눌러도 받아와서 복사해야 한다 */
+  expect(src).toMatch(/code \|\| \(await getJoinCode\(room\.id\)\)/);
+});

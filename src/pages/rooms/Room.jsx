@@ -16,6 +16,7 @@ import {
   FaCog,
   FaGhost,
   FaLink,
+  FaRegCopy,
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import {
@@ -48,6 +49,7 @@ import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
 import FeedTab from './FeedTab';
 import { useDialog } from '../../components/common/Dialog';
+import { copyText } from '../../clipboard';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
 import NicknameGate from '../../components/rooms/NicknameGate';
@@ -155,6 +157,15 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
   };
 
   const showCode = guard(async () => setCode(await getJoinCode(room.id)));
+
+  /* 코드를 눈으로 읽어 카톡에 옮겨 적는 게 제일 흔한 실수 자리다.
+     아직 안 열어봤으면 여기서 받아와서 바로 복사한다 */
+  const copyCode = guard(async () => {
+    const value = code || (await getJoinCode(room.id));
+    setCode(value);
+    if (await copyText(value)) toast.success(`입장 코드 ${value} 를 복사했어요.`);
+    else toast.error('복사가 막혀 있어요. 코드를 직접 눌러 복사해 주세요.');
+  });
   const rerollCode = guard(async () => {
     const ok = await confirm({
       title: '입장 코드 새로 뽑기',
@@ -318,6 +329,9 @@ const Settings = ({ room, members, players, myRole, myId, reload, onGone }) => {
             <span className="room-code">{code || '••••••'}</span>
             <button className="ghost-btn" onClick={showCode}>
               코드 보기
+            </button>
+            <button className="ghost-btn" onClick={copyCode}>
+              <FaRegCopy /> 복사
             </button>
             {isOwner && (
               <button className="ghost-btn" onClick={rerollCode}>
@@ -574,7 +588,10 @@ const Room = () => {
     );
   }
 
-  if (!user || error || !room) {
+  /* 새로고침 한 번 실패했다고 방을 통째로 버리지 않는다.
+     정산 직후처럼 요청이 몰릴 때 하나만 어긋나도 '방을 볼 수 없어요'가
+     떠서, 목록으로 나갔다 다시 들어와야 했다 */
+  if (!user || !room) {
     return (
       <div className="page room-page">
         <p className="rooms-blank">{error || '방을 볼 수 없어요.'}</p>

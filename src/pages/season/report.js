@@ -37,13 +37,5 @@ export const formatReport = ({ periodLabel, played, ranking, insights = [] }) =>
   return lines.join('\n');
 };
 
-/* 클립보드는 https나 localhost에서만 열린다. 실패하면 알려줘야 한다 */
-export const copyText = async (text) => {
-  if (!navigator.clipboard?.writeText) return false;
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-};
+/* 복사는 방 코드에서도 쓴다. 한 군데 두고 같이 쓴다 */
+export { copyText } from '../../clipboard';
