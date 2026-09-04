@@ -673,7 +673,13 @@ const Room = () => {
           />
         )}
         {tab === 'kkiko' && (
-          <KkikoTab roomId={roomId} members={members} myId={user.id} onChanged={reload} />
+          <KkikoTab
+            roomId={roomId}
+            members={members}
+            myId={user.id}
+            isOwner={myRole === 'owner'}
+            onChanged={reload}
+          />
         )}
         {tab === 'feed' && <FeedTab roomId={roomId} version={room.version} />}
         {tab === 'settings' && (

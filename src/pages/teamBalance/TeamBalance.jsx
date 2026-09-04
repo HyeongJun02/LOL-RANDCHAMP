@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaRedo } from 'react-icons/fa';
 import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
 import { splitTeams, MAX_PLAYERS, winChance, IGNORE_RATING } from './balance';
 import { mergeMembers, useRoster } from '../../roster';
@@ -47,7 +47,7 @@ const TierBadge = ({ player }) => {
 /* embedded: 방 안에서 팝업으로 띄울 때. 페이지 껍데기와 문서 제목을 건드리지 않는다
    onUseTeams: 주면 결과 아래에 '이 팀으로 내전 진행하기'가 붙는다.
    방에서 팀을 짠 다음 이름을 손으로 옮겨 적는 일이 없어진다 */
-const TeamBalance = ({ matches = [], embedded = false, onUseTeams }) => {
+const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }) => {
   const [players, setPlayers] = useState(() =>
     Array.from({ length: 10 }, blankPlayer)
   );
@@ -131,6 +131,25 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams }) => {
     }
   };
 
+  /* 직전 경기에 뛴 사람들을 그대로 앉힌다.
+     명단 불러오기 → 한 명씩 체크가 팀 짜기에서 제일 번거로운 대목인데,
+     내전은 대개 같은 인원으로 연달아 한다 */
+  const fillRecent = () => {
+    if (recent.length === 0) return;
+    const rows = recent
+      .slice(0, MAX_PLAYERS)
+      .map((m) => ({
+        ...blankPlayer(),
+        name: m.name,
+        tier: m.tier || 'GOLD',
+        division: m.division || 4,
+      }));
+    while (rows.length < 10) rows.push(blankPlayer());
+    setPlayers(rows);
+    setResult(null);
+    toast.success(`직전 경기 ${recent.length}명을 가져왔어요.`);
+  };
+
   const saveToRoster = () => {
     if (entered.length === 0) {
       toast.error('저장할 이름이 없어요.');
@@ -207,6 +226,11 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams }) => {
               <span className="panel-count">{entered.length}명</span>
             </h2>
             <div className="panel-head-actions">
+              {recent.length > 0 && (
+                <button className="ghost-btn" onClick={fillRecent} title="직전 경기와 같은 인원">
+                  <FaRedo /> 직전 인원
+                </button>
+              )}
               <RosterLoadButton onClick={() => setShowLoader(true)} />
               <button className="ghost-btn" onClick={saveToRoster}>
                 <FaBookmark /> 명단에 저장

@@ -576,3 +576,61 @@ test('연결 함수들은 로그인한 사람에게만 열려 있다', () => {
     expect(sql).toContain(`public.${sig}`);
   });
 });
+
+/* ---------- 방장의 끼꼬 조정 ---------- */
+
+test('끼꼬 조정은 방장만 할 수 있다', () => {
+  expect(fnBody('adjust_points')).toContain('is_room_owner(p_room)');
+});
+
+test('조정하면 반드시 로그가 남는다 (조용히 자기 잔액만 올릴 수 없게)', () => {
+  const body = fnBody('adjust_points');
+  expect(body).toMatch(/log_room\(p_room, 'adjust'/);
+  /* 원장에도 남아야 '내 끼꼬 내역'에서 본인이 확인할 수 있다 */
+  expect(body).toMatch(/insert into point_ledger[\s\S]*'adjust'/);
+});
+
+test('조정은 방 지갑만 건드리고 잔액이 음수가 되지 않는다', () => {
+  const body = fnBody('adjust_points');
+  expect(body).toMatch(/update room_wallets set points = greatest\(0, points \+ p_delta\)/);
+  expect(body).toContain('where room_id = p_room and user_id = p_user');
+});
+
+test('한 번에 움직일 수 있는 폭에 상한이 있다 (0 하나 더 붙는 오타)', () => {
+  expect(fnBody('adjust_points')).toContain('abs(p_delta) > 100000');
+});
+
+test('조정 로그는 누구를 얼마나 왜 만졌는지 다 보여준다', () => {
+  const { tag, parts } = feedParts({
+    type: 'adjust',
+    payload: { who: '영희', delta: -1500, after: 8500, reason: '벌칙' },
+  });
+  expect(tag.label).toBe('조정');
+  const line = parts.map((x) => x.v).join('');
+  expect(line).toContain('영희');
+  expect(line).toContain('-1,500');
+  expect(line).toContain('8,500');
+  expect(line).toContain('벌칙');
+});
+
+/* ---------- 방 상세 조회 ---------- */
+
+test('경기를 읽을 때 마감 시각도 같이 읽는다 (없으면 타이머가 조용히 안 그려진다)', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const select = src.slice(src.indexOf('const ROOM_SELECT'), src.indexOf('const POLL_MS'));
+  ['betting_closes_at', 'bet_count', 'status'].forEach((col) => {
+    expect(select).toContain(col);
+  });
+  /* 유령 멤버 표시도 같이 와야 한다 */
+  expect(select).toContain('is_ghost');
+});
+
+/* 렌더 함수 안에서 컴포넌트를 정의하면 렌더마다 타입이 달라져서 React가
+   그 아래를 통째로 다시 마운트한다. 스크롤이 맨 위로 튀고 입력 포커스가
+   날아간다. 두 번 겪었으니 소스에서 못 들어오게 막아둔다 */
+test('BetTab은 렌더 안에서 컴포넌트를 정의하지 않는다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'pages', 'rooms', 'BetTab.jsx'), 'utf8');
+  const body = src.slice(src.indexOf('const BetTab = ('));
+  const inner = [...body.matchAll(/^ {2}const ([A-Z]\w*) = \(/gm)].map((m) => m[1]);
+  expect(inner).toEqual([]);
+});

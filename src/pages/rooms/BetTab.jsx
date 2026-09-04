@@ -231,7 +231,12 @@ const BetTab = ({
     return selection;
   };
 
-  const Team = ({ ids: teamIds, label, hot }) => (
+  /* 아래 것들은 컴포넌트가 아니라 '그리는 함수'다.
+     렌더 안에서 컴포넌트를 정의하면 렌더마다 타입이 달라져서, 상태가
+     조금만 바뀌어도 React가 이 아래를 통째로 다시 마운트한다. DOM이 갈리면
+     스크롤 위치가 날아간다 (정산 펼치기를 누르면 맨 위로 튀던 이유).
+     함수로 부르면 결과 JSX가 이 컴포넌트의 트리에 그대로 붙어 그런 일이 없다 */
+  const renderTeam = ({ ids: teamIds, label, hot }) => (
     <div className={`bet-team ${hot ? 'bet-team-win' : ''}`}>
       <strong>{label}</strong>
       <span>{teamIds.map((id) => nameOf.get(id) || '?').join(', ')}</span>
@@ -243,7 +248,7 @@ const BetTab = ({
   const bettorsOn = (scrim, market, selection) =>
     bets.filter((b) => b.scrim_id === scrim.id && b.market === market && b.selection === selection);
 
-  const Option = ({ scrim, market, selection, label }) => {
+  const renderOption = ({ scrim, market, selection, label, key }) => {
     const p = poolOf(scrim.id, market, selection);
     const mine = myBets(scrim.id).find((b) => b.market === market);
     const taken = Boolean(mine);
@@ -258,7 +263,7 @@ const BetTab = ({
     const on = bettorsOn(scrim, market, selection);
 
     return (
-      <div className={`bet-opt-wrap ${settled ? 'is-settled' : ''}`}>
+      <div className={`bet-opt-wrap ${settled ? 'is-settled' : ''}`} key={key}>
         <button
           type="button"
           className={`bet-opt ${picked ? 'picked' : ''} ${isMine ? 'mine' : ''} ${
@@ -297,7 +302,7 @@ const BetTab = ({
     );
   };
 
-  const Markets = ({ scrim }) => {
+  const renderMarkets = (scrim) => {
     const roster = [...(scrim.team_a || []), ...(scrim.team_b || [])];
     const fixedFb = (roster.length * 0.85).toFixed(2);
     return (
@@ -305,8 +310,8 @@ const BetTab = ({
         <div className="bet-market">
           <h4>{marketLabel('winner')}</h4>
           <div className="bet-opts">
-            <Option scrim={scrim} market="winner" selection="A" label="1팀 승리" />
-            <Option scrim={scrim} market="winner" selection="B" label="2팀 승리" />
+            {renderOption({ scrim, market: 'winner', selection: 'A', label: '1팀 승리' })}
+            {renderOption({ scrim, market: 'winner', selection: 'B', label: '2팀 승리' })}
           </div>
           <p className="rooms-hint">
             걸린 끼꼬를 적중한 쪽끼리 나눠 갖습니다. 많이 걸린 쪽일수록 배당이 낮습니다.
@@ -323,15 +328,15 @@ const BetTab = ({
             공개됩니다.
           </p>
           <div className="bet-opts bet-opts-grid">
-            {roster.map((id) => (
-              <Option
-                key={id}
-                scrim={scrim}
-                market="first_blood"
-                selection={String(id)}
-                label={nameOf.get(id) || '?'}
-              />
-            ))}
+            {roster.map((id) =>
+              renderOption({
+                key: id,
+                scrim,
+                market: 'first_blood',
+                selection: String(id),
+                label: nameOf.get(id) || '?',
+              })
+            )}
           </div>
           <p className="rooms-hint">한 번에 {num(capOf('first_blood'))} 끼꼬까지.</p>
         </div>
@@ -345,18 +350,8 @@ const BetTab = ({
                 <em>고정 1.98배</em>
               </h4>
               <div className="bet-opts">
-                <Option
-                  scrim={scrim}
-                  market={market}
-                  selection="over"
-                  label={`오버 · ${line} 초과`}
-                />
-                <Option
-                  scrim={scrim}
-                  market={market}
-                  selection="under"
-                  label={`언더 · ${line} 미만`}
-                />
+                {renderOption({ scrim, market, selection: 'over', label: `오버 · ${line} 초과` })}
+                {renderOption({ scrim, market, selection: 'under', label: `언더 · ${line} 미만` })}
               </div>
               <p className="rooms-hint">둘 중 하나만 고를 수 있어요.</p>
             </div>
@@ -366,7 +361,7 @@ const BetTab = ({
     );
   };
 
-  const MyBets = ({ scrim }) => {
+  const renderMyBets = (scrim) => {
     const mine = myBets(scrim.id);
     if (mine.length === 0) return null;
     return (
@@ -403,7 +398,7 @@ const BetTab = ({
 
   /* 선택지별로 흩어져 있는 걸 사람 단위로 다시 모은다.
      '내가 이번 판에 결국 얼마 잃었나'는 그렇게 봐야 나온다 */
-  const PlayerTotals = ({ scrim }) => {
+  const renderTotals = (scrim) => {
     const rows = bets.filter((b) => b.scrim_id === scrim.id);
     if (rows.length === 0) return null;
 
@@ -502,8 +497,8 @@ const BetTab = ({
           </h3>
 
           <div className="bet-teams">
-            <Team ids={activeScrim.team_a || []} label="1팀" />
-            <Team ids={activeScrim.team_b || []} label="2팀" />
+            {renderTeam({ ids: activeScrim.team_a || [], label: '1팀' })}
+            {renderTeam({ ids: activeScrim.team_b || [], label: '2팀' })}
           </div>
 
           {/* 방장이 '다 걸었나?'만 보고 마감할 수 있어야 한다.
@@ -539,9 +534,9 @@ const BetTab = ({
             </div>
           )}
 
-          {(activeScrim.status !== 'betting' || me?.agreed) && <Markets scrim={activeScrim} />}
+          {(activeScrim.status !== 'betting' || me?.agreed) && renderMarkets(activeScrim)}
 
-          <MyBets scrim={activeScrim} />
+          {renderMyBets(activeScrim)}
 
           {activeScrim.status === 'betting' && cartRows.length > 0 && (
             <div className="bet-cart">
@@ -651,8 +646,8 @@ const BetTab = ({
             </span>
           </h3>
           <div className="bet-teams">
-            <Team ids={s.team_a || []} label="1팀" hot={s.winner === 'A'} />
-            <Team ids={s.team_b || []} label="2팀" hot={s.winner === 'B'} />
+            {renderTeam({ ids: s.team_a || [], label: '1팀', hot: s.winner === 'A' })}
+            {renderTeam({ ids: s.team_b || [], label: '2팀', hot: s.winner === 'B' })}
           </div>
           <p className="rooms-hint">
             총 킬 {s.total_kills ?? '-'} · 퍼블{' '}
@@ -662,8 +657,8 @@ const BetTab = ({
           </p>
           {/* 배팅할 때와 같은 화면을 그대로 다시 보여준다. 적중한 칸은 초록,
               각 칸 아래에 누가 걸어서 얼마를 벌고 잃었는지 붙는다 */}
-          <Markets scrim={s} />
-          <PlayerTotals scrim={s} />
+          {renderMarkets(s)}
+          {renderTotals(s)}
           {isOwner && (
             <button className="ghost-btn bet-action" onClick={() => undo(s)}>
               <FaUndo /> 정산 되돌리기

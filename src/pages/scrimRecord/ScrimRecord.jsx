@@ -125,6 +125,11 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
      매번 열 명을 다시 골라 넣는 게 제일 번거롭다 */
   const lastGame = history[0];
 
+  /* 팝업에도 같은 걸 쥐여준다. 티어는 방 참가자 명단에서 찾아 붙인다 */
+  const recentPeople = (lastGame ? [...lastGame.teamA, ...lastGame.teamB] : [])
+    .filter((n) => n && n.trim())
+    .map((n) => players.find((p) => p.name === n) || { name: n });
+
   const fillFromLastGame = () => {
     if (!lastGame) return;
     setTeamA(lastGame.teamA);
@@ -299,7 +304,12 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
               desc="여기서 팀을 짠 다음 '이 팀으로 내전 진행하기'를 누르면 그대로 옮겨집니다."
               onClose={() => setShowBalancer(false)}
             >
-              <TeamBalance embedded matches={matches} onUseTeams={applyTeams} />
+              <TeamBalance
+                embedded
+                matches={matches}
+                onUseTeams={applyTeams}
+                recent={recentPeople}
+              />
             </Modal>
           )}
         </>

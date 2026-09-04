@@ -647,6 +647,53 @@ begin
 end; $fn$;
 
 
+-- 방장이 끼꼬를 직접 더하고 뺀다.
+--
+-- 또또 정산이 꼬였거나 벌칙/상을 줄 때 쓴다. 방장에게 이 힘을 주면
+-- '조용히 자기 잔액만 올려두는' 게 가능해지므로, 성공하면 반드시 로그를
+-- 남긴다. 로그는 방 사람 누구나 본다. 감추고 쓸 수 있으면 안 된다.
+create or replace function public.adjust_points(
+  p_room bigint, p_user text, p_delta int, p_reason text)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare
+  who    text;
+  why    text := nullif(trim(p_reason), '');
+  after_ int;
+begin
+  perform public.roll_season();
+
+  if not public.is_room_owner(p_room) then
+    raise exception '방장만 끼꼬를 조정할 수 있어요.';
+  end if;
+  if not exists (select 1 from room_members where room_id = p_room and user_id = p_user) then
+    raise exception '그 사람은 이 방 멤버가 아니에요.';
+  end if;
+  if p_delta is null or p_delta = 0 then
+    raise exception '더하거나 뺄 끼꼬를 적어주세요.';
+  end if;
+  -- 한 번에 움직일 수 있는 폭을 묶어둔다. 오타로 0을 하나 더 붙이면
+  -- 그 방 순위가 통째로 의미를 잃는다
+  if abs(p_delta) > 100000 then
+    raise exception '한 번에 100,000 끼꼬까지 조정할 수 있어요.';
+  end if;
+
+  perform public.ensure_wallet(p_room, p_user);
+
+  -- 잔액은 0 밑으로 내려가지 않는다
+  update room_wallets set points = greatest(0, points + p_delta)
+   where room_id = p_room and user_id = p_user
+   returning points into after_;
+
+  insert into point_ledger (user_id, room_id, delta, reason, counterpart_user_id)
+  values (p_user, p_room, p_delta, 'adjust', auth.user_id());
+
+  select coalesce(nullif(nickname, ''), '이름없음') into who from profiles where user_id = p_user;
+
+  perform public.log_room(p_room, 'adjust', jsonb_build_object(
+    'who', who, 'delta', p_delta, 'after', after_, 'reason', why));
+end; $fn$;
+
+
 create or replace function public.leave_room(p_room bigint)
 returns void language plpgsql security definer set search_path = public as $fn$
 begin
@@ -802,6 +849,7 @@ grant execute on function
   public.link_room_player(bigint, text, bigint),
   public.add_ghost_member(bigint, text),
   public.remove_ghost_member(bigint, text),
+  public.adjust_points(bigint, text, int, text),
   public.leave_room(bigint),
   public.delete_room(bigint),
   public.transfer_points(bigint, text, int),

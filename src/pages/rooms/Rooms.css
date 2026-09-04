@@ -459,10 +459,21 @@
 
 .room-members {
   list-style: none;
-  margin: 0;
+  margin: 0.6rem 0 0;
   padding: 0;
   display: grid;
   gap: 0.45rem;
+}
+
+/* 패널 안에서 설명 → 목록 → 입력줄이 이어질 때 서로 붙어버리는 자리들.
+   목록(ul)은 margin: 0으로 초기화해 두는 게 보통이라, 뒤에 뭐가 오면
+   딱 달라붙는다. 붙는 조합만 짚어서 띄운다 */
+.room-members + .rooms-form-row,
+.room-members + .rooms-hint,
+.room-player-list + .rooms-form-row,
+.kkiko-ledger + .rooms-form-row,
+.feed-list + .rooms-form-row {
+  margin-top: 0.7rem;
 }
 
 .room-members li {

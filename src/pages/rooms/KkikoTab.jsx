@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaPaperPlane } from 'react-icons/fa';
-import { transferPoints, fetchLedger } from '../../rooms';
+import { FaPaperPlane, FaSlidersH } from 'react-icons/fa';
+import { transferPoints, adjustPoints, fetchLedger } from '../../rooms';
 import { useDialog } from '../../components/common/Dialog';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -14,6 +14,7 @@ const REASON = {
   bet: '배팅',
   payout: '적중',
   refund: '환불',
+  adjust: '방장 조정',
 };
 
 const when = (iso) => {
@@ -25,10 +26,13 @@ const when = (iso) => {
 
 /* 방의 '끼꼬' 탭. 순위는 방 안에서만 본다 - 전역 순위는 없다.
    members는 useRoom이 프로필을 붙여준 목록이다 */
-const KkikoTab = ({ roomId, members, myId, onChanged }) => {
+const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
   const [ledger, setLedger] = useState([]);
+  const [adjTo, setAdjTo] = useState('');
+  const [adjAmount, setAdjAmount] = useState('');
+  const [adjReason, setAdjReason] = useState('');
   const busy = useRef(false);
 
   const nameOf = new Map(members.map((m) => [m.user_id, m.nickname]));
@@ -69,6 +73,42 @@ const KkikoTab = ({ roomId, members, myId, onChanged }) => {
       await transferPoints(roomId, to, value);
       setAmount('');
       toast.success('보냈어요.');
+      loadLedger();
+      onChanged();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      busy.current = false;
+    }
+  };
+
+  /* 방장만. 더하기도 빼기도 같은 칸에서 한다 (음수를 적으면 뺀다) */
+  const adjust = async () => {
+    if (busy.current) return;
+    const value = Number(adjAmount);
+    if (!adjTo) {
+      toast.error('조정할 사람을 골라주세요.');
+      return;
+    }
+    if (!Number.isInteger(value) || value === 0) {
+      toast.error('더하거나 뺄 끼꼬를 숫자로 적어주세요. (빼려면 -1000처럼)');
+      return;
+    }
+    const ok = await confirm({
+      title: '끼꼬 조정',
+      message: `${nameOf.get(adjTo)} 님의 끼꼬를 ${value > 0 ? '+' : ''}${value.toLocaleString()} 할까요?`,
+      detail: '누가 누구의 끼꼬를 얼마나 왜 만졌는지 로그에 남고, 방 사람 모두가 봅니다.',
+      confirmText: '조정',
+      danger: true,
+    });
+    if (!ok) return;
+
+    busy.current = true;
+    try {
+      await adjustPoints(roomId, adjTo, value, adjReason);
+      setAdjAmount('');
+      setAdjReason('');
+      toast.success('조정했어요. 로그에 남았습니다.');
       loadLedger();
       onChanged();
     } catch (e) {
@@ -139,6 +179,53 @@ const KkikoTab = ({ roomId, members, myId, onChanged }) => {
           </div>
         )}
       </section>
+
+      {isOwner && (
+        <section className="room-panel">
+          <h3>
+            <FaSlidersH /> 끼꼬 조정
+          </h3>
+          <p className="rooms-hint">
+            정산이 꼬였거나 벌칙·상을 줄 때 방장이 직접 더하고 뺍니다. 빼려면{' '}
+            <b>-1000</b>처럼 적으세요. <b>조정한 내역은 예외 없이 로그 탭에 남습니다.</b>
+          </p>
+          <div className="rooms-form-row" style={{ marginTop: '0.6rem' }}>
+            <select
+              className="rooms-input"
+              value={adjTo}
+              onChange={(e) => setAdjTo(e.target.value)}
+              aria-label="조정할 사람"
+            >
+              <option value="">조정할 사람</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.nickname}
+                </option>
+              ))}
+            </select>
+            <input
+              className="rooms-input"
+              type="number"
+              value={adjAmount}
+              placeholder="+1000 / -1000"
+              onChange={(e) => setAdjAmount(e.target.value)}
+            />
+          </div>
+          <div className="rooms-form-row" style={{ marginTop: '0.4rem' }}>
+            <input
+              className="rooms-input"
+              value={adjReason}
+              maxLength={20}
+              placeholder="사유 (로그에 같이 남습니다)"
+              onChange={(e) => setAdjReason(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && adjust()}
+            />
+            <button className="ghost-btn" onClick={adjust}>
+              조정
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="room-panel">
         <h3>

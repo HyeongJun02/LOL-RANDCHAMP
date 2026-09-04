@@ -24,7 +24,16 @@ const first = (d) => (Array.isArray(d) ? d[0] : d) || null;
 
 const rpc = async (fn, args) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
-  return unwrap(await neon.rpc(fn, args));
+  try {
+    return unwrap(await neon.rpc(fn, args));
+  } catch (e) {
+    /* PostgREST는 '아직 없는 함수'와 '이름이 틀린 함수'를 같은 말로 알려준다.
+       sql/setup.sql을 다시 안 돌린 것뿐인데 원인을 알 수 없는 오류로 보인다 */
+    if (/schema cache/i.test(e.message)) {
+      throw new Error('DB에 이 기능이 아직 없어요. sql/setup.sql을 다시 실행해 주세요.');
+    }
+    throw e;
+  }
 };
 
 /* ---------- 프로필 ---------- */
@@ -66,6 +75,15 @@ export const addGhostMember = (roomId, name) =>
   rpc('add_ghost_member', { p_room: roomId, p_name: name });
 export const removeGhostMember = (roomId, userId) =>
   rpc('remove_ghost_member', { p_room: roomId, p_user: userId });
+
+/* 방장이 끼꼬를 직접 더하거나 뺀다. 성공하면 서버가 반드시 로그를 남긴다 */
+export const adjustPoints = (roomId, userId, delta, reason) =>
+  rpc('adjust_points', {
+    p_room: roomId,
+    p_user: userId,
+    p_delta: delta,
+    p_reason: reason || null,
+  });
 export const leaveRoom = (roomId) => rpc('leave_room', { p_room: roomId });
 export const deleteRoom = (roomId) => rpc('delete_room', { p_room: roomId });
 
@@ -124,6 +142,7 @@ export const LOG_TAGS = {
   betting_locked: { label: '배팅', tone: 'purple' },
   settled: { label: '경기', tone: 'gold' },
   settle_undone: { label: '정정', tone: 'red' },
+  adjust: { label: '조정', tone: 'red' },
 };
 
 export const feedParts = (log) => {
@@ -156,6 +175,20 @@ export const feedParts = (log) => {
           { k: 'hot', v: p.winner === 'A' ? '1팀 승리' : '2팀 승리' },
           ...(p.kills == null ? [] : [t(' · 총 킬 '), nameOf_(String(p.kills))]),
           ...(p.bet_total ? [t(' · 또또 '), amountOf(p.bet_total), t(' 정산')] : []),
+        ],
+      };
+    /* 방장이 잔액을 손댄 줄. 누구를 얼마나 왜 만졌는지 다 적는다.
+       조용히 지나갈 수 있으면 방장을 믿을 근거가 없어진다 */
+    case 'adjust':
+      return {
+        tag,
+        parts: [
+          t('방장이 '),
+          nameOf_(p.who),
+          t(' 끼꼬를 '),
+          { k: 'hot', v: `${p.delta > 0 ? '+' : ''}${num(p.delta)}` },
+          t(` 조정 (남은 ${num(p.after)})`),
+          ...(p.reason ? [t(' · '), nameOf_(p.reason)] : []),
         ],
       };
     case 'settle_undone':
@@ -358,7 +391,9 @@ const ROOM_SELECT =
   'room_members(user_id,role,joined_at,is_ghost),' +
   'room_players(id,name,tier,division,linked_user_id),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +
-  'first_blood_player_id,bet_total,bet_count,undo_count,locked_at)';
+  /* betting_closes_at을 빼먹으면 마감 타이머가 조용히 안 그려진다.
+     값이 undefined라 화면에서는 '자동 마감이 없는 경기'와 구분이 안 된다 */
+  'first_blood_player_id,bet_total,bet_count,undo_count,locked_at,betting_closes_at)';
 
 /* 탭이 보일 때만, 30초마다. 실시간 구독이 없어 폴링이 불가피한데
    방 전체를 매번 읽으면 그게 곧 부하다. version 한 컬럼만 보고
