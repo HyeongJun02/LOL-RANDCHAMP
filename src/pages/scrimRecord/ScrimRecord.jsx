@@ -19,6 +19,7 @@ import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
+import { timeAgo } from '../../timeAgo';
 import './ScrimRecord.css';
 
 /* 칼바람/일반을 나눠 세지 않기로 했다. scrims.mode는 NOT NULL이라 값은
@@ -62,17 +63,6 @@ const TeamPanel = ({ label, team, otherTeam, players, onChangeAt, onRemoveAt, on
     </button>
   </div>
 );
-
-/* 1분 미만은 '방금 전', 그 다음은 분/시간/일 단위로 대충 뭉뚱그린다.
-   전적 기록지라 초 단위 정밀도는 필요 없다 */
-const formatRelative = (ts) => {
-  const min = Math.floor((Date.now() - ts) / 60000);
-  if (min < 1) return '방금 전';
-  if (min < 60) return `${min}분 전`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
-  return `${Math.floor(hr / 24)}일 전`;
-};
 
 /* 방의 '기록' 탭.
    matches: rooms.js가 이름을 붙여 넘겨준 경기 목록
@@ -234,9 +224,9 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
               <button
                 className="ghost-btn"
                 onClick={() => applyTeams(lastSplit.teamA, lastSplit.teamB)}
-                title={`${formatRelative(lastSplit.at)} 짠 팀`}
+                title={`${timeAgo(lastSplit.at)} 짠 팀`}
               >
-                <FaArrowRight /> 방금 짠 팀 ({formatRelative(lastSplit.at)})
+                <FaArrowRight /> 방금 짠 팀 ({timeAgo(lastSplit.at)})
               </button>
             )}
             <button className="ghost-btn" onClick={clearTeams}>
@@ -361,7 +351,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
           <ul className="history-list">
             {history.map((m) => (
               <li key={m.id}>
-                <span className="hist-time">{formatRelative(m.playedAt)}</span>
+                <span className="hist-time">{timeAgo(m.playedAt)}</span>
                 <span className="hist-teams">
                   <span className={m.winner === 'A' ? 'hist-winner' : ''}>
                     {m.teamA.join(', ')}

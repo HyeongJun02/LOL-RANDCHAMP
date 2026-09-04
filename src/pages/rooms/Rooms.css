@@ -102,6 +102,16 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  /* 좁은 화면에서 한 줄에 다 못 들어가면 넘치지 말고 접힌다.
+     넉넉할 때는 아무 영향이 없다 */
+  flex-wrap: wrap;
+}
+
+/* 결과 입력 줄은 '총 킬 수 + 퍼스트 블러드 + 정산'이라 폭이 제일 빡빡하다.
+   select는 옵션 글자만큼 최소 폭을 갖고 있어 0까지 줄지 않는다.
+   기준 폭을 줘서 좁아지면 줄바꿈이 먼저 일어나게 한다 */
+.bet-result .rooms-form-row > .rooms-input {
+  flex: 1 1 7.5rem;
 }
 
 /* ---------- 방 목록 ---------- */
@@ -736,11 +746,26 @@
 /* ---------- 또또 ---------- */
 
 .bet-status {
+  display: inline-flex;
+  align-items: center;
   margin-left: auto;
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+/* 살아 있는 판이라는 표시. 깜빡이는 점 하나면 충분하다 */
+.bet-status.is-live::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 7px currentColor;
+  animation: bet-live-blink 1.5s ease-in-out infinite;
 }
 
 .s-betting {
@@ -756,6 +781,118 @@
 .s-settled {
   color: #94a3b8;
   background: rgba(148, 163, 184, 0.12);
+}
+
+/* ---------- 진행 중인 또또 ---------- */
+
+/* 지금 걸 수 있는 판. 지난 기록과 똑같은 카드로 두면 스크롤하다 지나친다.
+   테두리 색과 은은한 네온만으로 '여기가 살아 있다'를 말한다 */
+.bet-live {
+  --live: #4ade80;
+  position: relative;
+  border-color: color-mix(in srgb, var(--live) 50%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--live) 8%, transparent), transparent 55%),
+    rgba(15, 23, 42, 0.55);
+  animation: bet-live-breathe 3.2s ease-in-out infinite;
+}
+
+/* 배팅이 닫히면 초록에서 호박색으로. 색만 바꾸면 나머지는 따라온다 */
+.bet-live.is-locked {
+  --live: #fbbf24;
+}
+
+/* 카드 위쪽에 걸치는 가는 빛줄. 테두리만으로는 밋밋하다 */
+.bet-live::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--live), transparent);
+}
+
+@keyframes bet-live-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 20px -10px color-mix(in srgb, var(--live) 75%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 32px -6px color-mix(in srgb, var(--live) 75%, transparent);
+  }
+}
+
+@keyframes bet-live-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* 숨쉬는 그림자가 거슬리는 사람도 있다. 빛은 남기고 움직임만 뺀다 */
+@media (prefers-reduced-motion: reduce) {
+  .bet-live {
+    animation: none;
+    box-shadow: 0 0 26px -8px color-mix(in srgb, var(--live) 75%, transparent);
+  }
+
+  .bet-status.is-live::before {
+    animation: none;
+  }
+}
+
+/* ---------- 끝난 또또 ---------- */
+
+.bet-past-sep {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0 -0.2rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #5b6982;
+}
+
+.bet-past-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gg-panel-border);
+}
+
+/* 끝난 판은 한 걸음 물러나 있게. 진행 중인 판이 먼저 눈에 들어와야 한다 */
+.bet-past {
+  background: rgba(15, 23, 42, 0.28);
+}
+
+/* 판마다 붙는 이름표. 카드가 이어져 보이던 게 여기서 끊긴다 */
+.bet-past-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.18);
+}
+
+.bet-past-no {
+  flex: none;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.bet-past-when {
+  font-size: 0.7rem;
+  color: #5b6982;
 }
 
 .bet-teams {

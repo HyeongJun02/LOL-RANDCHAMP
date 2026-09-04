@@ -16,6 +16,7 @@ import {
 } from '../../rooms';
 import { useDialog } from '../../components/common/Dialog';
 import BetTimer from './BetTimer';
+import { timeAgo } from '../../timeAgo';
 
 const num = (n) => Number(n || 0).toLocaleString();
 
@@ -488,10 +489,16 @@ const BetTab = ({
           기록 탭에서 팀을 채우고 &lsquo;또또 열기&rsquo;를 누르면 여기에 올라옵니다.
         </p>
       ) : (
-        <section className="room-panel">
+        /* 진행 중인 판은 빛나게 둔다. 지난 기록과 같은 카드로 그려두면
+           스크롤하다가 '지금 걸 수 있는 판'을 그냥 지나친다 */
+        <section
+          className={`room-panel bet-live ${
+            activeScrim.status === 'betting' ? 'is-betting' : 'is-locked'
+          }`}
+        >
           <h3>
             내전
-            <span className={`bet-status s-${activeScrim.status}`}>
+            <span className={`bet-status is-live s-${activeScrim.status}`}>
               {activeScrim.status === 'betting' ? '배팅 중' : '배팅 마감 · 경기 진행 중'}
             </span>
           </h3>
@@ -637,13 +644,26 @@ const BetTab = ({
         </section>
       )}
 
-      {history.map((s) => (
-        <section className="room-panel" key={s.id}>
-          <h3>
-            {s.winner === 'A' ? '1팀' : '2팀'} 승리
-            <span className="bet-status s-settled">
+      {/* 여기서부터는 끝난 판. 카드가 똑같이 생겨서 아래로 이어지면
+          어디까지가 한 판인지 안 보인다. 선을 긋고 판마다 이름표를 단다 */}
+      {history.length > 0 && (
+        <div className="bet-past-sep">
+          <span>지난 또또 {history.length}판</span>
+        </div>
+      )}
+
+      {history.map((s, i) => (
+        <section className="room-panel bet-past" key={s.id}>
+          <div className="bet-past-label">
+            <span className="bet-past-no">{i === 0 ? '직전 경기' : `${i + 1}판 전`}</span>
+            <span className="bet-past-when">
+              {timeAgo(new Date(s.played_at).getTime())} ·{' '}
               {new Date(s.played_at).toLocaleDateString('ko-KR')}
             </span>
+          </div>
+          <h3>
+            {s.winner === 'A' ? '1팀' : '2팀'} 승리
+            <span className="bet-status s-settled">정산 완료</span>
           </h3>
           <div className="bet-teams">
             {renderTeam({ ids: s.team_a || [], label: '1팀', hot: s.winner === 'A' })}
