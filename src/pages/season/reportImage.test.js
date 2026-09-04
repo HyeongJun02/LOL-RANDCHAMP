@@ -2,7 +2,6 @@ import { drawReport, downloadReport } from './reportImage';
 
 const data = {
   periodLabel: '2026년 9월',
-  modeLabel: '일반',
   played: 3,
   ranking: [{ name: '철수', wins: 2, losses: 1, games: 3, points: 2 }],
   insights: [{ key: 'hot', label: '지금 연승 중', value: '철수 2연승' }],
@@ -38,7 +37,7 @@ test('캔버스가 있으면 리포트 줄 수에 맞춰 크기를 잡는다', (
   expect(out).toBe(canvas);
   expect(canvas.width).toBe(720);
   expect(canvas.height).toBeGreaterThan(100);
-  expect(calls).toContain('[롤랜챔] 2026년 9월 일반 정산');
+  expect(calls).toContain('[롤랜챔] 2026년 9월 내전 정산');
   expect(calls).toContain('🥇 철수 2승 1패 (67%) +2');
   expect(calls).toContain('lol-randchamp.vercel.app');
 

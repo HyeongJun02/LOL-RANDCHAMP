@@ -440,7 +440,7 @@ const BetTab = ({
       ) : (
         <section className="room-panel">
           <h3>
-            {activeScrim.mode === 'aram' ? '칼바람' : '일반'} 내전
+            내전
             <span className={`bet-status s-${activeScrim.status}`}>
               {activeScrim.status === 'betting' ? '배팅 중' : '배팅 마감 · 경기 진행 중'}
             </span>

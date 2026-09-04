@@ -187,10 +187,11 @@ describe('내전 포인트 반영', () => {
     expect(sums[0] + sums[1]).toBe(0); // 가·다 +2, 나·라 -2
   });
 
-  test('칼바람/일반 전환에 따라 같은 사람도 다른 내전 포인트가 반영된다', () => {
+  /* 모드를 나누지 않으므로 칼바람 승리도 그대로 내전 포인트가 된다 */
+  test('칼바람 기록도 내전 포인트에 함께 반영된다', () => {
     const el = buildWith(['철수', '영희'], [
-      { id: 'm1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
-      { id: 'm2', mode: 'aram', teamA: ['영희'], teamB: ['철수'], winner: 'A', playedAt: 2 },
+      { id: 'm1', mode: 'aram', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
+      { id: 'm2', mode: 'aram', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 2 },
     ]);
     click(byText(el, '내전 포인트만'));
     click(el.querySelector('.build-btn'));
@@ -200,13 +201,8 @@ describe('내전 포인트 반영', () => {
         .find((li) => li.textContent.includes(name))
         .querySelector('.scrim-badge').textContent;
 
-    // 기본값 '일반'에서는 철수가 이겼다
     expect(badgeFor('철수').startsWith('+')).toBe(true);
-
-    click(byText(el, '칼바람 내전'));
-    click(el.querySelector('.build-btn'));
-    // 칼바람에서는 영희가 이겼다
-    expect(badgeFor('철수').startsWith('-')).toBe(true);
+    expect(badgeFor('영희').startsWith('-')).toBe(true);
   });
 });
 

@@ -4,9 +4,13 @@
    전부 리스트를 인자로 받는 순수 함수라, 방 단위든 달 단위든
    잘라서 넘기기만 하면 된다.
 
-   경기 하나의 모양: { id, mode, teamA: [이름], teamB: [이름], winner, playedAt }
+   경기 하나의 모양: { id, teamA: [이름], teamB: [이름], winner, playedAt }
    방의 scrims는 이름 대신 room_players.id를 담고 있어서,
-   rooms.js의 toMatches()가 이 모양으로 바꿔서 넘긴다. */
+   rooms.js의 toMatches()가 이 모양으로 바꿔서 넘긴다.
+
+   칼바람과 일반을 나눠 세지 않는다. 같은 사람들이 그날 기분대로 고르는
+   것뿐이라 둘로 갈라두면 판수만 반토막 나고, 어느 쪽 순위를 봐야 하는지도
+   애매했다. scrims.mode 컬럼은 옛 기록을 위해 남아 있지만 집계는 안 본다. */
 
 /* ------------------------------------------------------------------
    내전 포인트
@@ -38,11 +42,11 @@ const clean = (names) => [...new Set((names || []).map((n) => String(n).trim()).
 
 /* 경기를 시간순으로 훑으면서 그 시점의 예상 승률과 점수 변화를 넘겨준다.
    포인트, 언더독, 연승 저격 계산이 전부 이 한 바퀴를 공유한다. */
-const walkGames = (list, mode, visit) => {
+const walkGames = (list, visit) => {
   const rating = new Map();
   const get = (n) => rating.get(n) || 0;
 
-  sorted(list, mode).forEach((match) => {
+  sorted(list).forEach((match) => {
     const teamA = clean(match.teamA);
     const teamB = clean(match.teamB);
     if (teamA.length === 0 || teamB.length === 0) return;
@@ -59,16 +63,15 @@ const walkGames = (list, mode, visit) => {
   });
 };
 
-/* mode 하나만 필터링해 이름별 승/패/포인트를 모은다.
-   로스터에 없는 손님 이름도 그냥 문자열로 집계된다. */
-export const statsFor = (list, mode) => {
+/* 이름별 승/패/포인트. 로스터에 없는 손님 이름도 그냥 문자열로 집계된다 */
+export const statsFor = (list) => {
   const stats = new Map();
   const ensure = (name) => {
     if (!stats.has(name)) stats.set(name, { wins: 0, losses: 0, games: 0, raw: 0, points: 0 });
     return stats.get(name);
   };
 
-  walkGames(list, mode, ({ teamA, teamB, aWon, gain }) => {
+  walkGames(list, ({ teamA, teamB, aWon, gain }) => {
     const apply = (team, delta, won) =>
       team.forEach((name) => {
         const s = ensure(name);
@@ -131,24 +134,21 @@ export const monthLabel = (monthKey) => {
 /* 짝 통계는 표본이 적으면 100%/0%가 남발돼서 의미가 없다 */
 export const MIN_PAIR_GAMES = 3;
 
-const sorted = (list, mode) =>
-  list
-    .filter((m) => m.mode === mode)
-    .slice()
-    .sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
+const sorted = (list) =>
+  list.slice().sort((a, b) => (a.playedAt || 0) - (b.playedAt || 0));
 
 const pairKey = (a, b) =>
   JSON.stringify([a, b].sort((x, y) => x.localeCompare(y, 'ko')));
 
 /* 현재 연승/연패와 역대 최고 연승. current는 양수면 연승, 음수면 연패 */
-export const streaksOf = (list, mode) => {
+export const streaksOf = (list) => {
   const out = new Map();
   const ensure = (n) => {
     if (!out.has(n)) out.set(n, { current: 0, bestWin: 0, worstLoss: 0 });
     return out.get(n);
   };
 
-  sorted(list, mode).forEach((m) => {
+  sorted(list).forEach((m) => {
     const teamA = clean(m.teamA);
     const teamB = clean(m.teamB);
     const winners = m.winner === 'A' ? teamA : teamB;
@@ -170,10 +170,10 @@ export const streaksOf = (list, mode) => {
 };
 
 /* 같은 팀으로 뛰었을 때의 승률. 궁합 */
-export const duosOf = (list, mode, minGames = MIN_PAIR_GAMES) => {
+export const duosOf = (list, minGames = MIN_PAIR_GAMES) => {
   const pairs = new Map();
 
-  sorted(list, mode).forEach((m) => {
+  sorted(list).forEach((m) => {
     const teams = [clean(m.teamA), clean(m.teamB)];
     teams.forEach((team, side) => {
       const won = (side === 0) === (m.winner === 'A');
@@ -196,10 +196,10 @@ export const duosOf = (list, mode, minGames = MIN_PAIR_GAMES) => {
 };
 
 /* 적으로 만났을 때의 상대 전적. 천적 */
-export const rivalsOf = (list, mode, minGames = MIN_PAIR_GAMES) => {
+export const rivalsOf = (list, minGames = MIN_PAIR_GAMES) => {
   const pairs = new Map();
 
-  sorted(list, mode).forEach((m) => {
+  sorted(list).forEach((m) => {
     const teamA = clean(m.teamA);
     const teamB = clean(m.teamB);
     const winners = m.winner === 'A' ? teamA : teamB;
@@ -243,9 +243,9 @@ export const UNDERDOG_MAX = 0.4;
 export const BREAK_MIN = 3;
 
 /* 열세라고 봤는데 이긴 판이 많은 사람 */
-export const underdogsOf = (list, mode) => {
+export const underdogsOf = (list) => {
   const out = new Map();
-  walkGames(list, mode, ({ teamA, teamB, aWon, expectedA }) => {
+  walkGames(list, ({ teamA, teamB, aWon, expectedA }) => {
     const expected = aWon ? expectedA : 1 - expectedA;
     if (expected >= UNDERDOG_MAX) return;
     (aWon ? teamA : teamB).forEach((n) => out.set(n, (out.get(n) || 0) + 1));
@@ -254,11 +254,11 @@ export const underdogsOf = (list, mode) => {
 };
 
 /* 남의 연승을 끊은 횟수. 이긴 팀 전원에게 준다 */
-export const streakBreakersOf = (list, mode) => {
+export const streakBreakersOf = (list) => {
   const out = new Map();
   const run = new Map();
 
-  walkGames(list, mode, ({ teamA, teamB, aWon }) => {
+  walkGames(list, ({ teamA, teamB, aWon }) => {
     const winners = aWon ? teamA : teamB;
     const losers = aWon ? teamB : teamA;
 
@@ -273,10 +273,9 @@ export const streakBreakersOf = (list, mode) => {
 };
 
 /* 하루에 가장 많이 몰아친 날 */
-export const busiestDayOf = (list, mode) => {
+export const busiestDayOf = (list) => {
   const byDay = new Map();
   list
-    .filter((m) => m.mode === mode)
     .forEach((m) => {
       const d = new Date(m.playedAt || 0);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
@@ -290,10 +289,9 @@ export const busiestDayOf = (list, mode) => {
 };
 
 /* 이름별 마지막 출전 시각 */
-export const lastSeenOf = (list, mode) => {
+export const lastSeenOf = (list) => {
   const out = new Map();
   list
-    .filter((m) => m.mode === mode)
     .forEach((m) => {
       [...(m.teamA || []), ...(m.teamB || [])].forEach((name) => {
         const key = String(name).trim();

@@ -21,10 +21,10 @@ import ScrimBadge from '../../components/common/ScrimBadge';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import './ScrimRecord.css';
 
-const MODES = [
-  { value: 'normal', label: '일반 내전' },
-  { value: 'aram', label: '칼바람 내전' },
-];
+/* 칼바람/일반을 나눠 세지 않기로 했다. scrims.mode는 NOT NULL이라 값은
+   있어야 하는데, 이제 그 값으로 갈라 보는 곳이 없어 하나로 고정한다.
+   (옛 기록의 'aram'도 그대로 남아 있고, 집계는 둘을 함께 센다) */
+const MODE = 'normal';
 
 const TEAM_SIZE = 5;
 const blankTeam = () => Array.from({ length: TEAM_SIZE }, () => '');
@@ -79,7 +79,6 @@ const formatRelative = (ts) => {
    players: 방 참가자 명단 (티어 배지와 이름 고르기에 쓴다)
    canEdit: 방장·부방장만 true. 나머지는 보기만 한다 */
 const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRemove, onOpenBetting }) => {
-  const [mode, setMode] = useState('normal');
   const [teamA, setTeamA] = useState(blankTeam);
   const [teamB, setTeamB] = useState(blankTeam);
   /* 더블클릭으로 같은 경기가 두 번 들어가는 걸 막는다.
@@ -88,10 +87,10 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
   const [showBalancer, setShowBalancer] = useState(false);
   const [showBetOpen, setShowBetOpen] = useState(false);
 
-  const stats = useMemo(() => statsFor(matches, mode), [matches, mode]);
+  const stats = useMemo(() => statsFor(matches), [matches]);
   const history = useMemo(
-    () => matches.filter((m) => m.mode === mode).sort((a, b) => b.playedAt - a.playedAt),
-    [matches, mode]
+    () => [...matches].sort((a, b) => b.playedAt - a.playedAt),
+    [matches]
   );
 
   const board = useMemo(
@@ -166,7 +165,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
 
     saving.current = true;
     try {
-      await onAdd({ mode, teamA: a, teamB: b, winner });
+      await onAdd({ mode: MODE, teamA: a, teamB: b, winner });
       toast.success(`${winner === 'A' ? '1팀' : '2팀'} 승리! 기록했어요.`);
     } catch (e) {
       toast.error(e.message);
@@ -191,7 +190,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     }
     saving.current = true;
     try {
-      await onOpenBetting({ mode, teamA: a, teamB: b, closeSeconds });
+      await onOpenBetting({ mode: MODE, teamA: a, teamB: b, closeSeconds });
       setShowBetOpen(false);
       toast.success(
         closeSeconds
@@ -215,18 +214,6 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
 
   return (
     <>
-      <div className="seg-tabs lg sr-mode-tabs">
-        {MODES.map((m) => (
-          <button
-            key={m.value}
-            className={`seg-tab ${mode === m.value ? 'active' : ''}`}
-            onClick={() => setMode(m.value)}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
-
       {canEdit && (
         <>
           <div className="sr-toolbar">
@@ -320,7 +307,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
 
       <section className="sr-board">
         <h2>
-          <FaClipboardList /> {mode === 'aram' ? '칼바람' : '일반'} 전적 리더보드
+          <FaClipboardList /> 전적 리더보드
           <span className="panel-count">{board.length}명</span>
         </h2>
         {board.length === 0 ? (

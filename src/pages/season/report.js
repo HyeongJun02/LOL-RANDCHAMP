@@ -8,9 +8,9 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 const pct = (rate) => `${Math.round(rate * 100)}%`;
 const signed = (n) => (n > 0 ? `+${n}` : `${n}`);
 
-export const formatReport = ({ periodLabel, modeLabel, played, ranking, insights = [] }) => {
+export const formatReport = ({ periodLabel, played, ranking, insights = [] }) => {
   const lines = [
-    `[롤랜챔] ${periodLabel} ${modeLabel} 정산`,
+    `[롤랜챔] ${periodLabel} 내전 정산`,
     `${played}경기 · ${ranking.length}명`,
     '',
   ];

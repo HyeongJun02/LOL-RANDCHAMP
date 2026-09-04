@@ -24,7 +24,7 @@ beforeEach(() => {
 
 describe('연승/연패', () => {
   test('연승 중이면 양수, 연패 중이면 음수', () => {
-    const s = streaksOf([g(['철수'], ['영희'], 'A'), g(['철수'], ['영희'], 'A')], 'normal');
+    const s = streaksOf([g(['철수'], ['영희'], 'A'), g(['철수'], ['영희'], 'A')]);
     expect(s.get('철수').current).toBe(2);
     expect(s.get('영희').current).toBe(-2);
   });
@@ -36,7 +36,6 @@ describe('연승/연패', () => {
         g(['철수'], ['영희'], 'A'),
         g(['철수'], ['영희'], 'B'),
       ],
-      'normal'
     );
     expect(s.get('철수').current).toBe(-1);
     expect(s.get('철수').bestWin).toBe(2); // 최고 기록은 남는다
@@ -49,7 +48,7 @@ describe('연승/연패', () => {
       g(['철수'], ['영희'], 'B'),
     ];
     const shuffled = [list[2], list[0], list[1]];
-    expect(streaksOf(shuffled, 'normal').get('철수').current).toBe(-1);
+    expect(streaksOf(shuffled).get('철수').current).toBe(-1);
   });
 });
 
@@ -58,20 +57,20 @@ describe('궁합 (같은 팀)', () => {
     Array.from({ length: n }, () => g(['철수', '영희'], ['민수', '지훈'], winner));
 
   test('같이 뛴 판수와 승률을 낸다', () => {
-    const [top] = duosOf(together(3, 'A'), 'normal');
+    const [top] = duosOf(together(3, 'A'));
     expect([top.a, top.b].sort()).toEqual(['영희', '철수']);
     expect(top.games).toBe(3);
     expect(top.rate).toBe(1);
   });
 
   test('표본이 적은 짝은 빼서 100%가 남발되지 않게 한다', () => {
-    expect(duosOf(together(2, 'A'), 'normal')).toHaveLength(0);
-    expect(duosOf(together(3, 'A'), 'normal').length).toBeGreaterThan(0);
+    expect(duosOf(together(2, 'A'))).toHaveLength(0);
+    expect(duosOf(together(3, 'A')).length).toBeGreaterThan(0);
   });
 
   test('승률 높은 짝이 앞에 온다', () => {
     const list = [...together(3, 'A'), ...together(1, 'B')];
-    const rates = duosOf(list, 'normal').map((d) => d.rate);
+    const rates = duosOf(list).map((d) => d.rate);
     expect(rates).toEqual([...rates].sort((a, b) => b - a));
   });
 });
@@ -79,7 +78,7 @@ describe('궁합 (같은 팀)', () => {
 describe('천적 (다른 팀)', () => {
   test('한쪽이 전승해도 진 사람 이름이 나온다', () => {
     const list = Array.from({ length: 3 }, () => g(['철수'], ['영희'], 'A'));
-    const [top] = rivalsOf(list, 'normal');
+    const [top] = rivalsOf(list);
     expect(top.winner).toBe('철수');
     expect(top.loser).toBe('영희'); // 전승이어도 상대를 안다
     expect(top.rate).toBe(1);
@@ -91,7 +90,7 @@ describe('천적 (다른 팀)', () => {
       g(['철수'], ['영희'], 'B'),
       g(['철수'], ['영희'], 'A'),
     ];
-    const [top] = rivalsOf(list, 'normal');
+    const [top] = rivalsOf(list);
     expect(top.winner).toBe('영희');
     expect(top.wins).toBe(2);
     expect(top.games).toBe(3);
@@ -99,17 +98,17 @@ describe('천적 (다른 팀)', () => {
 
   test('같은 팀이었던 판은 상대 전적에 안 들어간다', () => {
     const list = Array.from({ length: 5 }, () => g(['철수', '영희'], ['민수'], 'A'));
-    const pair = rivalsOf(list, 'normal').find(
+    const pair = rivalsOf(list).find(
       (r) => [r.winner, r.loser].sort().join() === ['영희', '철수'].sort().join()
     );
     expect(pair).toBeUndefined();
   });
 });
 
-test('모드가 다르면 섞이지 않는다', () => {
-  const list = [g(['철수'], ['영희'], 'A', 'aram')];
-  expect(streaksOf(list, 'normal').size).toBe(0);
-  expect(streaksOf(list, 'aram').get('철수').current).toBe(1);
+/* 모드를 갈라 세지 않는다. 칼바람 한 판, 일반 한 판이면 2연승이다 */
+test('칼바람과 일반이 한 흐름으로 이어진다', () => {
+  const list = [g(['철수'], ['영희'], 'A', 'aram'), g(['철수'], ['영희'], 'A', 'normal')];
+  expect(streaksOf(list).get('철수').current).toBe(2);
 });
 
 describe('언더독 / 연승 저격', () => {
@@ -118,17 +117,17 @@ describe('언더독 / 연승 저격', () => {
     const seed = Array.from({ length: 10 }, () => g(['고수'], ['호구'], 'A'));
     const list = [...seed, g(['호구'], ['고수'], 'A')];
 
-    expect(underdogsOf(list, 'normal').get('호구')).toBe(1);
-    expect(underdogsOf(list, 'normal').get('고수')).toBeUndefined();
+    expect(underdogsOf(list).get('호구')).toBe(1);
+    expect(underdogsOf(list).get('고수')).toBeUndefined();
   });
 
   test('예상대로 이긴 판은 언더독이 아니다', () => {
-    expect(underdogsOf([g(['철수'], ['영희'], 'A')], 'normal').size).toBe(0);
+    expect(underdogsOf([g(['철수'], ['영희'], 'A')]).size).toBe(0);
   });
 
   test('3연승 이상을 끊어야 저격으로 센다', () => {
     const two = [g(['철수'], ['영희'], 'A'), g(['철수'], ['영희'], 'A'), g(['철수'], ['영희'], 'B')];
-    expect(streakBreakersOf(two, 'normal').size).toBe(0);
+    expect(streakBreakersOf(two).size).toBe(0);
 
     clock = 0;
     const three = [
@@ -137,7 +136,7 @@ describe('언더독 / 연승 저격', () => {
       g(['철수'], ['영희'], 'A'),
       g(['철수'], ['영희'], 'B'),
     ];
-    expect(streakBreakersOf(three, 'normal').get('영희')).toBe(1);
+    expect(streakBreakersOf(three).get('영희')).toBe(1);
   });
 });
 
@@ -153,17 +152,17 @@ describe('날짜 통계', () => {
 
   test('가장 많이 한 날을 찾는다', () => {
     const list = [onDay(2026, 9, 1), onDay(2026, 9, 3), onDay(2026, 9, 3), onDay(2026, 9, 3)];
-    expect(busiestDayOf(list, 'normal')).toEqual({ day: '2026-09-03', games: 3 });
+    expect(busiestDayOf(list)).toEqual({ day: '2026-09-03', games: 3 });
   });
 
   test('기록이 없으면 null', () => {
-    expect(busiestDayOf([], 'normal')).toBeNull();
+    expect(busiestDayOf([])).toBeNull();
   });
 
   test('마지막 출전 시각을 이름별로 준다', () => {
     const a = onDay(2026, 9, 1);
     const b = onDay(2026, 9, 5);
-    const seen = lastSeenOf([a, b], 'normal');
+    const seen = lastSeenOf([a, b]);
     expect(seen.get('철수')).toBe(b.playedAt);
   });
 });

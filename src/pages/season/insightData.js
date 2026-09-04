@@ -19,11 +19,11 @@ const pct = (rate) => `${Math.round(rate * 100)}%`;
 const top = (map) => [...map.entries()].sort((a, b) => b[1] - a[1])[0];
 const DAY = 24 * 60 * 60 * 1000;
 
-export const buildInsights = (matches, mode, now = Date.now()) => {
-  const streaks = [...streaksOf(matches, mode).entries()].map(([name, s]) => ({ name, ...s }));
-  const duos = duosOf(matches, mode);
-  const rivals = rivalsOf(matches, mode);
-  const played = matches.filter((m) => m.mode === mode);
+export const buildInsights = (matches, now = Date.now()) => {
+  const streaks = [...streaksOf(matches).entries()].map(([name, s]) => ({ name, ...s }));
+  const duos = duosOf(matches);
+  const rivals = rivalsOf(matches);
+  const played = matches;
   const counts = gameCountsOf(played);
 
   const hot = [...streaks].sort((a, b) => b.current - a.current)[0];
@@ -36,12 +36,12 @@ export const buildInsights = (matches, mode, now = Date.now()) => {
     (a, b) => Math.abs(a.rate - 0.5) - Math.abs(b.rate - 0.5) || b.games - a.games
   )[0];
   const mostMet = [...rivals].sort((a, b) => b.games - a.games)[0];
-  const underdog = top(underdogsOf(matches, mode));
-  const breaker = top(streakBreakersOf(matches, mode));
+  const underdog = top(underdogsOf(matches));
+  const breaker = top(streakBreakersOf(matches));
   const iron = top(counts);
-  const busiest = busiestDayOf(matches, mode);
+  const busiest = busiestDayOf(matches);
 
-  const seen = lastSeenOf(matches, mode);
+  const seen = lastSeenOf(matches);
   const ghost = [...seen.entries()].sort((a, b) => a[1] - b[1])[0];
   const ghostDays = ghost ? Math.floor((now - ghost[1]) / DAY) : 0;
 

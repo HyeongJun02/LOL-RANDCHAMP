@@ -128,7 +128,7 @@ export const feedParts = (log) => {
       return {
         tag,
         parts: [
-          t(`${p.mode === 'aram' ? '칼바람' : '일반'} ${p.size}인 경기 · `),
+          t(`${p.size}인 경기 · `),
           { k: 'hot', v: '배팅 시작' },
         ],
       };

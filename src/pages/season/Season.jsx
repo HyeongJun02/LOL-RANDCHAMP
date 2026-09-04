@@ -17,10 +17,6 @@ import { formatReport, copyText } from './report';
 import { downloadReport } from './reportImage';
 import './Season.css';
 
-const MODES = [
-  { value: 'normal', label: '일반 내전' },
-  { value: 'aram', label: '칼바람 내전' },
-];
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 /* 달 탭과 같은 자리에 놓는 '전체 시즌' */
@@ -33,7 +29,6 @@ const Season = ({ matches = [], players = [] }) => {
 
   const months = useMemo(() => monthsOf(matches), [matches]);
   const [month, setMonth] = useState(null);
-  const [mode, setMode] = useState('normal');
 
   /* 기록이 들어오면 가장 최근 달이 기본. 고른 달의 기록을 다 지우면 되돌린다 */
   const active =
@@ -48,7 +43,7 @@ const Season = ({ matches = [], players = [] }) => {
   );
 
   /* 그 달만 떼어 처음부터 다시 계산한다. 달마다 0에서 시작하는 시즌 개념 */
-  const stats = useMemo(() => statsFor(monthMatches, mode), [monthMatches, mode]);
+  const stats = useMemo(() => statsFor(monthMatches), [monthMatches]);
 
   const ranking = useMemo(
     () =>
@@ -61,17 +56,13 @@ const Season = ({ matches = [], players = [] }) => {
     [stats]
   );
 
-  const played = monthMatches.filter((m) => m.mode === mode).length;
+  const played = monthMatches.length;
 
-  const insights = useMemo(
-    () => buildInsights(monthMatches, mode),
-    [monthMatches, mode]
-  );
+  const insights = useMemo(() => buildInsights(monthMatches), [monthMatches]);
 
   const periodLabel = isAll ? '전체 기간' : monthLabel(active);
-  const modeLabel = mode === 'aram' ? '칼바람' : '일반';
 
-  const reportData = { periodLabel, modeLabel, played, ranking, insights };
+  const reportData = { periodLabel, played, ranking, insights };
 
   const share = async () => {
     if (await copyText(formatReport(reportData))) {
@@ -82,7 +73,7 @@ const Season = ({ matches = [], players = [] }) => {
   };
 
   const saveImage = async () => {
-    const name = `롤랜챔_${periodLabel}_${modeLabel}.png`.replace(/\s+/g, '');
+    const name = `롤랜챔_${periodLabel}_내전정산.png`.replace(/\s+/g, '');
     if (await downloadReport(reportData, name)) {
       toast.success('이미지로 저장했어요.');
     } else {
@@ -117,17 +108,6 @@ const Season = ({ matches = [], players = [] }) => {
               ))}
             </div>
 
-            <div className="seg-tabs">
-              {MODES.map((m) => (
-                <button
-                  key={m.value}
-                  className={`seg-tab ${mode === m.value ? 'active' : ''}`}
-                  onClick={() => setMode(m.value)}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="season-summary">
@@ -146,8 +126,7 @@ const Season = ({ matches = [], players = [] }) => {
 
           {ranking.length === 0 ? (
             <p className="season-blank">
-              {isAll ? '전체 기간에' : `${monthLabel(active)}에는`}{' '}
-              {mode === 'aram' ? '칼바람' : '일반'} 내전 기록이 없습니다.
+              {isAll ? '전체 기간에' : `${monthLabel(active)}에는`} 내전 기록이 없습니다.
             </p>
           ) : (
             <ol className="season-board">

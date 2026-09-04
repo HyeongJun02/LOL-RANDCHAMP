@@ -2,7 +2,6 @@ import { formatReport } from './report';
 
 const base = {
   periodLabel: '2026년 9월',
-  modeLabel: '일반',
   played: 12,
   ranking: [
     { name: '철수', wins: 8, losses: 4, games: 12, points: 7 },
@@ -16,7 +15,7 @@ const base = {
 
 test('붙여넣기 좋은 형태로 만든다', () => {
   const text = formatReport(base);
-  expect(text).toContain('[롤랜챔] 2026년 9월 일반 정산');
+  expect(text).toContain('[롤랜챔] 2026년 9월 내전 정산');
   expect(text).toContain('12경기 · 2명');
   expect(text).toContain('🥇 철수 8승 4패 (67%) +7');
   expect(text).toContain('🥈 영희 4승 8패 (33%) -7');

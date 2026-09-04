@@ -87,16 +87,16 @@ test('양 팀에 같은 이름이 있으면 기록하지 않는다', async () =>
   expect(el.querySelector('.board-blank')).not.toBeNull();
 });
 
-test('칼바람/일반 탭을 바꾸면 그 모드의 기록만 보인다', async () => {
-  const el = render();
-  fill(el, '철수', '영희');
-  await click(byText(el, 'button', '1팀 승리')); // 기본값 '일반'에 기록됨
+/* 모드를 나누지 않으므로 옛 칼바람 기록도 같은 리더보드에 함께 뜬다 */
+test('예전 칼바람 기록도 같은 전적에 함께 잡힌다', async () => {
+  const el = render({
+    initial: [
+      { id: 'g1', mode: 'aram', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
+    ],
+  });
 
-  await click(byText(el, 'button', '칼바람 내전'));
-  expect(el.querySelector('.board-blank')).not.toBeNull();
-
-  await click(byText(el, 'button', '일반 내전'));
   expect(el.querySelector('.board-blank')).toBeNull();
+  expect(el.textContent).toContain('철수');
 });
 
 test('기록 삭제 버튼을 누르면 전적에서 사라진다', async () => {

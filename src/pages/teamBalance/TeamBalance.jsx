@@ -22,10 +22,6 @@ const RATING_MODES = [
   { value: 'points', label: '내전 포인트만' },
 ];
 
-const SCRIM_MODES = [
-  { value: 'normal', label: '일반 내전' },
-  { value: 'aram', label: '칼바람 내전' },
-];
 
 const LOCKS = [
   { value: 0, label: '자동' },
@@ -60,11 +56,10 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams }) => {
   const [showCandidates, setShowCandidates] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [ratingMode, setRatingMode] = useState('tier');
-  const [scrimMode, setScrimMode] = useState('normal');
   usePageMeta(embedded ? undefined : PAGE_META.teamBalance);
   const roster = useRoster();
 
-  const scrimStats = useMemo(() => statsFor(matches, scrimMode), [matches, scrimMode]);
+  const scrimStats = useMemo(() => statsFor(matches), [matches]);
   const hasScrimData = matches.length > 0;
   const showScrim = hasScrimData && ratingMode !== 'tier';
 
@@ -335,19 +330,8 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams }) => {
             </div>
             {showScrim && (
               <>
-                <div className="seg-tabs" style={{ marginTop: '0.5rem' }}>
-                  {SCRIM_MODES.map((m) => (
-                    <button
-                      key={m.value}
-                      className={`seg-tab ${scrimMode === m.value ? 'active' : ''}`}
-                      onClick={() => setScrimMode(m.value)}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
                 <p className="range-hint">
-                  방에 쌓인 {scrimMode === 'aram' ? '칼바람' : '일반'} 내전 승패를
+                  방에 쌓인 내전 승패를
                   {ratingMode === 'points' ? ' 평점 대신' : ' 티어 평점에 더해'} 반영합니다.
                   센 팀을 이길수록 많이 오르고, 판수가 적으면 조심스럽게 반영합니다.
                 </p>
