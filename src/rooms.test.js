@@ -201,7 +201,7 @@ test('로그 조각은 이름과 금액을 따로 표시해 색을 입힐 수 �
     payload: { from: '철수', to: '영희', amount: 2000 },
   });
 
-  expect(tag.label).toBe('이체');
+  expect(tag.label).toBe('끼꼬');
   expect(parts.filter((p) => p.k === 'name').map((p) => p.v)).toEqual(['철수', '영희']);
   expect(parts.find((p) => p.k === 'amount').v).toContain('2,000');
 });
@@ -608,9 +608,41 @@ test('조정 로그는 누구를 얼마나 왜 만졌는지 다 보여준다', (
   expect(tag.label).toBe('조정');
   const line = parts.map((x) => x.v).join('');
   expect(line).toContain('영희');
-  expect(line).toContain('-1,500');
+  /* 부호(-) 대신 '올렸어요/내렸어요'로 읽는다. 훑을 때 부호는 잘 안 보인다 */
+  expect(line).toContain('1,500');
+  expect(line).toContain('내렸어요');
   expect(line).toContain('8,500');
   expect(line).toContain('벌칙');
+
+  const up = feedParts({
+    type: 'adjust',
+    payload: { who: '철수', delta: 2000, after: 12000, reason: null },
+  });
+  expect(up.parts.map((x) => x.v).join('')).toContain('올렸어요');
+});
+
+/* 로그는 훑는 물건이다. 조각만 늘어놓으면 읽을 때마다 문장을 다시 만들어야 한다 */
+test('로그가 문장으로 읽힌다', () => {
+  const line = (log) =>
+    feedParts(log)
+      .parts.map((x) => x.v)
+      .join('');
+
+  expect(
+    line({
+      type: 'betting_open',
+      created_at: '2026-09-04T12:00:00Z',
+      payload: { size: 6, closes_at: '2026-09-04T12:02:00Z' },
+    })
+  ).toBe('6인 내전에 또또가 열렸어요 · 2분 뒤 자동 마감');
+
+  expect(line({ type: 'betting_locked', payload: { people: 8, total: 3500 } })).toBe(
+    '또또 마감 · 8명이 3,500 끼꼬를 걸었어요'
+  );
+
+  expect(line({ type: 'settle_undone', payload: { count: 2 } })).toBe(
+    '방장이 정산을 되돌렸어요 (2번째)'
+  );
 });
 
 /* ---------- 방 상세 조회 ---------- */
@@ -645,4 +677,23 @@ test('방 탭은 주소에 남는다 (새로고침해도 보던 탭)', () => {
   expect(src).toContain('location.hash');
   /* 뒤로 가기가 탭을 되짚으면 방을 빠져나가는 데 일곱 번 눌러야 한다 */
   expect(src).toMatch(/navigate\([^)]*\{ replace: true \}\)/);
+});
+
+/* ---------- 방 목록 ---------- */
+
+test('또또가 돌고 있는 방이 목록 맨 위로 온다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const body = src.slice(src.indexOf('export const useMyRooms'), src.indexOf('export const useRoom'));
+  /* 끝난 경기까지 다 읽어오면 방 목록 한 번 여는 데 수백 줄이 딸려온다 */
+  expect(body).toMatch(/\.in\('status', \['betting', 'locked'\]\)/);
+  expect(body).toContain('a.live ? -1 : 1');
+});
+
+/* ---------- 끼꼬 내역 ---------- */
+
+test('끼꼬 내역도 한 쪽씩 끊어서 본다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const body = src.slice(src.indexOf('export const fetchLedger'));
+  expect(body.slice(0, 400)).toContain("q.lt('id', beforeId)");
+  expect(src).toMatch(/export const LEDGER_PAGE = \d+/);
 });

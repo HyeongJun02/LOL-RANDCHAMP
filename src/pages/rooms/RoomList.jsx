@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FaPlus, FaSignInAlt, FaUsers, FaPen } from 'react-icons/fa';
+import { FaPlus, FaSignInAlt, FaUsers, FaPen, FaCoins, FaDoorOpen } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../rooms';
 import { MAX_ROOMS } from '../../limits';
@@ -92,6 +92,7 @@ const RoomList = () => {
       {me && !me.nickname && <NicknameGate onSaved={reloadMe} />}
 
       <div className="rooms-me">
+        <span className="rooms-me-label">방에서 쓰는 이름</span>
         {nick === null ? (
           <>
             <span className="rooms-me-name">{me?.nickname || '이름 없음'}</span>
@@ -121,8 +122,58 @@ const RoomList = () => {
             </button>
           </>
         )}
-        <span className="rooms-me-note">끼꼬는 방마다 따로 쌓입니다</span>
+        <span className="rooms-me-note">
+          {rooms.length > 0 ? `${rooms.length}개 방` : '아직 방 없음'} · 끼꼬는 방마다 따로 쌓입니다
+        </span>
       </div>
+
+      {error && <p className="rooms-blank">{error}</p>}
+
+      {/* 방 목록이 먼저다. 여기 오는 이유의 대부분은 '내 방에 들어가기'인데
+          만들기·입장 폼이 위를 차지하면 정작 방이 화면 밖으로 밀린다 */}
+      {loading ? (
+        <SkelRows count={3} h={92} />
+      ) : rooms.length === 0 ? (
+        <div className="rooms-empty">
+          <FaDoorOpen />
+          <strong>아직 들어간 방이 없어요</strong>
+          <span>
+            같이 하는 사람 중 한 명이 방을 만들고 입장 코드를 나눠주면 됩니다.
+            <br />
+            아래에서 방을 만들거나 코드를 넣어보세요.
+          </span>
+        </div>
+      ) : (
+        <ul className="rooms-grid">
+          {rooms.map((r) => (
+            <li key={r.id}>
+              <Link className={`room-card ${r.live ? 'is-live' : ''}`} to={`/rooms/${r.id}`}>
+                <span className="room-card-head">
+                  <strong className="room-card-name">{r.name}</strong>
+                  <span className={`rooms-role role-${r.myRole}`}>{ROLE_LABEL[r.myRole]}</span>
+                </span>
+
+                {/* 지금 걸 수 있는 판이 돌고 있으면 그게 제일 급한 정보다 */}
+                {r.live && (
+                  <span className="room-card-live">
+                    <i />
+                    {r.live === 'betting' ? '또또 배팅 중' : '경기 진행 중'}
+                  </span>
+                )}
+
+                <span className="room-card-foot">
+                  <span className="room-card-stat">
+                    <FaUsers /> {r.memberCount}명
+                  </span>
+                  <span className="room-card-stat is-kkiko">
+                    <FaCoins /> {(r.myPoints ?? 0).toLocaleString()}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="rooms-forms">
         <div className="rooms-form">
@@ -141,7 +192,9 @@ const RoomList = () => {
               <FaPlus /> 만들기
             </button>
           </div>
-          <p className="rooms-hint">방은 최대 {MAX_ROOMS}개까지 만들 수 있어요.</p>
+          <p className="rooms-hint">
+            방은 최대 {MAX_ROOMS}개까지. 만든 사람이 방장이 되고, 입장 코드는 설정 탭에 있어요.
+          </p>
         </div>
 
         <div className="rooms-form">
@@ -163,31 +216,6 @@ const RoomList = () => {
           <p className="rooms-hint">한 번 들어오면 다음부터는 코드가 필요 없어요.</p>
         </div>
       </div>
-
-      {error && <p className="rooms-blank">{error}</p>}
-
-      {loading ? (
-        <SkelRows count={3} h={54} />
-      ) : rooms.length === 0 ? (
-        <p className="rooms-blank">
-          아직 들어간 방이 없어요. 위에서 방을 만들거나 입장 코드를 넣어보세요.
-        </p>
-      ) : (
-        <ul className="rooms-list">
-          {rooms.map((r) => (
-            <li key={r.id}>
-              <Link to={`/rooms/${r.id}`}>
-                <span className="rooms-name">{r.name}</span>
-                <span className="rooms-meta">
-                  <FaUsers /> {r.memberCount}명
-                </span>
-                <span className="rooms-kkiko">{(r.myPoints ?? 0).toLocaleString()} 끼꼬</span>
-                <span className={`rooms-role role-${r.myRole}`}>{ROLE_LABEL[r.myRole]}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 };

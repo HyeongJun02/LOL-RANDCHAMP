@@ -98,15 +98,19 @@ export const transferPoints = (roomId, toUserId, amount) =>
 /* ---------- 포인트 내역 · 피드 ---------- */
 
 /* RLS가 내 행만 준다. 방을 가려낼 필요도 없다 */
-export const fetchLedger = async (limit = 30) => {
+/* 로그 탭과 같은 방식. 한 화면에 한 쪽씩만 보여주고 커서로 넘긴다.
+   끝없이 이어 붙이면 어디까지 봤는지 놓친다 */
+export const LEDGER_PAGE = 15;
+
+export const fetchLedger = async (beforeId) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
-  return unwrap(
-    await neon
-      .from('point_ledger')
-      .select('id,room_id,delta,reason,counterpart_user_id,created_at')
-      .order('id', { ascending: false })
-      .limit(limit)
-  );
+  let q = neon
+    .from('point_ledger')
+    .select('id,room_id,delta,reason,counterpart_user_id,created_at')
+    .order('id', { ascending: false })
+    .limit(LEDGER_PAGE);
+  if (beforeId) q = q.lt('id', beforeId);
+  return unwrap(await q);
 };
 
 export const FEED_PAGE = 20;
@@ -136,13 +140,24 @@ const t = (v) => ({ k: 'text', v });
 const nameOf_ = (v) => ({ k: 'name', v });
 const amountOf = (v) => ({ k: 'amount', v: `${num(v)} 끼꼬` });
 
+/* 태그는 이 방에서 실제로 쓰는 말로. '배팅'이라고 적어두면
+   화면 어디에도 없는 단어라 한 박자 늦게 읽힌다 */
 export const LOG_TAGS = {
-  transfer: { label: '이체', tone: 'blue' },
-  betting_open: { label: '배팅', tone: 'purple' },
-  betting_locked: { label: '배팅', tone: 'purple' },
+  transfer: { label: '끼꼬', tone: 'blue' },
+  betting_open: { label: '또또', tone: 'purple' },
+  betting_locked: { label: '또또', tone: 'purple' },
   settled: { label: '경기', tone: 'gold' },
   settle_undone: { label: '정정', tone: 'red' },
   adjust: { label: '조정', tone: 'red' },
+};
+
+/* '2분 뒤 자동 마감'처럼 사람이 읽는 길이로. 초 단위는 필요 없다 */
+const durationText = (fromIso, toIso) => {
+  const sec = Math.round((new Date(toIso) - new Date(fromIso)) / 1000);
+  if (!Number.isFinite(sec) || sec <= 0) return null;
+  if (sec < 60) return `${sec}초`;
+  const min = Math.round(sec / 60);
+  return `${min}분`;
 };
 
 export const feedParts = (log) => {
@@ -150,23 +165,42 @@ export const feedParts = (log) => {
   const tag = LOG_TAGS[log.type] || { label: '기타', tone: 'gray' };
 
   switch (log.type) {
+    /* 누가 무엇을 했는지가 먼저 오게 쓴다. '철수 → 영희 1,000 끼꼬 보냄'처럼
+       조각만 늘어놓으면 훑을 때마다 머리로 문장을 다시 만들어야 한다 */
     case 'transfer':
       return {
         tag,
-        parts: [nameOf_(p.from), t(' → '), nameOf_(p.to), t(' '), amountOf(p.amount), t(' 보냄')],
+        parts: [
+          nameOf_(p.from),
+          t(' 님이 '),
+          nameOf_(p.to),
+          t(' 님에게 '),
+          amountOf(p.amount),
+          t('를 보냈어요'),
+        ],
       };
-    case 'betting_open':
+    case 'betting_open': {
+      const dur = p.closes_at ? durationText(log.created_at, p.closes_at) : null;
       return {
         tag,
         parts: [
-          t(`${p.size}인 경기 · `),
-          { k: 'hot', v: '배팅 시작' },
+          nameOf_(`${p.size}인 내전`),
+          t('에 '),
+          { k: 'hot', v: '또또가 열렸어요' },
+          ...(dur ? [t(` · ${dur} 뒤 자동 마감`)] : []),
         ],
       };
+    }
     case 'betting_locked':
       return {
         tag,
-        parts: [t('배팅 마감 · '), nameOf_(`${p.people}명`), t(' · '), amountOf(p.total)],
+        parts: [
+          t('또또 마감 · '),
+          nameOf_(`${p.people}명`),
+          t('이 '),
+          amountOf(p.total),
+          t('를 걸었어요'),
+        ],
       };
     case 'settled':
       return {
@@ -174,7 +208,9 @@ export const feedParts = (log) => {
         parts: [
           { k: 'hot', v: p.winner === 'A' ? '1팀 승리' : '2팀 승리' },
           ...(p.kills == null ? [] : [t(' · 총 킬 '), nameOf_(String(p.kills))]),
-          ...(p.bet_total ? [t(' · 또또 '), amountOf(p.bet_total), t(' 정산')] : []),
+          ...(p.bet_total
+            ? [t(' · 또또 '), amountOf(p.bet_total), t('를 나눠 가졌어요')]
+            : [t(' · 정산 끝')]),
         ],
       };
     /* 방장이 잔액을 손댄 줄. 누구를 얼마나 왜 만졌는지 다 적는다.
@@ -185,14 +221,18 @@ export const feedParts = (log) => {
         parts: [
           t('방장이 '),
           nameOf_(p.who),
-          t(' 끼꼬를 '),
-          { k: 'hot', v: `${p.delta > 0 ? '+' : ''}${num(p.delta)}` },
-          t(` 조정 (남은 ${num(p.after)})`),
+          t(' 님 끼꼬를 '),
+          { k: 'hot', v: `${num(Math.abs(p.delta))}` },
+          t(p.delta > 0 ? ' 올렸어요' : ' 내렸어요'),
+          t(` · 남은 ${num(p.after)}`),
           ...(p.reason ? [t(' · '), nameOf_(p.reason)] : []),
         ],
       };
     case 'settle_undone':
-      return { tag, parts: [t(`방장이 ${p.count}번째 정산을 되돌렸습니다`)] };
+      return {
+        tag,
+        parts: [t('방장이 정산을 '), { k: 'hot', v: '되돌렸어요' }, t(` (${p.count}번째)`)],
+      };
     default:
       return { tag, parts: [t(log.type)] };
   }
@@ -358,6 +398,12 @@ export const useMyRooms = (userId) => {
     const members = unwrap(await neon.from('room_members').select('room_id,user_id,role'));
     /* 방마다 내 끼꼬가 다르므로 목록에서도 방별로 보여준다 */
     const wallets = unwrap(await neon.from('room_wallets').select('room_id,user_id,points'));
+    /* '지금 또또 중인 방'은 목록에서 제일 먼저 보고 싶은 것이다.
+       끝난 경기는 안 읽는다 - 진행 중인 것만 몇 줄 가져온다 */
+    const live = unwrap(
+      await neon.from('scrims').select('room_id,status').in('status', ['betting', 'locked'])
+    );
+    const liveOf = new Map((live || []).map((sc) => [sc.room_id, sc.status]));
     const myPoints = new Map(
       (wallets || []).filter((w) => w.user_id === userId).map((w) => [w.room_id, w.points])
     );
@@ -372,8 +418,13 @@ export const useMyRooms = (userId) => {
         memberCount: countOf.get(r.id) || 0,
         myRole: roleOf.get(r.id),
         myPoints: myPoints.get(r.id) ?? 0,
+        live: liveOf.get(r.id) || null,
       }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+      /* 또또가 돌고 있는 방을 맨 위로. 그 다음은 이름순 */
+      .sort((a, b) => {
+        if (Boolean(a.live) !== Boolean(b.live)) return a.live ? -1 : 1;
+        return a.name.localeCompare(b.name, 'ko');
+      });
   }, [userId]);
 
   const { data, loading, error, reload } = useFetch(

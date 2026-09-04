@@ -18,6 +18,7 @@ import TeamBalance from '../teamBalance/TeamBalance';
 import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
+import ClearInput from '../../components/common/ClearInput';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import { timeAgo } from '../../timeAgo';
 import './ScrimRecord.css';
@@ -42,11 +43,14 @@ const TeamPanel = ({ label, team, otherTeam, players, onChangeAt, onRemoveAt, on
     {team.map((name, i) => (
       <div className="sr-row" key={i}>
         <span className="row-no">{i + 1}</span>
-        <input
-          value={name}
-          placeholder="이름"
-          onChange={(e) => onChangeAt(i, e.target.value)}
-        />
+        <span className="input-with-clear">
+          <input
+            value={name}
+            placeholder="이름"
+            onChange={(e) => onChangeAt(i, e.target.value)}
+          />
+          <ClearInput value={name} onClear={() => onChangeAt(i, '')} />
+        </span>
         <RosterPicker
           people={players}
           title="방 참가자 불러오기"

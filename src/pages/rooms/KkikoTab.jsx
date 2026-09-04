@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaPaperPlane, FaSlidersH } from 'react-icons/fa';
-import { transferPoints, adjustPoints, fetchLedger } from '../../rooms';
+import { FaPaperPlane, FaSlidersH, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { transferPoints, adjustPoints, fetchLedger, LEDGER_PAGE } from '../../rooms';
 import { useDialog } from '../../components/common/Dialog';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -30,6 +30,10 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
   const [ledger, setLedger] = useState([]);
+  /* 로그 탭과 같은 방식. cursors[i] = i쪽을 받을 때 쓴 beforeId */
+  const [cursors, setCursors] = useState([undefined]);
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
   const [adjTo, setAdjTo] = useState('');
   const [adjAmount, setAdjAmount] = useState('');
   const [adjReason, setAdjReason] = useState('');
@@ -41,13 +45,41 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
   const ranked = [...members].sort((a, b) => b.points - a.points);
   const others = members.filter((m) => m.user_id !== myId);
 
-  const loadLedger = useCallback(() => {
-    fetchLedger()
-      .then(setLedger)
-      .catch(() => setLedger([]));
+  const loadPage = useCallback(async (at, list) => {
+    try {
+      const rows = (await fetchLedger(list[at])) || [];
+      setLedger(rows);
+      setHasNext(rows.length === LEDGER_PAGE);
+    } catch {
+      setLedger([]);
+      setHasNext(false);
+    }
   }, []);
 
+  /* 뭔가 오갔으면 첫 쪽부터 다시 본다. 방금 한 일이 맨 위에 있어야 한다 */
+  const loadLedger = useCallback(() => {
+    setPage(0);
+    setCursors([undefined]);
+    loadPage(0, [undefined]);
+  }, [loadPage]);
+
   useEffect(loadLedger, [loadLedger]);
+
+  const nextPage = () => {
+    const last = ledger[ledger.length - 1];
+    if (!last) return;
+    const list = [...cursors];
+    list[page + 1] = last.id;
+    setCursors(list);
+    setPage(page + 1);
+    loadPage(page + 1, list);
+  };
+
+  const prevPage = () => {
+    if (page === 0) return;
+    setPage(page - 1);
+    loadPage(page - 1, cursors);
+  };
 
   const send = async () => {
     if (busy.current) return;
@@ -229,10 +261,13 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
 
       <section className="room-panel">
         <h3>
-          내 끼꼬 내역<span className="panel-count">{ledger.length}건</span>
+          내 끼꼬 내역
+          {page > 0 && <span className="panel-count">{page + 1}쪽</span>}
         </h3>
         {ledger.length === 0 ? (
-          <p className="rooms-hint">아직 움직인 내역이 없어요.</p>
+          <p className="rooms-hint">
+            {page === 0 ? '아직 움직인 내역이 없어요.' : '더 볼 내역이 없어요.'}
+          </p>
         ) : (
           <ul className="kkiko-ledger">
             {ledger.map((l) => (
@@ -251,6 +286,17 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
               </li>
             ))}
           </ul>
+        )}
+        {(page > 0 || hasNext) && (
+          <div className="feed-pager">
+            <button className="ghost-btn" onClick={prevPage} disabled={page === 0}>
+              <FaChevronLeft /> 이전
+            </button>
+            <span className="feed-page-no">{page + 1}쪽</span>
+            <button className="ghost-btn" onClick={nextPage} disabled={!hasNext}>
+              다음 <FaChevronRight />
+            </button>
+          </div>
         )}
       </section>
     </div>

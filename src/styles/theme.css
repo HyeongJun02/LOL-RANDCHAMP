@@ -615,3 +615,44 @@
     animation: none;
   }
 }
+
+/* ---------- 입력칸 안쪽 지우기 단추 ---------- */
+/* 줄 끝의 ×는 자리를 없애고, 이건 이름만 지운다 (ClearInput.jsx) */
+
+.input-with-clear {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.input-with-clear input {
+  flex: 1;
+  min-width: 0;
+  /* 단추가 나타났다 사라져도 글자가 안 움직이게 자리를 늘 비워둔다 */
+  padding-right: 1.55rem;
+}
+
+.clear-in-input {
+  position: absolute;
+  top: 50%;
+  right: 0.3rem;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #94a3b8;
+  font-size: 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.clear-in-input:hover {
+  background: rgba(249, 115, 98, 0.22);
+  color: #fca5a5;
+}

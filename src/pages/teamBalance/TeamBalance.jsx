@@ -8,6 +8,7 @@ import { statsFor, pointsOf, statOf } from '../../matches';
 import { saveLastSplit } from '../../lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
+import ClearInput from '../../components/common/ClearInput';
 import CandidateModal from './CandidateModal';
 import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
@@ -245,11 +246,14 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
                 <div className="player-row" key={p.id}>
                   <span className="row-no">{i + 1}</span>
                   <div className="row-name">
-                    <input
-                      value={p.name}
-                      placeholder="이름"
-                      onChange={(e) => update(p.id, { name: e.target.value })}
-                    />
+                    <span className="input-with-clear">
+                      <input
+                        value={p.name}
+                        placeholder="이름"
+                        onChange={(e) => update(p.id, { name: e.target.value })}
+                      />
+                      <ClearInput value={p.name} onClear={() => update(p.id, { name: '' })} />
+                    </span>
                     {showScrim && p.name.trim() !== '' && (
                       <ScrimBadge
                         points={pointsOf(scrimStats, p.name)}
