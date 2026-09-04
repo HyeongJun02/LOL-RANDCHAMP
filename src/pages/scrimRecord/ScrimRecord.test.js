@@ -13,6 +13,8 @@ const render = ({ initial = [], canEdit = true } = {}) => {
   React = require('react');
   const { createRoot } = require('react-dom/client');
   const ScrimRecord = require('./ScrimRecord').default;
+  /* 삭제는 확인창을 거친다. 실제 앱처럼 Provider로 감싸야 그린다 */
+  const { DialogProvider } = require('../../components/common/Dialog');
   ({ act } = React);
 
   let seq = 0;
@@ -28,9 +30,12 @@ const render = ({ initial = [], canEdit = true } = {}) => {
     });
   };
 
+  const Wrapped = () =>
+    React.createElement(DialogProvider, null, React.createElement(Harness));
+
   const container = document.createElement('div');
   document.body.appendChild(container);
-  act(() => createRoot(container).render(React.createElement(Harness)));
+  act(() => createRoot(container).render(React.createElement(Wrapped)));
   return container;
 };
 
@@ -105,6 +110,9 @@ test('기록 삭제 버튼을 누르면 전적에서 사라진다', async () => 
   await click(byText(el, 'button', '1팀 승리'));
 
   await click(el.querySelector('.history-list .row-del'));
+  /* 지우면 지갑까지 되돌아가는 일이라 확인창을 한 번 거친다.
+     모달은 body로 포탈되므로 document에서 찾는다 */
+  await click(document.querySelector('.dialog-ok'));
 
   expect(el.querySelector('.board-blank')).not.toBeNull();
   expect(el.querySelector('.history-list')).toBeNull();
@@ -160,4 +168,15 @@ test('입력 칸에는 승률을 안 보여준다 (리더보드에만)', () => {
   expect(el.querySelector('.sr-row .sr-winrate')).toBeNull();
   // 순위표에는 그대로 있다
   expect(el.querySelector('.board-record').textContent).toContain('%');
+});
+
+test('확인창에서 취소하면 기록이 그대로 남는다', async () => {
+  const el = render();
+  fill(el, '철수', '영희');
+  await click(byText(el, 'button', '1팀 승리'));
+
+  await click(el.querySelector('.history-list .row-del'));
+  await click(byText(document, 'button', '취소'));
+
+  expect(el.querySelector('.history-list')).not.toBeNull();
 });

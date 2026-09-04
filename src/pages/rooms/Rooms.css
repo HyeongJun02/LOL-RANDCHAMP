@@ -1778,3 +1778,19 @@
   font-variant-numeric: tabular-nums;
   font-weight: 800;
 }
+
+/* 진행 중인 판을 없애는 단추. 눌러야 할 일이 거의 없으니 조용히 둔다 */
+.bet-cancel {
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.45rem;
+  border-color: rgba(249, 115, 98, 0.25);
+  color: #b47a72;
+  font-size: 0.78rem;
+}
+
+.bet-cancel:hover {
+  border-color: rgba(249, 115, 98, 0.5);
+  color: #fca5a5;
+  background: rgba(249, 115, 98, 0.08);
+}

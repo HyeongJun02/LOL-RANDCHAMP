@@ -19,6 +19,7 @@ import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ClearInput from '../../components/common/ClearInput';
+import { useDialog } from '../../components/common/Dialog';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
 import { timeAgo } from '../../timeAgo';
 import './ScrimRecord.css';
@@ -73,6 +74,7 @@ const TeamPanel = ({ label, team, otherTeam, players, onChangeAt, onRemoveAt, on
    players: 방 참가자 명단 (티어 배지와 이름 고르기에 쓴다)
    canEdit: 방장·부방장만 true. 나머지는 보기만 한다 */
 const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRemove, onOpenBetting }) => {
+  const { confirm } = useDialog();
   const [teamA, setTeamA] = useState(blankTeam);
   const [teamB, setTeamB] = useState(blankTeam);
   /* 더블클릭으로 같은 경기가 두 번 들어가는 걸 막는다.
@@ -203,9 +205,22 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     }
   };
 
-  const deleteMatch = async (id) => {
+  /* 지우면 그 경기가 지갑에 한 일까지 전부 되돌아간다.
+     또또가 걸렸던 판이면 남의 돈이 오가므로 무슨 일이 일어나는지 적어준다 */
+  const deleteMatch = async (m) => {
+    const had = m.betCount > 0;
+    const ok = await confirm({
+      title: had ? '또또까지 되돌리기' : '기록 삭제',
+      message: had ? '이 경기를 없던 걸로 할까요?' : '이 기록을 지울까요?',
+      detail: had
+        ? `${m.betCount}명이 건 ${m.betTotal.toLocaleString()} 끼꼬가 전부 돌아가고, 지급도 취소됩니다. 되돌릴 수 없어요.`
+        : '전적에서 빠지고, 참여 포인트도 함께 되돌아갑니다.',
+      confirmText: had ? '되돌리고 삭제' : '삭제',
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await onRemove(id);
+      await onRemove(m.id);
     } catch (e) {
       toast.error(e.message);
     }
@@ -368,7 +383,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
                 {canEdit && (
                   <button
                     className="row-del"
-                    onClick={() => deleteMatch(m.id)}
+                    onClick={() => deleteMatch(m)}
                     aria-label="기록 삭제"
                   >
                     <FaTimes />

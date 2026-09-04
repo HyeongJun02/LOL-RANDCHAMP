@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaLock, FaCheck, FaUndo, FaChevronRight } from 'react-icons/fa';
+import { FaLock, FaCheck, FaUndo, FaChevronRight, FaTrash } from 'react-icons/fa';
 import {
   killLineOfScrim,
   killMarket,
@@ -12,6 +12,7 @@ import {
   lockBetting,
   settleScrim,
   unsettleScrim,
+  removeScrim,
   fetchBetting,
 } from '../../rooms';
 import { useDialog } from '../../components/common/Dialog';
@@ -221,6 +222,24 @@ const BetTab = ({
       setKills('');
       setFb('');
       toast.success('정산했어요.');
+      onChanged();
+      load();
+    });
+
+  /* 팀을 잘못 짰거나 게임이 엎어졌을 때. 예전에는 나갈 길이 아예 없어서
+     가짜 결과를 넣어 정산해야만 다음 판으로 넘어갈 수 있었다 */
+  const cancel = (scrim) =>
+    guard(async () => {
+      const ok = await confirm({
+        title: '또또 취소',
+        message: '이 판을 없던 걸로 할까요?',
+        detail: `걸린 ${num(scrim.bet_total)} 끼꼬가 전부 돌아가고 경기 기록도 지워집니다. 되돌릴 수 없어요.`,
+        confirmText: '취소하기',
+        danger: true,
+      });
+      if (!ok) return;
+      await removeScrim(scrim.id);
+      toast.success('또또를 취소하고 끼꼬를 돌려줬어요.');
       onChanged();
       load();
     });
@@ -638,6 +657,13 @@ const BetTab = ({
           {canEdit && activeScrim.status === 'betting' && (
             <button className="ghost-btn bet-action" onClick={() => lock(activeScrim)}>
               <FaLock /> 게임 시작 (배팅 마감)
+            </button>
+          )}
+
+          {/* 방장만. 실수로 누르면 끝이라 확인창을 반드시 거친다 */}
+          {isOwner && (
+            <button className="ghost-btn bet-cancel" onClick={() => cancel(activeScrim)}>
+              <FaTrash /> 이 판 취소하기
             </button>
           )}
 

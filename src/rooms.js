@@ -195,6 +195,7 @@ export const LOG_TAGS = {
   settle_undone: { label: '정정', tone: 'red' },
   adjust: { label: '조정', tone: 'red' },
   record: { label: '신기록', tone: 'gold' },
+  scrim_cancelled: { label: '취소', tone: 'red' },
 };
 
 /* 방 기록 종류. 서버가 kind만 보내고 문구는 여기서 만든다 */
@@ -289,6 +290,20 @@ export const feedParts = (log) => {
           t(` · ${RECORD_LABEL[p.kind] || p.kind} `),
           nameOf_(String(num(p.value))),
           ...(p.prev ? [t(` (지난 기록 ${num(p.prev)})`)] : [t(' (첫 기록)')]),
+        ],
+      };
+    /* 진행 중이던 판을 통째로 없앴다. 남의 돈이 오간 일이라 반드시 남긴다 */
+    case 'scrim_cancelled':
+      return {
+        tag,
+        parts: [
+          t('방장이 또또를 '),
+          { k: 'hot', v: '취소' },
+          t('했어요 · '),
+          nameOf_(`${p.people}명`),
+          t(' '),
+          amountOf(p.refund),
+          t(' 환불'),
         ],
       };
     case 'settle_undone':
@@ -401,6 +416,9 @@ export const toMatches = (scrims = [], players = []) => {
       teamB: names(s.team_b),
       winner: s.winner,
       playedAt: new Date(s.played_at).getTime(),
+      /* 지울 때 '또또까지 되돌아간다'고 알려주려면 필요하다 */
+      betCount: s.bet_count || 0,
+      betTotal: s.bet_total || 0,
     }))
     .sort((a, b) => a.playedAt - b.playedAt);
 };

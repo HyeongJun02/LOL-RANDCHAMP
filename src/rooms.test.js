@@ -782,3 +782,36 @@ test('신기록 로그가 문장으로 읽힌다', () => {
   const first = feedParts({ type: 'record', payload: { kind: 'bet', value: 5000, prev: null } });
   expect(first.parts.map((x) => x.v).join('')).toContain('첫 기록');
 });
+
+/* ---------- 경기 취소 / 삭제 ---------- */
+
+/* 예전엔 배팅이 걸리면 아예 못 지웠다. 잘못 연 또또를 취소할 길이 없어서
+   가짜 결과를 넣어 정산해야만 다음 판으로 넘어갈 수 있었다 */
+test('배팅이 걸린 경기도 방장이면 취소할 수 있다', () => {
+  const body = fnBody('delete_scrim');
+  expect(body).not.toContain('배팅이 걸린 경기는 지울 수 없어요');
+  expect(body).toContain('배팅이 걸린 경기는 방장만 취소할 수 있어요');
+  /* 돈이 안 걸린 기록은 부방장도 그대로 지운다 */
+  expect(body).toContain('방장과 부방장만 기록을 지울 수 있어요');
+});
+
+test('취소하면 건 돈·지급·참여 포인트를 전부 되돌린다', () => {
+  const body = fnBody('delete_scrim');
+  expect(body).toMatch(/reason in \('bet', 'payout', 'scrim'\)/);
+  /* 이미 뒤집힌 줄을 또 뒤집으면 두 배로 돌아간다 */
+  expect(body).toContain('reversed_at is null');
+});
+
+test('취소는 로그에 남는다 (남의 돈이 오간 일이다)', () => {
+  expect(fnBody('delete_scrim')).toMatch(/log_room\(s\.room_id, 'scrim_cancelled'/);
+
+  const { tag, parts } = feedParts({
+    type: 'scrim_cancelled',
+    payload: { people: 8, refund: 3500, status: 'betting' },
+  });
+  expect(tag.label).toBe('취소');
+  const line = parts.map((x) => x.v).join('');
+  expect(line).toContain('8명');
+  expect(line).toContain('3,500');
+  expect(line).toContain('환불');
+});

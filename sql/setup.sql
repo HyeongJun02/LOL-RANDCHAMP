@@ -1388,21 +1388,37 @@ end; $fn$;
 
 create or replace function public.delete_scrim(p_scrim bigint)
 returns void language plpgsql security definer set search_path = public as $fn$
-declare s scrims;
+declare
+  s        scrims;
+  n_people int;
+  n_amount bigint;
 begin
   select * into s from scrims where id = p_scrim;
   if s.id is null then return; end if;
-  if not public.is_room_admin(s.room_id) then
+
+  select count(distinct user_id), coalesce(sum(amount), 0)
+    into n_people, n_amount
+    from bets where scrim_id = p_scrim;
+
+  -- 배팅 없는 기록은 부방장도 지울 수 있다. 돈이 걸린 판은 방장만.
+  -- 예전엔 배팅이 걸리면 아예 못 지웠는데, 잘못 연 또또를 취소할 방법이
+  -- 없어서 가짜 결과를 넣어 정산해야만 다음 판으로 넘어갈 수 있었다.
+  if n_people > 0 then
+    if not public.is_room_owner(s.room_id) then
+      raise exception '배팅이 걸린 경기는 방장만 취소할 수 있어요.';
+    end if;
+  elsif not public.is_room_admin(s.room_id) then
     raise exception '방장과 부방장만 기록을 지울 수 있어요.';
   end if;
-  if exists (select 1 from bets where scrim_id = p_scrim) then
-    raise exception '배팅이 걸린 경기는 지울 수 없어요. 기록으로 남깁니다.';
-  end if;
 
-  -- 참여 포인트를 준 경기라면 되돌려놓고 지운다
+  -- 이 경기가 지갑에 한 일을 전부 되돌린다.
+  -- 건 돈('bet'), 지급('payout'), 참여 포인트('scrim') 가릴 것 없이
+  -- 아직 안 뒤집은 줄이면 다 뒤집는다. 정산을 한 번 되돌린 뒤여도
+  -- 그때 뒤집힌 줄은 reversed_at이 차 있어 두 번 세지 않는다.
   with back as (
     update point_ledger set reversed_at = now()
-     where ref_id = p_scrim and reversed_at is null and reason = 'scrim'
+     where ref_id = p_scrim and reversed_at is null
+       and reason in ('bet', 'payout', 'scrim')
     returning user_id, delta
   ),
   ins as (
@@ -1414,7 +1430,13 @@ begin
     from (select user_id, sum(delta) d from ins group by user_id) x
    where w.room_id = s.room_id and w.user_id = x.user_id;
 
+  -- bets와 bet_pools는 scrims를 참조하며 on delete cascade다
   delete from scrims where id = p_scrim;
+
+  if n_people > 0 then
+    perform public.log_room(s.room_id, 'scrim_cancelled', jsonb_build_object(
+      'people', n_people, 'refund', n_amount, 'status', s.status));
+  end if;
 end; $fn$;
 
 
