@@ -634,3 +634,15 @@ test('BetTab은 렌더 안에서 컴포넌트를 정의하지 않는다', () => 
   const inner = [...body.matchAll(/^ {2}const ([A-Z]\w*) = \(/gm)].map((m) => m[1]);
   expect(inner).toEqual([]);
 });
+
+/* ---------- 방 탭 ---------- */
+
+/* useState에만 담아두면 새로고침할 때마다 첫 탭으로 돌아간다.
+   또또를 보다 새로고침하면 게임 시작 탭이 뜨던 버그 */
+test('방 탭은 주소에 남는다 (새로고침해도 보던 탭)', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'pages', 'rooms', 'Room.jsx'), 'utf8');
+  expect(src).not.toMatch(/const \[tab, setTab\] = useState/);
+  expect(src).toContain('location.hash');
+  /* 뒤로 가기가 탭을 되짚으면 방을 빠져나가는 데 일곱 번 눌러야 한다 */
+  expect(src).toMatch(/navigate\([^)]*\{ replace: true \}\)/);
+});

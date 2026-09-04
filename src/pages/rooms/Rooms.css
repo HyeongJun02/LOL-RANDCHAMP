@@ -1289,40 +1289,43 @@
   color: #6b7a94;
 }
 
+/* 상태 칩 + 남은 시간을 헤더 오른쪽에 한 덩어리로 */
+.bet-head-live {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+/* 헤더에 얹히는 작은 타이머. 남은 시간과 가는 막대뿐이다 */
 .bet-timer {
-  margin-bottom: 0.8rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 10px;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.15rem 0.5rem 0.25rem;
+  border-radius: 8px;
   border: 1px solid rgba(56, 189, 248, 0.28);
   background: rgba(56, 189, 248, 0.07);
 }
 
-.bet-timer-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.bet-timer-label {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #7dd3fc;
-}
-
 .bet-timer-left {
-  font-size: 1.1rem;
+  font-size: 0.78rem;
   font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
   color: #e0f2fe;
   font-variant-numeric: tabular-nums;
 }
 
 .bet-timer-bar {
-  height: 6px;
-  margin-top: 0.4rem;
+  display: block;
+  width: 3.4rem;
+  height: 3px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .bet-timer-fill {
@@ -1340,7 +1343,6 @@
   background: rgba(249, 115, 98, 0.1);
 }
 
-.bet-timer.is-warn .bet-timer-label,
 .bet-timer.is-warn .bet-timer-left {
   color: #fca5a5;
 }
@@ -1353,11 +1355,52 @@
   opacity: 0.7;
 }
 
-.bet-timer-warn {
-  margin: 0.4rem 0 0;
-  font-size: 0.7rem;
-  line-height: 1.45;
-  color: #6b7a94;
+/* ---------- 배팅 금액 빠른 입력 ---------- */
+
+.bet-cart-row {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.bet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.bet-chip {
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.08);
+  color: #bae6fd;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bet-chip:hover:not(:disabled) {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(56, 189, 248, 0.16);
+}
+
+.bet-chip:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.bet-chip.is-clear {
+  margin-left: auto;
+  border-color: var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #8b98ae;
+}
+
+.bet-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* ---------- 또또 열기 팝업 ---------- */

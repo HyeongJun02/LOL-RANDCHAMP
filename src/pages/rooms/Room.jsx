@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   FaArrowLeft,
@@ -534,7 +534,14 @@ const Room = () => {
     error,
     reload,
   } = useRoom(roomId, user?.id);
-  const [tab, setTab] = useState('record');
+  /* 탭을 주소(#bet)에 둔다. useState에만 담아두면 새로고침하거나
+     링크를 공유했을 때 항상 첫 탭으로 돌아간다.
+     replace라 뒤로 가기는 탭을 되짚지 않고 방 목록으로 나간다 */
+  const location = useLocation();
+  const fromHash = location.hash.replace('#', '');
+  const tab = TABS.some((t) => t.key === fromHash) ? fromHash : 'record';
+  const setTab = (key) =>
+    navigate(`${location.pathname}${key === 'record' ? '' : `#${key}`}`, { replace: true });
 
   const editable = canEditRole(myRole);
 

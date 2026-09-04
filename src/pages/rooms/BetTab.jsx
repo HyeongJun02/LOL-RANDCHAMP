@@ -98,6 +98,20 @@ const BetTab = ({
   const setAmount = (market, amount) =>
     setCart((prev) => ({ ...prev, [market]: { ...prev[market], amount } }));
 
+  /* 폰으로 숫자 키보드 올려서 0을 네 번 치는 게 은근히 번거롭다.
+     자주 거는 금액은 눌러서 더한다. 마켓 상한은 여기서 잘라준다 */
+  const BUMPS = [500, 1000, 2000];
+
+  const bump = (market, delta) =>
+    setCart((prev) => {
+      const cap = capOf(market);
+      const next = (Number(prev[market]?.amount) || 0) + delta;
+      return {
+        ...prev,
+        [market]: { ...prev[market], amount: String(cap ? Math.min(next, cap) : next) },
+      };
+    });
+
   const cartRows = Object.entries(cart);
   const cartTotal = cartRows.reduce((sum, [, v]) => sum + (Number(v.amount) || 0), 0);
   const overBalance = cartTotal > (me?.points ?? 0);
@@ -498,8 +512,19 @@ const BetTab = ({
         >
           <h3>
             내전
-            <span className={`bet-status is-live s-${activeScrim.status}`}>
-              {activeScrim.status === 'betting' ? '배팅 중' : '배팅 마감 · 경기 진행 중'}
+            {/* 상태와 남은 시간은 한 덩어리다. 타이머를 아래에 크게 두면
+                정작 걸어야 할 선택지가 화면 밖으로 밀린다 */}
+            <span className="bet-head-live">
+              <span className={`bet-status is-live s-${activeScrim.status}`}>
+                {activeScrim.status === 'betting' ? '배팅 중' : '배팅 마감 · 경기 진행 중'}
+              </span>
+              {activeScrim.status === 'betting' && activeScrim.betting_closes_at && (
+                <BetTimer
+                  closesAt={activeScrim.betting_closes_at}
+                  openedAt={activeScrim.played_at}
+                  onExpire={() => autoLock(activeScrim.id)}
+                />
+              )}
             </span>
           </h3>
 
@@ -522,14 +547,6 @@ const BetTab = ({
             </span>
           </div>
 
-          {activeScrim.status === 'betting' && activeScrim.betting_closes_at && (
-            <BetTimer
-              closesAt={activeScrim.betting_closes_at}
-              openedAt={activeScrim.played_at}
-              onExpire={() => autoLock(activeScrim.id)}
-            />
-          )}
-
           {activeScrim.status === 'betting' && !me?.agreed && (
             <div className="bet-consent">
               <p>
@@ -549,17 +566,33 @@ const BetTab = ({
             <div className="bet-cart">
               <h4>담은 배팅 {cartRows.length}건</h4>
               {cartRows.map(([market, v]) => (
-                <div className="rooms-form-row" key={market}>
-                  <span className="rooms-name">{marketLabel(market)}</span>
-                  <input
-                    className="rooms-input"
-                    type="number"
-                    min="1"
-                    max={capOf(market) || undefined}
-                    value={v.amount}
-                    placeholder="끼꼬"
-                    onChange={(e) => setAmount(market, e.target.value)}
-                  />
+                <div className="bet-cart-row" key={market}>
+                  <div className="rooms-form-row">
+                    <span className="rooms-name">{marketLabel(market)}</span>
+                    <input
+                      className="rooms-input"
+                      type="number"
+                      min="1"
+                      max={capOf(market) || undefined}
+                      value={v.amount}
+                      placeholder="끼꼬"
+                      onChange={(e) => setAmount(market, e.target.value)}
+                    />
+                  </div>
+                  <div className="bet-chips">
+                    {BUMPS.map((n) => (
+                      <button key={n} className="bet-chip" onClick={() => bump(market, n)}>
+                        +{num(n)}
+                      </button>
+                    ))}
+                    <button
+                      className="bet-chip is-clear"
+                      onClick={() => setAmount(market, '')}
+                      disabled={!v.amount}
+                    >
+                      초기화
+                    </button>
+                  </div>
                 </div>
               ))}
               <div className={`bet-cart-foot ${overBalance ? 'is-over' : ''}`}>

@@ -41,21 +41,19 @@ const BetTimer = ({ closesAt, openedAt, onExpire }) => {
 
   const warn = left > 0 && left <= WARN_SECONDS;
 
+  /* 헤더의 '배팅 중' 라벨 옆에 붙는다. 큰 덩어리로 두면 정작 걸어야 할
+     선택지를 아래로 밀어낸다. 남은 시간 숫자와 가는 막대 하나면 충분하다.
+     '미리 끝내라'는 당부는 툴팁으로 옮기고, 20초 전부터는 색으로 말한다 */
   return (
-    <div className={`bet-timer ${warn ? 'is-warn' : ''} ${left === 0 ? 'is-done' : ''}`}>
-      <div className="bet-timer-head">
-        <span className="bet-timer-label">
-          {left === 0 ? '마감 처리 중…' : '배팅 마감까지'}
-        </span>
-        {left > 0 && <strong className="bet-timer-left">{mmss(left)}</strong>}
-      </div>
-      <div className="bet-timer-bar">
+    <span
+      className={`bet-timer ${warn ? 'is-warn' : ''} ${left === 0 ? 'is-done' : ''}`}
+      title={`시계가 사람마다 조금씩 다를 수 있어요. 마감 ${WARN_SECONDS}초 전까지 배팅을 끝내주세요.`}
+    >
+      <strong className="bet-timer-left">{left === 0 ? '마감 중…' : mmss(left)}</strong>
+      <span className="bet-timer-bar">
         <span className="bet-timer-fill" style={{ width: `${ratio * 100}%` }} />
-      </div>
-      <p className="bet-timer-warn">
-        시계가 사람마다 조금씩 다를 수 있어요. 마감 {WARN_SECONDS}초 전까지 배팅을 끝내주세요.
-      </p>
-    </div>
+      </span>
+    </span>
   );
 };
 
