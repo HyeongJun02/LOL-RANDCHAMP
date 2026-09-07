@@ -1441,58 +1441,8 @@ begin
 end; $fn$;
 
 
-create or replace function public.delete_scrim(p_scrim bigint)
-returns void language plpgsql security definer set search_path = public as $fn$
-declare
-  s        scrims;
-  n_people int;
-  n_amount bigint;
-begin
-  select * into s from scrims where id = p_scrim;
-  if s.id is null then return; end if;
-
-  select count(distinct user_id), coalesce(sum(amount), 0)
-    into n_people, n_amount
-    from bets where scrim_id = p_scrim;
-
-  -- 배팅 없는 기록은 부방장도 지울 수 있다. 돈이 걸린 판은 방장만.
-  -- 예전엔 배팅이 걸리면 아예 못 지웠는데, 잘못 연 또또를 취소할 방법이
-  -- 없어서 가짜 결과를 넣어 정산해야만 다음 판으로 넘어갈 수 있었다.
-  if n_people > 0 then
-    if not public.is_room_owner(s.room_id) then
-      raise exception '배팅이 걸린 경기는 방장만 취소할 수 있어요.';
-    end if;
-  elsif not public.is_room_admin(s.room_id) then
-    raise exception '방장과 부방장만 기록을 지울 수 있어요.';
-  end if;
-
-  -- 이 경기가 지갑에 한 일을 전부 되돌린다.
-  -- 건 돈('bet'), 지급('payout'), 참여 포인트('scrim') 가릴 것 없이
-  -- 아직 안 뒤집은 줄이면 다 뒤집는다. 정산을 한 번 되돌린 뒤여도
-  -- 그때 뒤집힌 줄은 reversed_at이 차 있어 두 번 세지 않는다.
-  with back as (
-    update point_ledger set reversed_at = now()
-     where ref_id = p_scrim and reversed_at is null
-       and reason in ('bet', 'payout', 'scrim')
-    returning user_id, delta
-  ),
-  ins as (
-    insert into point_ledger (user_id, room_id, delta, reason, ref_id, reversed_at)
-    select user_id, s.room_id, -delta, 'undo', p_scrim, now() from back
-    returning user_id, delta
-  )
-  update room_wallets w set points = w.points + x.d
-    from (select user_id, sum(delta) d from ins group by user_id) x
-   where w.room_id = s.room_id and w.user_id = x.user_id;
-
-  -- bets와 bet_pools는 scrims를 참조하며 on delete cascade다
-  delete from scrims where id = p_scrim;
-
-  if n_people > 0 then
-    perform public.log_room(s.room_id, 'scrim_cancelled', jsonb_build_object(
-      'people', n_people, 'refund', n_amount, 'status', s.status));
-  end if;
-end; $fn$;
+-- delete_scrim은 아래 관리자 절에서 정의한다.
+-- 환불·역분개 몸통(rollback_scrim)을 관리자 취소와 나눠 쓰기 때문이다.
 
 
 revoke execute on function public.award_participation(bigint) from public;
@@ -1506,8 +1456,7 @@ grant execute on function
   public.place_bets(bigint, jsonb),
   public.lock_betting(bigint),
   public.settle_scrim(bigint, text, int, bigint),
-  public.unsettle_scrim(bigint),
-  public.delete_scrim(bigint)
+  public.unsettle_scrim(bigint)
 to authenticated;
 
 
@@ -1730,6 +1679,253 @@ grant execute on function
   public.set_site_role(text, text),
   public.admin_delete_room(bigint),
   public.admin_roll_season()
+to authenticated;
+
+
+-- ============================================================
+-- 8. 관리자 - 점검과 조사
+-- ============================================================
+
+-- 경기 하나가 지갑에 한 일을 전부 되돌리고 지운다. 권한 검사는 없다.
+-- 부르는 쪽이 책임진다 (delete_scrim은 방 권한을, admin_cancel_scrim은
+-- 사이트 관리자를 확인한 뒤 부른다).
+--
+-- 이 몸통을 두 벌로 두면 한쪽만 고쳐서 끼꼬가 어긋나는 날이 온다.
+create or replace function public.rollback_scrim(p_scrim bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare s scrims;
+begin
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then return; end if;
+
+  -- 건 돈('bet'), 지급('payout'), 참여 포인트('scrim') 가릴 것 없이
+  -- 아직 안 뒤집은 줄이면 다 뒤집는다. 정산을 한 번 되돌린 뒤여도
+  -- 그때 뒤집힌 줄은 reversed_at이 차 있어 두 번 세지 않는다.
+  with back as (
+    update point_ledger set reversed_at = now()
+     where ref_id = p_scrim and reversed_at is null
+       and reason in ('bet', 'payout', 'scrim')
+    returning user_id, delta
+  ),
+  ins as (
+    insert into point_ledger (user_id, room_id, delta, reason, ref_id, reversed_at)
+    select user_id, s.room_id, -delta, 'undo', p_scrim, now() from back
+    returning user_id, delta
+  )
+  update room_wallets w set points = w.points + x.d
+    from (select user_id, sum(delta) d from ins group by user_id) x
+   where w.room_id = s.room_id and w.user_id = x.user_id;
+
+  -- bets와 bet_pools는 scrims를 참조하며 on delete cascade다
+  delete from scrims where id = p_scrim;
+end; $fn$;
+
+
+create or replace function public.delete_scrim(p_scrim bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare
+  s        scrims;
+  n_people int;
+  n_amount bigint;
+begin
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then return; end if;
+
+  select count(distinct user_id), coalesce(sum(amount), 0)
+    into n_people, n_amount
+    from bets where scrim_id = p_scrim;
+
+  -- 배팅 없는 기록은 부방장도 지울 수 있다. 돈이 걸린 판은 방장만.
+  -- 예전엔 배팅이 걸리면 아예 못 지웠는데, 잘못 연 또또를 취소할 방법이
+  -- 없어서 가짜 결과를 넣어 정산해야만 다음 판으로 넘어갈 수 있었다.
+  if n_people > 0 then
+    if not public.is_room_owner(s.room_id) then
+      raise exception '배팅이 걸린 경기는 방장만 취소할 수 있어요.';
+    end if;
+  elsif not public.is_room_admin(s.room_id) then
+    raise exception '방장과 부방장만 기록을 지울 수 있어요.';
+  end if;
+
+  perform public.rollback_scrim(p_scrim);
+
+  if n_people > 0 then
+    perform public.log_room(s.room_id, 'scrim_cancelled', jsonb_build_object(
+      'people', n_people, 'refund', n_amount, 'status', s.status));
+  end if;
+end; $fn$;
+
+
+-- 아직 결과가 안 들어온 또또. 방장이 잠수하면 걸린 끼꼬가 여기 묶인다.
+-- 자동 마감 타이머는 배팅을 닫아주지만 정산은 방장·부방장만 할 수 있어서,
+-- locked 상태로 멈춘 판은 방 안에서는 아무도 풀 수 없다.
+create or replace function public.admin_stuck_scrims()
+returns table (
+  id         bigint,
+  room_id    bigint,
+  room_name  text,
+  owner_name text,
+  status     text,
+  mode       text,
+  bet_count  int,
+  bet_total  bigint,
+  played_at  timestamptz,
+  locked_at  timestamptz
+)
+language plpgsql stable security definer set search_path = public as $fn$
+begin
+  perform public.require_site_admin();
+  return query
+    select s.id, s.room_id, r.name,
+           coalesce(nullif(op.nickname, ''), '이름 없음'),
+           s.status, s.mode, s.bet_count, s.bet_total, s.played_at, s.locked_at
+      from scrims s
+      join rooms r on r.id = s.room_id
+      left join profiles op on op.user_id = r.owner_id
+     where s.status in ('betting', 'locked')
+     order by s.played_at;
+end; $fn$;
+
+
+-- 방장이 안 돌아오는 판을 대신 없던 걸로 한다. 걸린 끼꼬는 전부 돌아간다.
+-- 결과를 대신 넣어주지는 않는다 - 관리자는 그 게임을 안 봤으니 승패를
+-- 알 수 없고, 잘못 넣으면 또또가 통째로 뒤집힌다. 환불이 유일하게
+-- 확실히 옳은 처리다.
+create or replace function public.admin_cancel_scrim(p_scrim bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare
+  s        scrims;
+  n_people int;
+  n_amount bigint;
+begin
+  perform public.require_site_admin();
+
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then return; end if;
+  if s.status = 'settled' then
+    raise exception '이미 정산된 경기예요. 방장이 되돌린 뒤에 처리해 주세요.';
+  end if;
+
+  select count(distinct user_id), coalesce(sum(amount), 0)
+    into n_people, n_amount
+    from bets where scrim_id = p_scrim;
+
+  perform public.rollback_scrim(p_scrim);
+
+  -- 방 사람들이 왜 사라졌는지 알아야 한다. 관리자가 했다는 것도 같이 남긴다
+  perform public.log_room(s.room_id, 'scrim_cancelled', jsonb_build_object(
+    'people', n_people, 'refund', n_amount, 'status', s.status, 'by', 'admin'));
+end; $fn$;
+
+
+-- 끼꼬 정합성.
+--
+-- 지갑은 원장의 합이어야 한다. 어긋났다면 정산 어딘가에서 끼꼬가
+-- 사라졌거나 새로 생긴 것이고, 그건 이 시스템에서 제일 무서운 종류의 버그다.
+-- 누가 "내 끼꼬가 이상한데?" 하고 말해줄 때까지 기다릴 일이 아니다.
+--
+-- 기준선은 마지막 시즌 초기화 시각(app_season.rolled_at)이다.
+-- 달의 1일로 잡으면 안 된다 - 초기화는 지연 실행이라 5일에 돌 수도 있고,
+-- 그러면 1~5일 사이 기록은 초기화 이전 것인데 이번 시즌으로 세어버린다.
+create or replace function public.admin_audit_wallets()
+returns table (
+  room_id   bigint,
+  room_name text,
+  user_id   text,
+  nickname  text,
+  actual    int,
+  expected  bigint,
+  diff      bigint
+)
+language plpgsql stable security definer set search_path = public as $fn$
+declare cut timestamptz;
+begin
+  perform public.require_site_admin();
+  select rolled_at into cut from app_season where id = 1;
+
+  return query
+    select w.room_id, r.name, w.user_id,
+           coalesce(nullif(p.nickname, ''), '이름 없음'),
+           w.points,
+           10000 + coalesce(l.total, 0),
+           w.points - (10000 + coalesce(l.total, 0))
+      from room_wallets w
+      join rooms r on r.id = w.room_id
+      left join profiles p on p.user_id = w.user_id
+      left join (
+        select point_ledger.room_id as rid, point_ledger.user_id as uid, sum(delta) as total
+          from point_ledger
+         where created_at > cut
+         group by 1, 2
+      ) l on l.rid = w.room_id and l.uid = w.user_id
+     where w.points <> 10000 + coalesce(l.total, 0)
+     order by abs(w.points - (10000 + coalesce(l.total, 0))) desc;
+end; $fn$;
+
+
+-- 사용자 한 명을 파고든다. "내 끼꼬 왜 줄었어요?" 에 답하려면
+-- 합계가 아니라 줄이 필요하다.
+create or replace function public.admin_user_detail(p_user text)
+returns jsonb language plpgsql stable security definer set search_path = public as $fn$
+declare out jsonb;
+begin
+  perform public.require_site_admin();
+
+  select jsonb_build_object(
+    'profile', (
+      select to_jsonb(x) from (
+        select p.user_id, p.nickname, p.role, p.created_at, p.agreed_fairplay_at
+          from profiles p where p.user_id = p_user
+      ) x
+    ),
+    'rooms', coalesce((
+      select jsonb_agg(x order by x.joined_at) from (
+        select r.id, r.name, r.emblem, m.role, m.joined_at, m.is_ghost,
+               coalesce(w.points, 0) as points
+          from room_members m
+          join rooms r on r.id = m.room_id
+          left join room_wallets w on w.room_id = r.id and w.user_id = m.user_id
+         where m.user_id = p_user
+      ) x
+    ), '[]'::jsonb),
+    'ledger', coalesce((
+      select jsonb_agg(x order by x.created_at desc) from (
+        select l.id, l.room_id, r.name as room_name, l.delta, l.reason,
+               l.counterpart_user_id,
+               coalesce(nullif(cp.nickname, ''), null) as counterpart_name,
+               l.reversed_at, l.created_at
+          from point_ledger l
+          left join rooms r on r.id = l.room_id
+          left join profiles cp on cp.user_id = l.counterpart_user_id
+         where l.user_id = p_user
+         order by l.id desc
+         limit 40
+      ) x
+    ), '[]'::jsonb),
+    'bets', coalesce((
+      select jsonb_agg(x order by x.created_at desc) from (
+        select b.id, b.room_id, r.name as room_name, b.market, b.selection,
+               b.amount, b.odds, b.payout, b.created_at
+          from bets b
+          left join rooms r on r.id = b.room_id
+         where b.user_id = p_user
+         order by b.id desc
+         limit 25
+      ) x
+    ), '[]'::jsonb)
+  ) into out;
+
+  return out;
+end; $fn$;
+
+
+revoke execute on function public.rollback_scrim(bigint) from public;
+
+grant execute on function
+  public.delete_scrim(bigint),
+  public.admin_stuck_scrims(),
+  public.admin_cancel_scrim(bigint),
+  public.admin_audit_wallets(),
+  public.admin_user_detail(text)
 to authenticated;
 
 notify pgrst, 'reload schema';

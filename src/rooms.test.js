@@ -806,8 +806,10 @@ test('배팅이 걸린 경기도 방장이면 취소할 수 있다', () => {
   expect(body).toContain('방장과 부방장만 기록을 지울 수 있어요');
 });
 
+/* 되돌리는 몸통은 rollback_scrim으로 옮겼다. 방장 취소와 관리자 취소가
+   같은 길을 써야 한쪽만 고쳐서 끼꼬가 어긋나는 일이 없다 */
 test('취소하면 건 돈·지급·참여 포인트를 전부 되돌린다', () => {
-  const body = fnBody('delete_scrim');
+  const body = fnBody('rollback_scrim');
   expect(body).toMatch(/reason in \('bet', 'payout', 'scrim'\)/);
   /* 이미 뒤집힌 줄을 또 뒤집으면 두 배로 돌아간다 */
   expect(body).toContain('reversed_at is null');
@@ -946,4 +948,29 @@ test('시즌 강제 초기화는 없다 (달 확인만 밀어준다)', () => {
   expect(body).toContain('roll_season()');
   /* 여기서 직접 points를 만지면 모두의 끼꼬가 한 번에 날아간다 */
   expect(body).not.toMatch(/update\s+(public\.)?(profiles|room_wallets)/);
+});
+
+/* rollback_scrim은 권한 검사가 없다. 돈을 움직이는 함수를 열어두는 셈이라,
+   아무도 직접 못 부르는지와 부르는 쪽이 전부 검사하는지를 같이 본다 */
+test('환불 몸통은 직접 부를 수 없고, 부르는 쪽이 권한을 본다', () => {
+  expect(sql).toContain('revoke execute on function public.rollback_scrim(bigint) from public;');
+  expect(sql).not.toMatch(/grant execute on function[^;]*rollback_scrim/);
+
+  expect(fnBody('delete_scrim')).toContain('is_room_owner');
+  expect(fnBody('admin_cancel_scrim')).toContain('require_site_admin()');
+});
+
+/* 관리자는 그 게임을 안 봤다. 승패를 대신 정하면 또또가 통째로 뒤집힌다 */
+test('관리자 취소는 환불만 한다 (결과를 넣지 않는다)', () => {
+  const body = fnBody('admin_cancel_scrim');
+  expect(body).toContain("if s.status = 'settled' then");
+  expect(body).not.toMatch(/set\s+winner\s*=/);
+});
+
+/* 시즌 초기화는 지연 실행이라 5일에 돌 수도 있다. 달의 1일로 자르면
+   1~5일 기록이 초기화 이전 것인데 이번 시즌으로 세어버린다 */
+test('정합성 검사는 마지막 초기화 시각을 기준으로 자른다', () => {
+  const body = fnBody('admin_audit_wallets');
+  expect(body).toContain('rolled_at into cut');
+  expect(body).toContain('created_at > cut');
 });

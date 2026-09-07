@@ -273,3 +273,94 @@ a.adm-name:hover {
     font-size: 1.1rem;
   }
 }
+
+/* ---------- 점검 ---------- */
+
+/* 평소엔 이것만 보여야 정상이다 */
+.adm-ok,
+.adm-bad {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.adm-ok {
+  color: #4ade80;
+}
+
+.adm-bad {
+  color: #f87171;
+}
+
+.adm-checklist {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.adm-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.65rem;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.78rem;
+}
+
+.adm-checklist .dim {
+  color: #6b7686;
+}
+
+/* 금액은 남는 자리를 먹고 오른쪽 끝에 붙는다 */
+.adm-amount {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gg-gold);
+  white-space: nowrap;
+}
+
+/* ---------- 사용자 상세 ---------- */
+
+.adm-peek {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.adm-peek:hover {
+  color: var(--gg-gold);
+  text-decoration: underline;
+}
+
+.adm-detail {
+  display: grid;
+  gap: 1.4rem;
+}
+
+.adm-detail h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+/* 되돌려진 줄. 지운 게 아니라 취소분이 따로 한 줄 더 있다는 뜻이다 */
+.adm-detail .is-reversed {
+  opacity: 0.45;
+  text-decoration: line-through;
+}

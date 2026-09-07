@@ -25,6 +25,18 @@ export const setSiteRole = (userId, role) =>
 
 export const adminDeleteRoom = (roomId) => rpc('admin_delete_room', { p_room: roomId });
 
+/* 아직 결과가 안 들어온 또또. 방장이 잠수하면 걸린 끼꼬가 여기 묶인다 */
+export const fetchStuckScrims = () => rpc('admin_stuck_scrims');
+
+/* 결과를 대신 넣어주지는 않는다. 관리자는 그 게임을 안 봤으니
+   확실히 옳은 처리는 환불뿐이다 */
+export const adminCancelScrim = (scrimId) => rpc('admin_cancel_scrim', { p_scrim: scrimId });
+
+/* 지갑이 원장의 합과 어긋난 줄만 돌려준다. 빈 배열이면 정상이다 */
+export const fetchWalletAudit = () => rpc('admin_audit_wallets');
+
+export const fetchUserDetail = (userId) => rpc('admin_user_detail', { p_user: userId });
+
 /* 달이 넘어갔는데 아무도 안 들어와서 시즌이 안 돌아간 경우를 밀어준다.
    같은 달에 불러도 아무 일이 없다 - 강제 초기화가 아니다 */
 export const rollSeasonNow = () => rpc('admin_roll_season');

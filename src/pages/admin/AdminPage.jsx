@@ -10,6 +10,7 @@ import {
   FaTrash,
   FaUserShield,
   FaUsers,
+  FaStethoscope,
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import { useMe, feedParts } from '../../rooms';
@@ -24,6 +25,8 @@ import {
 import { useDialog } from '../../components/common/Dialog';
 import PageHeader from '../../components/common/PageHeader';
 import { SkelRows, SkelBox } from '../../components/common/Skeleton';
+import CheckTab from './CheckTab';
+import UserDetail from './UserDetail';
 import './Admin.css';
 
 const num = (n) => Number(n || 0).toLocaleString();
@@ -46,6 +49,7 @@ const TABS = [
   { key: 'overview', label: '개요', icon: <FaChartBar /> },
   { key: 'users', label: '사용자', icon: <FaUsers /> },
   { key: 'rooms', label: '방', icon: <FaDoorOpen /> },
+  { key: 'check', label: '점검', icon: <FaStethoscope /> },
   { key: 'logs', label: '로그', icon: <FaUserShield /> },
 ];
 
@@ -177,6 +181,8 @@ const AdminPage = () => {
 
   const [tab, setTab] = useState('overview');
   const [q, setQ] = useState('');
+  /* 표에서 이름을 누르면 그 사람만 파고든다 */
+  const [peek, setPeek] = useState(null);
 
   const isAdmin = me?.role === 'admin';
   const { data, loading, error, reload } = useAdminData(isAdmin);
@@ -405,7 +411,13 @@ const AdminPage = () => {
                     {users.map((u) => (
                       <tr key={u.user_id} className={u.role === 'admin' ? 'is-admin' : ''}>
                         <td>
-                          <span className="adm-name">{u.nickname || '이름 없음'}</span>
+                          <button
+                            className="adm-name adm-peek"
+                            onClick={() => setPeek(u)}
+                            title="자세히 보기"
+                          >
+                            {u.nickname || '이름 없음'}
+                          </button>
                           {u.role === 'admin' && <span className="adm-badge">관리자</span>}
                           {u.user_id === user.id && <em className="adm-me">나</em>}
                         </td>
@@ -507,8 +519,18 @@ const AdminPage = () => {
             </>
           )}
 
+          {tab === 'check' && <CheckTab onChanged={reload} />}
+
           {tab === 'logs' && <LogsTab />}
         </>
+      )}
+
+      {peek && (
+        <UserDetail
+          userId={peek.user_id}
+          name={peek.nickname}
+          onClose={() => setPeek(null)}
+        />
       )}
     </div>
   );
