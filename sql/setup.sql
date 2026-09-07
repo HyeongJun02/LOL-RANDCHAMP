@@ -707,9 +707,11 @@ create or replace function public.adjust_points(
   p_room bigint, p_user text, p_delta int, p_reason text)
 returns void language plpgsql security definer set search_path = public as $fn$
 declare
-  who    text;
-  why    text := nullif(trim(p_reason), '');
-  after_ int;
+  who     text;
+  why     text := nullif(trim(p_reason), '');
+  before_ int;
+  applied int;
+  after_  int;
 begin
   perform public.roll_season();
 
@@ -730,18 +732,29 @@ begin
 
   perform public.ensure_wallet(p_room, p_user);
 
-  -- 잔액은 0 밑으로 내려가지 않는다
-  update room_wallets set points = greatest(0, points + p_delta)
+  -- 잔액은 0 밑으로 내려가지 않는다. 다만 '깎인 만큼'만 원장에 적어야 한다.
+  -- 지갑은 0에서 멈췄는데 원장에는 -5000이 적히면 둘이 영영 어긋나고,
+  -- 정합성 검사가 그 방을 계속 빨갛게 띄운다.
+  select points into before_ from room_wallets
+   where room_id = p_room and user_id = p_user
+   for update;
+
+  applied := greatest(0, before_ + p_delta) - before_;
+  if applied = 0 then
+    raise exception '이미 0이라 더 뺄 끼꼬가 없어요.';
+  end if;
+
+  update room_wallets set points = before_ + applied
    where room_id = p_room and user_id = p_user
    returning points into after_;
 
   insert into point_ledger (user_id, room_id, delta, reason, counterpart_user_id)
-  values (p_user, p_room, p_delta, 'adjust', auth.user_id());
+  values (p_user, p_room, applied, 'adjust', auth.user_id());
 
   select coalesce(nullif(nickname, ''), '이름없음') into who from profiles where user_id = p_user;
 
   perform public.log_room(p_room, 'adjust', jsonb_build_object(
-    'who', who, 'delta', p_delta, 'after', after_, 'reason', why));
+    'who', who, 'delta', applied, 'after', after_, 'reason', why));
 end; $fn$;
 
 

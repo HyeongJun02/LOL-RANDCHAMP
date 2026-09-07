@@ -603,7 +603,8 @@ test('조정하면 반드시 로그가 남는다 (조용히 자기 잔액만 올
 
 test('조정은 방 지갑만 건드리고 잔액이 음수가 되지 않는다', () => {
   const body = fnBody('adjust_points');
-  expect(body).toMatch(/update room_wallets set points = greatest\(0, points \+ p_delta\)/);
+  /* 0에서 멈추되, 멈춘 만큼은 원장에도 그대로 반영된다 (아래 테스트) */
+  expect(body).toContain('greatest(0, before_ + p_delta)');
   expect(body).toContain('where room_id = p_room and user_id = p_user');
 });
 
@@ -973,4 +974,14 @@ test('정합성 검사는 마지막 초기화 시각을 기준으로 자른다',
   const body = fnBody('admin_audit_wallets');
   expect(body).toContain('rolled_at into cut');
   expect(body).toContain('created_at > cut');
+});
+
+/* 지갑이 0에서 멈췄는데 원장에는 전액이 적히면 둘이 영영 어긋나고,
+   정합성 검사가 그 방을 계속 빨갛게 띄운다 */
+test('끼꼬 조정은 실제로 깎인 만큼만 원장에 적는다', () => {
+  const body = fnBody('adjust_points');
+  expect(body).toContain('applied := greatest(0, before_ + p_delta) - before_;');
+  /* 원장에 p_delta를 그대로 적으면 안 된다 */
+  expect(body).toMatch(/values \(p_user, p_room, applied, 'adjust'/);
+  expect(body).not.toMatch(/values \(p_user, p_room, p_delta, 'adjust'/);
 });
