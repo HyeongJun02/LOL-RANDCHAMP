@@ -456,7 +456,7 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
               </span>
               <span className="tier-gap-acts">
                 <button className="ghost-btn" onClick={pullTiers}>
-                  내 명단에 맞추기
+                  내 명단에 반영
                 </button>
                 <button className="ghost-btn" onClick={pushTiers}>
                   방 명단에 반영
