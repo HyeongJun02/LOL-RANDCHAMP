@@ -8,11 +8,12 @@ const read = (rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8');
    실제 파일에서 읽어 비교해야 '라우트는 늘렸는데 SEO를 빼먹은' 걸 잡는다 */
 /* :id 같은 동적 경로는 뺀다. 방마다 다른 페이지라 sitemap에 올릴 주소가 없고
    고정 제목·설명을 붙일 수도 없다.
-   '*'(없는 주소)도 뺀다. 404는 색인시킬 페이지가 아니다 */
+   '*'(없는 주소)도 뺀다. 404는 색인시킬 페이지가 아니다.
+   /admin도 뺀다. 관리자에게만 보이는 화면이라 색인 대상이 아니다 */
 const routePaths = () =>
   [...read('App.js').matchAll(/<Route\s+path="([^"]+)"/g)]
     .map((m) => m[1])
-    .filter((p) => !p.includes(':') && p !== '*')
+    .filter((p) => !p.includes(':') && p !== '*' && p !== '/admin')
     .sort();
 
 const sitemapPaths = () =>

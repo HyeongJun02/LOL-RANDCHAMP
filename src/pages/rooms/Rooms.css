@@ -422,22 +422,31 @@
 
 /* ---------- 방 탭 ---------- */
 /* 스크롤을 내려도 따라온다. 기록을 한참 내려보다 또또로 넘어가려고
-   맨 위까지 올라가야 하면 그게 제일 답답하다 */
+   맨 위까지 올라가야 하면 그게 제일 답답하다.
+
+   헤더 바로 밑에 붙여두면 두 막대가 한 덩어리로 보여서 답답하다.
+   틈을 주고 띄운다 - 그 틈으로 내용이 지나가는 게 떠 있다는 신호다 */
 
 .room-tabs {
   position: sticky;
-  top: var(--header-h, 80px);
+  top: calc(var(--header-h, 80px) + 0.6rem);
   z-index: 20;
   display: flex;
   gap: 0.25rem;
   overflow-x: auto;
   scrollbar-width: none;
-  margin-bottom: 1rem;
-  padding: 0.3rem;
-  border-radius: 12px;
+  margin: 0 0 1.15rem;
+  padding: 0.32rem;
+  border-radius: 999px;
   border: 1px solid var(--gg-panel-border);
-  background: rgba(8, 12, 20, 0.92);
-  backdrop-filter: blur(10px);
+  background: rgba(8, 12, 20, 0.86);
+  backdrop-filter: blur(14px) saturate(1.3);
+  /* 아래로 퍼지는 그림자 + 위쪽 하이라이트. 판이 떠 있는 느낌은
+     그림자 하나보다 이 둘이 같이 있을 때 난다 */
+  box-shadow:
+    0 10px 28px -14px rgba(0, 0, 0, 0.85),
+    0 2px 8px -4px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .room-tabs::-webkit-scrollbar {

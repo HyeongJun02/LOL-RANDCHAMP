@@ -914,3 +914,36 @@ test('직접 정한 기준선은 경기에 박아둔다 (나중에 명단이 바
   /* .5로 안 끝나면 무승부가 생긴다 */
   expect(body).toContain("raise exception '총 킬 기준선은 53.5처럼 .5로 끝나야 해요.'");
 });
+
+/* ---------- 관리자 ---------- */
+/* 방을 넘나드는 값이라 RLS로는 막을 수 없다. 함수 안의 검사가 유일한 문이고,
+   함수를 하나 더 만들면서 그 줄을 빼먹는 게 가장 그럴듯한 사고다 */
+
+test('admin_ 으로 시작하는 함수는 전부 관리자인지 먼저 확인한다', () => {
+  const names = [...sql.matchAll(/create or replace function public\.(admin_\w+)/g)]
+    .map((m) => m[1])
+    /* admin_id()는 상수를 돌려주는 것뿐이라 지킬 게 없다 */
+    .filter((n) => n !== 'admin_id');
+  expect(names.length).toBeGreaterThan(0);
+  names.forEach((n) => {
+    expect(fnBody(n)).toContain('require_site_admin()');
+  });
+});
+
+test('관리자 여부는 DB의 profiles.role만 본다', () => {
+  const body = fnBody('is_site_admin');
+  expect(body).toContain("role = 'admin'");
+  expect(body).toContain('auth.user_id()');
+});
+
+/* 마지막 관리자가 자기를 내리면 앱에서는 되돌릴 방법이 없다 */
+test('자기 권한은 앱에서 못 바꾼다', () => {
+  expect(fnBody('set_site_role')).toContain('p_user = auth.user_id()');
+});
+
+test('시즌 강제 초기화는 없다 (달 확인만 밀어준다)', () => {
+  const body = fnBody('admin_roll_season');
+  expect(body).toContain('roll_season()');
+  /* 여기서 직접 points를 만지면 모두의 끼꼬가 한 번에 날아간다 */
+  expect(body).not.toMatch(/update\s+(public\.)?(profiles|room_wallets)/);
+});

@@ -4,12 +4,17 @@ import toast from 'react-hot-toast';
 import { FaDice } from 'react-icons/fa';
 import { TOOL_SECTIONS } from '../../../tools';
 import { useAuth } from '../../../auth/AuthContext';
+import { useMe } from '../../../rooms';
 import AuthModal from '../../auth/AuthModal';
 import UserMenu from '../../auth/UserMenu';
 import './Header.css';
 
 const Header = () => {
   const { user, loading, configured, signOut } = useAuth();
+  /* 관리자에게만 프로필 메뉴에 관리자 항목을 띄운다.
+     get_me는 로그인하면 어차피 한 번 부르는 것이라(시즌 확인도 여기서 한다)
+     따로 요청이 늘지 않는다 */
+  const { me } = useMe(user?.id);
   const [showAuth, setShowAuth] = useState(false);
   const box = useRef(null);
 
@@ -49,7 +54,7 @@ const Header = () => {
         {configured && !loading && (
           <div className="header-auth">
             {user ? (
-              <UserMenu user={user} onSignOut={handleSignOut} />
+              <UserMenu user={user} isAdmin={me?.role === 'admin'} onSignOut={handleSignOut} />
             ) : (
               <button className="login-btn" onClick={() => setShowAuth(true)}>
                 로그인

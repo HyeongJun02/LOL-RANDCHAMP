@@ -150,6 +150,12 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+/* 관리자 항목은 링크(a)라 밑줄과 기본 색이 따라붙는다 */
+a.user-menu-item {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
 .user-menu-item:hover {
   background: rgba(200, 170, 110, 0.14);
   color: var(--gg-gold-light);

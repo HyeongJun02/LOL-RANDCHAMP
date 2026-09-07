@@ -23,7 +23,8 @@ const unwrap = ({ data, error }) => {
    한 칸짜리 배열로 오기도 한다. 양쪽 다 받는다 */
 const first = (d) => (Array.isArray(d) ? d[0] : d) || null;
 
-const rpc = async (fn, args) => {
+/* admin.js도 같은 통로를 쓴다. 오류 처리를 두 벌 두지 않는다 */
+export const rpc = async (fn, args) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
   try {
     return unwrap(await neon.rpc(fn, args));

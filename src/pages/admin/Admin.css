@@ -1,0 +1,275 @@
+/* 관리자 화면.
+
+   본 사이트와 같은 재료(.room-panel, .room-tabs, .rooms-input)를 그대로 쓰고,
+   여기서만 필요한 것 - 밀도 높은 표와 숫자 칸 - 만 더한다.
+   훑는 화면이라 여백보다 한 화면에 들어오는 줄 수가 중요하다. */
+
+.adm-page .page-head {
+  position: relative;
+}
+
+.adm-reload {
+  margin-top: 0.6rem;
+}
+
+/* 방 안 탭과 달리 따라다닐 이유가 없다. 표가 길어도 위로 올라가면 그만이고,
+   표 머리(정렬 버튼)가 붙어 있는 편이 더 쓸모 있다 */
+.adm-tabs {
+  position: static;
+}
+
+/* ---------- 숫자 칸 ---------- */
+
+.adm-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.adm-stat {
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--gg-panel-border);
+}
+
+.adm-stat b {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.adm-stat span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  color: #8b98ae;
+}
+
+.adm-stat em {
+  display: block;
+  margin-top: 0.25rem;
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #6b7686;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-action {
+  margin-top: 0.8rem;
+}
+
+/* 할 일이 남아 있을 때만 눈에 띄게. 평소엔 조용한 버튼이다 */
+.adm-action.urge {
+  border-color: var(--gg-gold);
+  color: var(--gg-gold);
+}
+
+/* ---------- 표 ---------- */
+
+.adm-search {
+  width: 100%;
+  margin-bottom: 0.8rem;
+}
+
+/* 열이 많아서 좁은 화면에서는 반드시 넘친다.
+   페이지가 통째로 가로로 흐르지 않게 여기서만 흐르게 한다 */
+.adm-tablewrap {
+  overflow-x: auto;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 12px;
+  background: rgba(8, 12, 20, 0.5);
+}
+
+.adm-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.adm-table th,
+.adm-table td {
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.adm-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  background: rgba(12, 17, 26, 0.97);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--gg-panel-border);
+}
+
+.adm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.adm-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.adm-th {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.55rem 0.7rem;
+  border: none;
+  background: none;
+  color: #8b98ae;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.adm-th:hover {
+  color: #cbd5e1;
+}
+
+.adm-th.on {
+  color: var(--gg-gold);
+}
+
+.adm-th i {
+  font-style: normal;
+  font-size: 0.6rem;
+}
+
+.adm-table .num,
+.adm-table th.num .adm-th {
+  text-align: right;
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-table .right {
+  text-align: right;
+}
+
+.adm-table .dim {
+  color: #6b7686;
+}
+
+.adm-table .plus {
+  color: #4ade80;
+}
+
+.adm-table .minus {
+  color: #f87171;
+}
+
+.adm-name {
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+
+a.adm-name:hover {
+  color: var(--gg-gold);
+}
+
+.adm-emblem {
+  margin-right: 0.35rem;
+}
+
+.adm-badge {
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(200, 170, 110, 0.16);
+  color: var(--gg-gold);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.adm-me {
+  margin-left: 0.35rem;
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #6b7686;
+}
+
+.adm-table tr.is-admin td:first-child {
+  box-shadow: inset 2px 0 0 var(--gg-gold);
+}
+
+.adm-btn {
+  padding: 0.22rem 0.5rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 7px;
+  background: transparent;
+  color: #8b98ae;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.adm-btn:hover {
+  color: #e2e8f0;
+  border-color: #8b98ae;
+}
+
+.adm-btn.danger:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
+
+/* ---------- 로그 ---------- */
+
+.adm-logs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.adm-logs li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* 어느 방에서 난 일인지가 관리자에게는 제일 먼저 필요하다 */
+.adm-log-room {
+  color: var(--gg-gold);
+  font-weight: 700;
+  text-decoration: none;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adm-log-room:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .adm-stats {
+    grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  }
+
+  .adm-stat b {
+    font-size: 1.1rem;
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaChevronDown, FaSignOutAlt, FaUserFriends } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaChevronDown, FaSignOutAlt, FaUserFriends, FaUserShield } from 'react-icons/fa';
 import { openRosterModal } from '../../rosterModal';
 import './UserMenu.css';
 
@@ -15,7 +16,7 @@ const Avatar = ({ user, broken, onBroken }) =>
     <span className="avatar-letter">{initialOf(user)}</span>
   );
 
-const UserMenu = ({ user, onSignOut }) => {
+const UserMenu = ({ user, isAdmin, onSignOut }) => {
   const [open, setOpen] = useState(false);
   const [broken, setBroken] = useState(false);
   const box = useRef(null);
@@ -69,6 +70,16 @@ const UserMenu = ({ user, onSignOut }) => {
           >
             <FaUserFriends /> 내 팀원 명단
           </button>
+          {isAdmin && (
+            <Link
+              className="user-menu-item"
+              role="menuitem"
+              to="/admin"
+              onClick={() => setOpen(false)}
+            >
+              <FaUserShield /> 관리자
+            </Link>
+          )}
           <button
             className="user-signout"
             role="menuitem"

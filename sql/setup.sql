@@ -1520,4 +1520,216 @@ to authenticated;
 -- 라고 나온다. 표는 멀쩡히 있는데 API 쪽이 아직 모르는 것이다.
 --
 -- 이 스크립트를 고쳐서 다시 돌릴 때마다 이 줄이 마지막에 있어야 한다.
+
+
+-- ============================================================
+-- 7. 관리자
+-- ============================================================
+-- profiles.role = 'admin' 인 사람만.
+-- 첫 관리자는 콘솔에서 손으로 지정한다. 앱에서 자기를 관리자로 만들 수
+-- 있으면 관리자라는 게 아무 의미가 없기 때문이다:
+--
+--   update public.profiles set role = 'admin' where user_id = '...';
+--
+-- role 컬럼은 GRANT에서 빠져 있어(닉네임만 열려 있다) 브라우저에서
+-- 직접 못 고친다. 아래 set_site_role()로만 바뀌고, 그것도 관리자만 부른다.
+
+create or replace function public.is_site_admin()
+returns boolean language sql stable security definer set search_path = public as $fn$
+  select exists (
+    select 1 from profiles where user_id = auth.user_id() and role = 'admin'
+  );
+$fn$;
+
+-- 관리자 함수는 전부 이걸로 시작한다. 빼먹으면 아무나 전체 사용자를 본다
+create or replace function public.require_site_admin()
+returns void language plpgsql stable security definer set search_path = public as $fn$
+begin
+  if not public.is_site_admin() then
+    raise exception '관리자만 볼 수 있어요.';
+  end if;
+end; $fn$;
+
+
+-- 한 화면에 올릴 숫자들. 여러 번 왕복하지 않게 한 번에 준다
+create or replace function public.admin_overview()
+returns jsonb language plpgsql stable security definer set search_path = public as $fn$
+begin
+  perform public.require_site_admin();
+  return jsonb_build_object(
+    'users',        (select count(*) from profiles),
+    'users_7d',     (select count(*) from profiles where created_at > now() - interval '7 days'),
+    'named',        (select count(*) from profiles where coalesce(nickname, '') <> ''),
+    'rooms',        (select count(*) from rooms),
+    'memberships',  (select count(*) from room_members where not is_ghost),
+    'players',      (select count(*) from room_players),
+    'scrims',       (select count(*) from scrims where status = 'settled'),
+    'scrims_7d',    (select count(*) from scrims
+                      where status = 'settled' and played_at > now() - interval '7 days'),
+    'live',         (select count(*) from scrims where status in ('betting', 'locked')),
+    'bets',         (select count(*) from bets),
+    'wagered',      (select coalesce(sum(amount), 0) from bets),
+    'paid',         (select coalesce(sum(payout), 0) from bets where payout is not null),
+    'points',       (select coalesce(sum(points), 0) from room_wallets),
+    'wallets',      (select count(*) from room_wallets),
+    'logs',         (select count(*) from room_logs),
+    'season',       (select current_month from app_season where id = 1),
+    'rolled_at',    (select rolled_at from app_season where id = 1),
+    'this_month',   public.now_month()
+  );
+end; $fn$;
+
+
+-- 사용자 전체. 방을 넘나드는 값이라 RLS로는 절대 못 보는 화면이다
+create or replace function public.admin_users()
+returns table (
+  user_id     text,
+  nickname    text,
+  role        text,
+  created_at  timestamptz,
+  rooms       int,
+  points      bigint,
+  bets        int,
+  wagered     bigint,
+  net         bigint,
+  last_active timestamptz
+)
+language plpgsql stable security definer set search_path = public as $fn$
+begin
+  perform public.require_site_admin();
+  return query
+    select
+      p.user_id,
+      p.nickname,
+      p.role,
+      p.created_at,
+      (select count(*)::int from room_members m
+        where m.user_id = p.user_id and not m.is_ghost),
+      (select coalesce(sum(w.points), 0) from room_wallets w where w.user_id = p.user_id),
+      (select count(*)::int from bets b where b.user_id = p.user_id),
+      (select coalesce(sum(b.amount), 0) from bets b where b.user_id = p.user_id),
+      -- 또또로 딴 만큼. 건 돈과 받은 돈의 차이라 음수면 잃은 것이다
+      (select coalesce(sum(coalesce(b.payout, 0) - b.amount), 0)
+         from bets b where b.user_id = p.user_id and b.payout is not null),
+      (select max(l.created_at) from point_ledger l where l.user_id = p.user_id)
+    from profiles p
+    order by p.created_at desc;
+end; $fn$;
+
+
+create or replace function public.admin_rooms()
+returns table (
+  id          bigint,
+  name        text,
+  emblem      text,
+  accent      text,
+  owner_id    text,
+  owner_name  text,
+  members     int,
+  players     int,
+  scrims      int,
+  bets        int,
+  wagered     bigint,
+  points      bigint,
+  created_at  timestamptz,
+  last_played timestamptz
+)
+language plpgsql stable security definer set search_path = public as $fn$
+begin
+  perform public.require_site_admin();
+  return query
+    select
+      r.id, r.name, r.emblem, r.accent, r.owner_id,
+      coalesce(nullif(op.nickname, ''), '이름 없음'),
+      (select count(*)::int from room_members m where m.room_id = r.id and not m.is_ghost),
+      (select count(*)::int from room_players rp where rp.room_id = r.id),
+      (select count(*)::int from scrims s where s.room_id = r.id and s.status = 'settled'),
+      (select count(*)::int from bets b where b.room_id = r.id),
+      (select coalesce(sum(b.amount), 0) from bets b where b.room_id = r.id),
+      (select coalesce(sum(w.points), 0) from room_wallets w where w.room_id = r.id),
+      r.created_at,
+      (select max(s.played_at) from scrims s where s.room_id = r.id)
+    from rooms r
+    left join profiles op on op.user_id = r.owner_id
+    order by r.created_at desc;
+end; $fn$;
+
+
+-- 방을 가리지 않는 전체 로그. 커서로 이어 받는다
+create or replace function public.admin_logs(p_before bigint default null, p_limit int default 40)
+returns table (
+  id         bigint,
+  room_id    bigint,
+  room_name  text,
+  type       text,
+  payload    jsonb,
+  created_at timestamptz
+)
+language plpgsql stable security definer set search_path = public as $fn$
+begin
+  perform public.require_site_admin();
+  return query
+    select l.id, l.room_id, r.name, l.type, l.payload, l.created_at
+      from room_logs l
+      join rooms r on r.id = l.room_id
+     where p_before is null or l.id < p_before
+     order by l.id desc
+     limit least(coalesce(p_limit, 40), 100);
+end; $fn$;
+
+
+-- 관리자 지정/해제.
+create or replace function public.set_site_role(p_user text, p_role text)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  perform public.require_site_admin();
+  if p_role not in ('user', 'admin') then
+    raise exception '알 수 없는 권한이에요.';
+  end if;
+  -- 자기를 강등하면 관리자가 하나도 없는 상태가 될 수 있고,
+  -- 그러면 앱에서는 되돌릴 방법이 없어 콘솔로 들어가야 한다
+  if p_user = auth.user_id() then
+    raise exception '자기 권한은 바꿀 수 없어요.';
+  end if;
+  update profiles set role = p_role where user_id = p_user;
+end; $fn$;
+
+
+create or replace function public.admin_delete_room(p_room bigint)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare nm text;
+begin
+  perform public.require_site_admin();
+  select name into nm from rooms where id = p_room;
+  if nm is null then return; end if;
+  -- 참조가 전부 on delete cascade라 방 한 줄이면 딸린 것들이 같이 지워진다
+  delete from rooms where id = p_room;
+end; $fn$;
+
+
+-- 시즌이 넘어갔는데 아무도 안 들어와서 안 돌아간 경우를 손으로 밀어준다.
+-- roll_season()이 달을 다시 확인하므로 같은 달에 불러도 아무 일이 없다.
+-- (강제 초기화가 아니다 - 그건 모두의 끼꼬를 날리는 일이라 만들지 않았다)
+create or replace function public.admin_roll_season()
+returns text language plpgsql security definer set search_path = public as $fn$
+begin
+  perform public.require_site_admin();
+  perform public.roll_season();
+  return (select current_month from app_season where id = 1);
+end; $fn$;
+
+
+revoke execute on function public.require_site_admin() from public;
+
+grant execute on function
+  public.is_site_admin(),
+  public.admin_overview(),
+  public.admin_users(),
+  public.admin_rooms(),
+  public.admin_logs(bigint, int),
+  public.set_site_role(text, text),
+  public.admin_delete_room(bigint),
+  public.admin_roll_season()
+to authenticated;
+
 notify pgrst, 'reload schema';
