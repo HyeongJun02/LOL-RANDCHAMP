@@ -1871,12 +1871,35 @@
   background: rgba(0, 0, 0, 0.25);
 }
 
-.line-value strong {
+.line-value input {
+  width: 4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gg-gold-light);
+  font-family: inherit;
   font-size: 1.1rem;
   font-weight: 800;
-  color: var(--gg-gold-light);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+  text-align: center;
+  outline: none;
+}
+
+/* 숫자만 치면 되는 칸이라 스피너는 자리만 먹는다 */
+.line-value input::-webkit-outer-spin-button,
+.line-value input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.line-value input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.line-value:focus-within {
+  border-color: color-mix(in srgb, var(--gg-gold) 55%, transparent);
 }
 
 .line-value em {
@@ -2099,4 +2122,25 @@
 .room-card-stat .game-logo,
 .room-game .game-logo {
   margin-right: 0.28rem;
+}
+
+/* 방 이름 위의 게임 줄. 통계 줄(인원·끼꼬)에 끼워 넣으면
+   '리그 오브 레전드'가 길어서 줄을 넘긴다 */
+.room-card-game {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #6b7a94;
+}
+
+.room-card-game .game-logo {
+  margin-right: 0;
+}
+
+/* 게임 줄이 생기면서 이름 줄은 위 여백이 필요 없다 */
+.room-card-game + .room-card-head {
+  margin-top: -0.15rem;
 }

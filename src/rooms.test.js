@@ -662,14 +662,30 @@ test('로그가 문장으로 읽힌다', () => {
 
 /* ---------- 방 상세 조회 ---------- */
 
-test('경기를 읽을 때 마감 시각도 같이 읽는다 (없으면 타이머가 조용히 안 그려진다)', () => {
+/* 여기서 컬럼을 빼먹으면 화면이 조용히 틀린 값을 보여준다. 오류도 안 난다.
+   실제로 kill_line을 빼먹어서, 방장이 직접 정한 기준선이 저장은 되는데
+   화면은 인원으로 계산한 값을 계속 쓰고 있었다 */
+test('방을 읽을 때 화면이 쓰는 컬럼을 다 읽는다', () => {
   const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
   const select = src.slice(src.indexOf('const ROOM_SELECT'), src.indexOf('const POLL_MS'));
-  ['betting_closes_at', 'bet_count', 'status'].forEach((col) => {
+  [
+    'status',
+    'bet_count',
+    /* 없으면 마감 타이머가 아예 안 그려진다 */
+    'betting_closes_at',
+    /* 없으면 방장이 정한 기준선이 무시된다 */
+    'kill_line',
+    /* 없으면 유령 멤버 표시가 안 뜬다 */
+    'is_ghost',
+    /* 없으면 지운 참가자의 지난 경기 이름이 빠진다 */
+    'deleted_at',
+    /* 없으면 방 색·엠블럼·게임이 기본값으로 보인다 */
+    'accent',
+    'emblem',
+    'game',
+  ].forEach((col) => {
     expect(select).toContain(col);
   });
-  /* 유령 멤버 표시도 같이 와야 한다 */
-  expect(select).toContain('is_ghost');
 });
 
 /* 렌더 함수 안에서 컴포넌트를 정의하면 렌더마다 타입이 달라져서 React가

@@ -72,7 +72,6 @@ export const GAMES = [
     key: 'lol',
     /* 줄여 부르지 않는다. '롤'·'발로'는 사람마다 다르게 쓴다 */
     label: '리그 오브 레전드',
-    emoji: '⚔️',
     /* public/logo에 둔 파일. 배포 경로가 바뀌어도 따라오게 절대 경로 */
     logo: '/logo/lol-logo.png',
     /* 로고 옆이나 배경으로 옅게 깔 때 쓰는 그 게임의 색 */
@@ -104,7 +103,6 @@ export const GAMES = [
   {
     key: 'valorant',
     label: '발로란트',
-    emoji: '🎯',
     logo: '/logo/valorant-logo.png',
     color: '#ff4655',
     tiers: VALORANT_TIERS,
@@ -198,11 +196,8 @@ export const getRole = (game, name) => getGame(game).roles.find((r) => r.name ==
 
 /* ---------- 티어 ---------- */
 
-export const tiersOf = (game) => getGame(game).tiers;
-export const divisionsOf = (game) => getGame(game).divisions;
-
 export const getTier = (game, key) => {
-  const list = tiersOf(game);
+  const list = getGame(game).tiers;
   return list.find((t) => t.key === key) || list[0];
 };
 

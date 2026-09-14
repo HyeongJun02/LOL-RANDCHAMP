@@ -1648,6 +1648,8 @@ begin
 end; $fn$;
 
 
+-- 반환 열이 바뀌면 create or replace가 'cannot change return type'으로 막는다
+drop function if exists public.admin_rooms();
 create or replace function public.admin_rooms()
 returns table (
   id          bigint,

@@ -166,10 +166,15 @@ const RoomList = () => {
                 style={accentVars(r.accent)}
                 to={`/rooms/${r.id}`}
               >
+                {/* 게임 이름은 방 이름 위에 한 줄로. 아래 통계 줄에 끼워 넣으면
+                    '리그 오브 레전드'가 길어서 인원·끼꼬가 줄을 넘긴다 */}
+                <span className="room-card-game">
+                  <img className="game-logo is-tiny" src={getGame(r.game).logo} alt="" />
+                  {getGame(r.game).label}
+                </span>
+
                 <span className="room-card-head">
-                  <span className="room-card-emblem" title={getGame(r.game).label}>
-                    {r.emblem}
-                  </span>
+                  <span className="room-card-emblem">{r.emblem}</span>
                   <strong className="room-card-name">{r.name}</strong>
                   <span className={`rooms-role role-${r.myRole}`}>{ROLE_LABEL[r.myRole]}</span>
                 </span>
@@ -183,10 +188,6 @@ const RoomList = () => {
                 )}
 
                 <span className="room-card-foot">
-                  <span className="room-card-stat">
-                    <img className="game-logo is-tiny" src={getGame(r.game).logo} alt="" />
-                    {getGame(r.game).label}
-                  </span>
                   <span className="room-card-stat">
                     <FaUsers /> {r.memberCount}명
                   </span>

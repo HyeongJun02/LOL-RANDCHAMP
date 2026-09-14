@@ -68,8 +68,6 @@ export const LINES = [
 
 export const LINE_NAMES = LINES.map((l) => l.name);
 
-export const getLine = (name) => LINES.find((l) => l.name === name);
-
 /* 롤 라인과 발로 역할군을 다 뒤진다. 이름이 겹치지 않아서 한 번에 찾는다 */
 const ALL_ROLES = () => [...LINES, ...VALORANT_ROLES];
 

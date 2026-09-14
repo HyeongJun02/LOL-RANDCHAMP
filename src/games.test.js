@@ -166,3 +166,31 @@ test('역할마다 색과 그릴 것이 있다', () => {
     });
   });
 });
+
+/* 게임 이름을 줄여 쓰면 사람마다 다르게 읽는다 ('롤'·'옵치'·'발로'…) */
+test('게임은 풀네임 하나로만 부른다', () => {
+  GAMES.forEach((g) => {
+    expect(g.short).toBeUndefined();
+    expect(g.label.length).toBeGreaterThan(2);
+  });
+  expect(getGame('lol').label).toBe('리그 오브 레전드');
+  expect(getGame('valorant').label).toBe('발로란트');
+});
+
+test('게임마다 로고와 색이 있다', () => {
+  GAMES.forEach((g) => {
+    expect(g.logo).toMatch(/^\/logo\//);
+    expect(g.color).toMatch(/^#/);
+  });
+});
+
+/* 발로란트 역할 아이콘은 단색 SVG라 마스크로 색을 입힌다.
+   mono 표시가 빠지면 넷이 다 같은 흰색으로 보인다 */
+test('발로란트 역할 아이콘은 색을 입힐 수 있게 표시돼 있다', () => {
+  rolesOf('valorant').forEach((r) => {
+    expect(r.mono).toBe(true);
+    expect(r.icon).toMatch(/^\/val_role_icon\//);
+  });
+  /* 롤 아이콘은 이미 칠해진 그림이라 그대로 쓴다 */
+  rolesOf('lol').forEach((r) => expect(r.mono).toBeUndefined());
+});

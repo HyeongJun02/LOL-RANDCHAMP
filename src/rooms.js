@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
 import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP } from './tuning';
-import { getGame, getMode, defaultTierOf } from './games';
+import { getGame, getMode, defaultTierOf, fitTier } from './games';
 
 /* 내전 방. 여기부터는 localStorage가 없다.
 
@@ -334,8 +334,11 @@ export const feedLine = (log) =>
 export const addRoomPlayer = async (roomId, player, game) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
   const name = String(player.name || '').trim();
-  /* 기본 티어는 게임마다 다르다. 발로란트에는 디비전 4가 없다 */
+  /* 기본 티어는 게임마다 다르다. 발로란트에는 디비전 4가 없다.
+     넘어온 티어가 그 게임에 없는 값이면(롤 에메랄드 → 발로란트)
+     기본값으로 갈아끼운다. 안 그러면 화면에 없는 티어가 저장된다 */
   const base = defaultTierOf(game);
+  const fitted = player.tier ? fitTier(game, player) : null;
 
   const gone = unwrap(
     await neon
@@ -350,7 +353,7 @@ export const addRoomPlayer = async (roomId, player, game) => {
     return unwrap(
       await neon
         .from('room_players')
-        .update({ deleted_at: null, ...base, ...player, name })
+        .update({ deleted_at: null, ...base, ...player, ...fitted, name })
         .eq('id', gone[0].id)
     );
   }
@@ -358,7 +361,7 @@ export const addRoomPlayer = async (roomId, player, game) => {
   return unwrap(
     await neon
       .from('room_players')
-      .insert({ room_id: roomId, ...base, ...player, name })
+      .insert({ room_id: roomId, ...base, ...player, ...fitted, name })
   );
 };
 
@@ -622,9 +625,12 @@ const ROOM_SELECT =
   'room_members(user_id,role,joined_at,is_ghost),' +
   'room_players(id,name,tier,division,linked_user_id,deleted_at),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +
-  /* betting_closes_at을 빼먹으면 마감 타이머가 조용히 안 그려진다.
-     값이 undefined라 화면에서는 '자동 마감이 없는 경기'와 구분이 안 된다 */
-  'first_blood_player_id,bet_total,bet_count,undo_count,locked_at,betting_closes_at)';
+  /* 여기서 컬럼을 빼먹으면 화면이 조용히 틀린 값을 보여준다. 오류도 안 난다.
+     - betting_closes_at이 없으면 마감 타이머가 아예 안 그려지고
+     - kill_line이 없으면 방장이 직접 정한 기준선이 무시되고
+       인원으로 계산한 값이 뜬다 (저장은 되는데 안 읽는 것) */
+  'first_blood_player_id,bet_total,bet_count,undo_count,locked_at,' +
+  'betting_closes_at,kill_line)';
 
 /* 탭이 보일 때만, 30초마다. 실시간 구독이 없어 폴링이 불가피한데
    방 전체를 매번 읽으면 그게 곧 부하다. version 한 컬럼만 보고
