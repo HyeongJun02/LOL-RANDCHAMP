@@ -51,6 +51,18 @@
   filter: none;
 }
 
+/* 단색 아이콘(발로 역할군)은 filter가 아니라 색으로 눌러야 한다.
+   grayscale을 걸면 마스크 색이 그대로라 아무 변화가 없다 */
+.icon:global(.role-icon) {
+  filter: none;
+  color: #5b6b85;
+}
+
+.option:not(.banned):hover .icon:global(.role-icon),
+.option:not(.banned):focus-visible .icon:global(.role-icon) {
+  color: var(--line-color);
+}
+
 .banMark {
   position: absolute;
   inset: 0;
@@ -87,15 +99,4 @@
 
 .compact .banMark {
   font-size: 1rem;
-}
-
-/* 발로란트 역할군은 아이콘 파일이 없어 이모지로 그린다.
-   아이콘과 같은 자리를 차지해야 줄이 안 흔들린다 */
-.emoji {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  font-size: 1rem;
-  line-height: 1;
 }

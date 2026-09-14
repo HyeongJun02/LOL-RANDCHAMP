@@ -1652,6 +1652,7 @@ create or replace function public.admin_rooms()
 returns table (
   id          bigint,
   name        text,
+  game        text,
   emblem      text,
   accent      text,
   owner_id    text,
@@ -1670,7 +1671,7 @@ begin
   perform public.require_site_admin();
   return query
     select
-      r.id, r.name, r.emblem, r.accent, r.owner_id,
+      r.id, r.name, r.game, r.emblem, r.accent, r.owner_id,
       coalesce(nullif(op.nickname, ''), '이름 없음'),
       (select count(*)::int from room_members m where m.room_id = r.id and not m.is_ghost),
       (select count(*)::int from room_players rp where rp.room_id = r.id),

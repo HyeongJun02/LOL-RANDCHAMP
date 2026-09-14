@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { getRole } from '../../../games';
+import RoleIcon from '../../../components/common/RoleIcon';
 import styles from './Roulette.module.css';
 
 const VISIBLE_COUNT = 3;
@@ -107,11 +108,7 @@ const Roulette = ({ game, options, selectedOption, trigger, resetTrigger }) => {
               className={styles.item}
               style={{ flex: `0 0 ${itemWidth}px` }}
             >
-              {l?.icon ? (
-                <img src={l.icon} alt={name} />
-              ) : (
-                <span className={styles.emoji}>{l?.emoji}</span>
-              )}
+              <RoleIcon role={l} style={{ color: l?.color }} />
               <span style={{ color: l?.color }}>{name}</span>
             </div>
           );

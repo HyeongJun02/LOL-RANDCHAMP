@@ -25,7 +25,7 @@ const RosterEditor = () => {
             onClick={() => setGameKey(g.key)}
           >
             <img className="game-logo is-tiny" src={g.logo} alt="" />
-            {g.short}
+            {g.label}
           </button>
         ))}
       </div>
@@ -33,7 +33,7 @@ const RosterEditor = () => {
       <div className="roster-panel">
         {roster.length === 0 && (
           <p className="roster-blank">
-            아직 저장된 {game.short} 팀원이 없어요. 아래 버튼으로 추가하세요.
+            아직 저장된 {game.label} 팀원이 없어요. 아래 버튼으로 추가하세요.
           </p>
         )}
 

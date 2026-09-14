@@ -656,3 +656,17 @@
   background: rgba(249, 115, 98, 0.22);
   color: #fca5a5;
 }
+
+/* ---------- 단색 역할 아이콘 ---------- */
+/* 발로란트 역할군 아이콘은 단색 SVG라 그대로 두면 넷이 다 같은 흰색이다.
+   마스크로 떠서 currentColor로 칠한다 - 그래야 '평소엔 흐리게, 고르면
+   제 색으로' 같은 규칙을 바깥 CSS에서 그대로 얹을 수 있다 (RoleIcon.jsx) */
+.role-icon {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  background-color: currentColor;
+  -webkit-mask: var(--mask) center / contain no-repeat;
+  mask: var(--mask) center / contain no-repeat;
+  transition: background-color 0.25s ease;
+}

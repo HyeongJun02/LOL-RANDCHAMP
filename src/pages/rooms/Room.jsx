@@ -732,7 +732,7 @@ const Room = () => {
             <p className="room-meta">
               <span className="room-game" title={getGame(room.game).label}>
                 <img className="game-logo is-tiny" src={getGame(room.game).logo} alt="" />
-                {getGame(room.game).short}
+                {getGame(room.game).label}
               </span>
               {members.length}명 · {ROLE_LABEL[myRole]}
             </p>

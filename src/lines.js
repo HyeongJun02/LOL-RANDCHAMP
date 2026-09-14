@@ -85,14 +85,17 @@ export const randomQuote = (name) => {
    롤은 다섯 라인을 다섯 명이 하나씩 나눠 갖지만, 발로란트는 역할이 넷이라
    5인 팀이면 하나는 겹친다. 그래서 '겹쳐도 되는' 역할이다.
 
-   한국 서버 공식 명칭을 쓴다. 전략가를 흔히 '연막'이라 부르는데,
-   그 말이 더 빨리 통해서 설명에 같이 적어둔다.
+   이름은 한국 서버 공식 명칭 넷을 그대로 쓴다.
+   (타격대 · 척후대 · 감시자 · 전략가)
    ------------------------------------------------------------------ */
 export const VALORANT_ROLES = [
   {
     name: '타격대',
     emoji: '⚔️',
-    hint: '듀얼리스트 · 앞라인',
+    icon: '/val_role_icon/타격대.svg',
+    /* 단색 SVG. 그대로 두면 넷이 다 같은 흰색이라 마스크로 색을 입힌다 */
+    mono: true,
+    hint: '앞라인 · 진입',
     color: '#ff4655',
     glow: 'rgba(255, 70, 85, 0.55)',
     quotes: [
@@ -106,7 +109,9 @@ export const VALORANT_ROLES = [
   {
     name: '척후대',
     emoji: '🛰️',
-    hint: '이니시에이터 · 정보',
+    icon: '/val_role_icon/척후대.svg',
+    mono: true,
+    hint: '정보 · 진입 지원',
     color: '#38bdf8',
     glow: 'rgba(56, 189, 248, 0.55)',
     quotes: [
@@ -120,7 +125,9 @@ export const VALORANT_ROLES = [
   {
     name: '감시자',
     emoji: '🛡️',
-    hint: '센티널 · 수비',
+    icon: '/val_role_icon/감시자.svg',
+    mono: true,
+    hint: '수비 · 지역 장악',
     color: '#4ade80',
     glow: 'rgba(74, 222, 128, 0.55)',
     quotes: [
@@ -134,7 +141,9 @@ export const VALORANT_ROLES = [
   {
     name: '전략가',
     emoji: '🌫️',
-    hint: '컨트롤러 · 연막',
+    icon: '/val_role_icon/전략가.svg',
+    mono: true,
+    hint: '연막 · 시야 차단',
     color: '#c084fc',
     glow: 'rgba(192, 132, 252, 0.55)',
     quotes: [

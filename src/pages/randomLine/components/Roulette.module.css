@@ -46,10 +46,14 @@
   opacity: 0.85;
 }
 
-.item img {
+.item img,
+.item :global(.role-icon) {
   width: 34px;
   height: 34px;
   margin-bottom: 0.25rem;
+}
+
+.item img {
   filter: drop-shadow(0 0 6px rgba(200, 170, 110, 0.2));
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { rolesOf } from '../../games';
 import { DEFAULT_GAME } from '../../games';
+import RoleIcon from './RoleIcon';
 import styles from './LineSelector.module.css';
 
 /* 못 가는 자리 고르기.
@@ -21,13 +22,7 @@ const LineSelector = ({ game = DEFAULT_GAME, disabledLines, onToggle, compact = 
           title={banned ? `${line.name} 밴 해제` : `${line.name} 밴하기`}
           style={!banned ? { '--line-color': line.color, '--line-glow': line.glow } : undefined}
         >
-          {line.icon ? (
-            <img src={line.icon} alt={line.name} className={styles.icon} />
-          ) : (
-            <span className={styles.emoji} title={line.hint}>
-              {line.emoji}
-            </span>
-          )}
+          <RoleIcon role={line} className={styles.icon} />
           {banned && <span className={styles.banMark}>✕</span>}
         </button>
       );

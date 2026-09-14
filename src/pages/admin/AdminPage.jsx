@@ -14,6 +14,7 @@ import {
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import { useMe, feedParts } from '../../rooms';
+import { getGame } from '../../games';
 import {
   useAdminData,
   fetchAllLogs,
@@ -465,6 +466,9 @@ const AdminPage = () => {
                       <Th col="name" sort={roomSort.sort} onSort={roomSort.toggle}>
                         방
                       </Th>
+                      <Th col="game" sort={roomSort.sort} onSort={roomSort.toggle}>
+                        게임
+                      </Th>
                       <Th col="owner_name" sort={roomSort.sort} onSort={roomSort.toggle}>
                         방장
                       </Th>
@@ -497,6 +501,10 @@ const AdminPage = () => {
                             <span className="adm-emblem">{r.emblem}</span>
                             {r.name}
                           </Link>
+                        </td>
+                        <td className="dim">
+                          <img className="game-logo is-tiny" src={getGame(r.game).logo} alt="" />
+                          {getGame(r.game).label}
                         </td>
                         <td className="dim">{r.owner_name}</td>
                         <td className="num">{num(r.members)}</td>

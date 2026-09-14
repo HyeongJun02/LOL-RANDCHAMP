@@ -18,9 +18,9 @@ export const TOOLS = [
   {
     to: '/random-line',
     category: 'game',
-    name: '라인 분배',
+    name: '라인·역할 분배',
     title: '라인 랜덤 분배',
-    desc: '가기 싫은 라인은 미리 밴하고, 나머지는 랜덤으로 배정한다.',
+    desc: '롤 라인도, 발로란트 역할도. 가기 싫은 자리는 미리 밴하고 나머지는 랜덤으로.',
     icon: <GiPathDistance />,
     accent: 'gold',
   },

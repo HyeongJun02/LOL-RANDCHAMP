@@ -87,9 +87,15 @@
   animation: row-pop 0.35s ease;
 }
 
-.lineTag img {
+.lineTag img,
+.lineTag :global(.role-icon) {
   width: 15px;
   height: 15px;
+}
+
+/* 단색 아이콘은 태그 글자색(=역할 색)을 그대로 따라간다 */
+.lineTag :global(.role-icon) {
+  background-color: currentColor;
 }
 
 @keyframes row-pop {

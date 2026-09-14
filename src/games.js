@@ -70,8 +70,8 @@ const VALORANT_TIERS = [
 export const GAMES = [
   {
     key: 'lol',
+    /* 줄여 부르지 않는다. '롤'·'발로'는 사람마다 다르게 쓴다 */
     label: '리그 오브 레전드',
-    short: '롤',
     emoji: '⚔️',
     /* public/logo에 둔 파일. 배포 경로가 바뀌어도 따라오게 절대 경로 */
     logo: '/logo/lol-logo.png',
@@ -86,6 +86,9 @@ export const GAMES = [
     roles: LINES,
     roleLabel: '라인',
     uniqueRoles: true,
+    /* 이름 칸이 비어 있을 때 띄우는 농담. 게임마다 통하는 말이 다르다 */
+    sampleNames: ['탑차이', '정글탓', '관종미드', '버스원딜', '헌신서폿'],
+    banHint: '가기 싫은 라인 밴하기',
     /* 내전 모드. 하나뿐이면 화면에 고르는 칸을 아예 안 그린다 */
     modes: [
       {
@@ -101,7 +104,6 @@ export const GAMES = [
   {
     key: 'valorant',
     label: '발로란트',
-    short: '발로',
     emoji: '🎯',
     logo: '/logo/valorant-logo.png',
     color: '#ff4655',
@@ -113,6 +115,8 @@ export const GAMES = [
     roles: VALORANT_ROLES,
     roleLabel: '역할',
     uniqueRoles: false,
+    sampleNames: ['원딜러', '연막충', '벽잡이', '칼잡이', '설치왕'],
+    banHint: '하기 싫은 역할 밴하기',
     modes: [
       {
         key: 'standard',
@@ -218,7 +222,12 @@ export const ratingOf = (game, { tier: key, division }) => {
 
 export const tierName = (game, { tier: key, division }) => {
   const t = getTier(game, key);
-  return t.divisions ? `${t.label} ${division}` : t.label;
+  if (!t.divisions) return t.label;
+  /* 그 게임에 없는 칸이 들어오면(발로란트에 디비전 4) 제일 아래 칸으로 읽는다.
+     그대로 두면 '골드 4' 같은, 그 게임에 존재하지 않는 이름이 화면에 뜬다 */
+  const g = getGame(game);
+  const d = g.divisions.includes(Number(division)) ? Number(division) : g.divisions[0];
+  return `${t.label} ${d}`;
 };
 
 /* 게임을 바꿔 옮겨 적을 때. 없는 티어(롤 에메랄드 → 발로)는 기본값으로 */

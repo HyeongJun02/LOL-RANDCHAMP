@@ -4,7 +4,8 @@ import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaRedo } from 'react-ic
 import { getTier, ratingOf, tierName, defaultTierOf } from '../../games';
 import { splitTeams, MAX_PLAYERS, winChance, IGNORE_RATING } from './balance';
 import { mergeMembers, useRoster } from '../../roster';
-import { useGame, useGameKey } from '../../GameContext';
+import { GameProvider, useGame, useGameKey } from '../../GameContext';
+import { GAMES, DEFAULT_GAME } from '../../games';
 import { statsFor, pointsOf, statOf } from '../../matches';
 import { saveLastSplit } from '../../lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
@@ -50,11 +51,20 @@ const TierBadge = ({ game, player }) => {
 /* embedded: 방 안에서 팝업으로 띄울 때. 페이지 껍데기와 문서 제목을 건드리지 않는다
    onUseTeams: 주면 결과 아래에 '이 팀으로 내전 진행하기'가 붙는다.
    방에서 팀을 짠 다음 이름을 손으로 옮겨 적는 일이 없어진다 */
-const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }) => {
+const TeamBalance = ({
+  matches = [],
+  embedded = false,
+  onUseTeams,
+  recent = [],
+  /* 방에서 띄울 때 그 모드의 인원(난투면 2대2 = 4칸) */
+  slots = 10,
+  /* 단독 페이지에서만 준다. 방 안에서는 방의 게임을 따른다 */
+  gamePicker,
+}) => {
   const game = useGame();
   const gameKey = useGameKey();
   const [players, setPlayers] = useState(() =>
-    Array.from({ length: 10 }, () => blankPlayer(gameKey))
+    Array.from({ length: slots }, () => blankPlayer(gameKey))
   );
   const [randomness, setRandomness] = useState(0);
   const [result, setResult] = useState(null);
@@ -149,7 +159,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
         tier: m.tier || 'GOLD',
         division: m.division || 4,
       }));
-    while (rows.length < 10) rows.push(blankPlayer(gameKey));
+    while (rows.length < slots) rows.push(blankPlayer(gameKey));
     setPlayers(rows);
     setResult(null);
     toast.success(`직전 경기 ${recent.length}명을 가져왔어요.`);
@@ -219,8 +229,24 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
       {!embedded && (
         <PageHeader
           title="내전 팀 짜기"
-          sub="티어로 평점을 매겨 양 팀이 최대한 비슷해지게 나눕니다. 10명 안 채워도 됩니다."
-        />
+          sub="티어로 평점을 매겨 양 팀이 최대한 비슷해지게 나눕니다. 다 안 채워도 됩니다."
+        >
+          {/* 단독 페이지에는 방이 없어서 게임을 물려받을 데가 없다 */}
+          {gamePicker && (
+            <div className="seg-tabs">
+              {GAMES.map((g) => (
+                <button
+                  key={g.key}
+                  className={`seg-tab ${gamePicker.value === g.key ? 'active' : ''}`}
+                  onClick={() => gamePicker.onChange(g.key)}
+                >
+                  <img className="game-logo is-tiny" src={g.logo} alt="" />
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </PageHeader>
       )}
 
       <div className="tb-layout">
@@ -337,7 +363,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
             </button>
             <button
               className="ghost-btn"
-              onClick={() => setPlayers(Array.from({ length: 10 }, () => blankPlayer(gameKey)))}
+              onClick={() => setPlayers(Array.from({ length: slots }, () => blankPlayer(gameKey)))}
             >
               전체 비우기
             </button>
@@ -483,4 +509,16 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
   );
 };
 
-export default TeamBalance;
+/* 단독 페이지에서는 게임을 여기서 고른다. 방 안에서 띄울 때는
+   방의 GameProvider가 이미 위에 있어서 그대로 따라간다 */
+const TeamBalanceShell = (props) => {
+  const [game, setGame] = useState(DEFAULT_GAME);
+  if (props.embedded) return <TeamBalance {...props} />;
+  return (
+    <GameProvider game={game}>
+      <TeamBalance {...props} gamePicker={{ value: game, onChange: setGame }} />
+    </GameProvider>
+  );
+};
+
+export default TeamBalanceShell;

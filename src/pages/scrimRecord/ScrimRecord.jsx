@@ -343,6 +343,8 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
                 matches={matches}
                 onUseTeams={applyTeams}
                 recent={recentPeople}
+                /* 난투(2대2)면 10칸이 아니라 4칸으로 연다 */
+                slots={modeInfo.teamSize * 2}
               />
             </Modal>
           )}

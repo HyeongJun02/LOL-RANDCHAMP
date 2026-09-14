@@ -185,7 +185,7 @@ const RoomList = () => {
                 <span className="room-card-foot">
                   <span className="room-card-stat">
                     <img className="game-logo is-tiny" src={getGame(r.game).logo} alt="" />
-                    {getGame(r.game).short}
+                    {getGame(r.game).label}
                   </span>
                   <span className="room-card-stat">
                     <FaUsers /> {r.memberCount}명

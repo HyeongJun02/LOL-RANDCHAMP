@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { FaDice, FaUndo } from 'react-icons/fa';
-import { getRole, roleNamesOf } from '../../../games';
+import { getGame, getRole, roleNamesOf } from '../../../games';
 import LineSelector from '../../../components/common/LineSelector';
 import RosterPicker from '../../../components/common/RosterPicker';
 import Roulette from './Roulette';
 import styles from './PlayerCard.module.css';
 
-const PLACEHOLDER_NAMES = ['탑차이', '정글탓', '관종미드', '버스원딜', '헌신서폿'];
+
 
 const PlayerCard = ({
   game,
@@ -30,6 +30,7 @@ const PlayerCard = ({
     setDisplayName(name);
   }, [name]);
 
+  const sample = getGame(game).sampleNames;
   const line = assignedLine ? getRole(game, assignedLine) : null;
   const remaining = roleNamesOf(game).filter((l) => !disabledLines.includes(l)).length;
   const noWayOut = remaining === 0;
@@ -62,7 +63,7 @@ const PlayerCard = ({
         <input
           className={styles.nameInput}
           value={displayName}
-          placeholder={PLACEHOLDER_NAMES[index % PLACEHOLDER_NAMES.length]}
+          placeholder={sample[index % sample.length]}
           onChange={(e) => {
             setDisplayName(e.target.value);
             onNameChange(index, e.target.value);
@@ -77,7 +78,7 @@ const PlayerCard = ({
         />
       </div>
 
-      <div className={styles.selectorLabel}>가기 싫은 라인 밴하기</div>
+      <div className={styles.selectorLabel}>{getGame(game).banHint}</div>
       <LineSelector
         game={game}
         disabledLines={disabledLines}

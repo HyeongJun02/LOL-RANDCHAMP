@@ -14,9 +14,9 @@ import { usePageMeta, PAGE_META } from '../../seo';
 import styles from './RandomLine.module.css';
 
 const SUBTITLES = [
-  '가기 싫은 라인은 미리 밴 때려두자. 억울함 방지 차원에서.',
+  '가기 싫은 자리는 미리 밴 때려두자. 억울함 방지 차원에서.',
   '여기서 정해지면 무를 수 없습니다. 신중하게 밴하세요.',
-  '탑차이, 정글탓, 원딜캐리 다 필요없고 일단 뽑고 봅시다.',
+  '누구 탓이니 뭐니 다 필요없고 일단 뽑고 봅시다.',
 ];
 
 /* 좁은 화면에서는 카드 5장이 세로로 한없이 늘어져서 목록이 낫다.
@@ -247,7 +247,7 @@ export default function RandomLinePage() {
                 onClick={() => pickGame(g.key)}
               >
                 <img className="game-logo is-tiny" src={g.logo} alt="" />
-                {g.short}
+                {g.label}
               </button>
             ))}
           </div>

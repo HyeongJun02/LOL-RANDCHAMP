@@ -40,7 +40,7 @@ test('디비전 칸 수가 게임마다 다르다 (롤 4칸 · 발로 3칸)', ()
 
 /* 평점이 뒤집히면 팀 짜기가 거꾸로 돈다. 게임마다 한 번씩 본다 */
 GAMES.forEach((g) => {
-  test(`${g.short}: 위 티어일수록 평점이 높다`, () => {
+  test(`${g.label}: 위 티어일수록 평점이 높다`, () => {
     const all = [];
     g.tiers.forEach((t) => {
       /* divisions는 4→1 순서로 적혀 있고, 숫자가 클수록 아래 칸이다 */
@@ -52,12 +52,12 @@ GAMES.forEach((g) => {
     expect(new Set(all).size).toBe(all.length);
   });
 
-  test(`${g.short}: 제일 낮은 칸이 0점이다`, () => {
+  test(`${g.label}: 제일 낮은 칸이 0점이다`, () => {
     const bottom = g.tiers[0];
     expect(ratingOf(g.key, { tier: bottom.key, division: g.divisions[0] })).toBe(0);
   });
 
-  test(`${g.short}: 기본 티어가 그 게임에 실제로 있는 값이다`, () => {
+  test(`${g.label}: 기본 티어가 그 게임에 실제로 있는 값이다`, () => {
     const d = defaultTierOf(g.key);
     expect(g.tiers.some((t) => t.key === d.tier)).toBe(true);
     expect(g.divisions).toContain(d.division);
