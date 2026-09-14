@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../rooms';
 import { MAX_ROOMS } from '../../limits';
 import { accentVars } from '../../roomStyle';
+import { GAMES, DEFAULT_GAME, getGame } from '../../games';
 import PageHeader from '../../components/common/PageHeader';
 import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelRows } from '../../components/common/Skeleton';
@@ -20,6 +21,7 @@ const RoomList = () => {
   const { rooms, loading, error, reload } = useMyRooms(user?.id);
 
   const [name, setName] = useState('');
+  const [game, setGame] = useState(DEFAULT_GAME);
   const [code, setCode] = useState('');
   const [nick, setNick] = useState(null);
   /* 더블클릭으로 방이 두 개 만들어지는 걸 막는다.
@@ -44,9 +46,9 @@ const RoomList = () => {
         toast.error('방 이름을 적어주세요.');
         return;
       }
-      await createRoom(name);
+      await createRoom(name, game);
       setName('');
-      toast.success('방을 만들었어요.');
+      toast.success(`${getGame(game).label} 내전 방을 만들었어요.`);
       reload();
     });
 
@@ -165,7 +167,9 @@ const RoomList = () => {
                 to={`/rooms/${r.id}`}
               >
                 <span className="room-card-head">
-                  <span className="room-card-emblem">{r.emblem}</span>
+                  <span className="room-card-emblem" title={getGame(r.game).label}>
+                    {r.emblem}
+                  </span>
                   <strong className="room-card-name">{r.name}</strong>
                   <span className={`rooms-role role-${r.myRole}`}>{ROLE_LABEL[r.myRole]}</span>
                 </span>
@@ -179,6 +183,10 @@ const RoomList = () => {
                 )}
 
                 <span className="room-card-foot">
+                  <span className="room-card-stat">
+                    <img className="game-logo is-tiny" src={getGame(r.game).logo} alt="" />
+                    {getGame(r.game).short}
+                  </span>
                   <span className="room-card-stat">
                     <FaUsers /> {r.memberCount}명
                   </span>
@@ -195,6 +203,23 @@ const RoomList = () => {
       <div className="rooms-forms">
         <div className="rooms-form">
           <label htmlFor="room-name">새 방 만들기</label>
+
+          {/* 게임은 만들 때 정하면 끝이다. 티어 체계와 전적이 게임에 묶여
+              있어서 나중에 바꾸면 쌓인 게 전부 의미를 잃는다 */}
+          <div className="game-pick">
+            {GAMES.map((g) => (
+              <button
+                key={g.key}
+                className={`game-opt ${game === g.key ? 'is-on' : ''}`}
+                style={{ '--game': g.color }}
+                onClick={() => setGame(g.key)}
+              >
+                <img className="game-logo" src={g.logo} alt="" />
+                <strong>{g.label}</strong>
+              </button>
+            ))}
+          </div>
+
           <div className="rooms-form-row">
             <input
               id="room-name"
@@ -211,6 +236,8 @@ const RoomList = () => {
           </div>
           <p className="rooms-hint">
             방은 최대 {MAX_ROOMS}개까지. 만든 사람이 방장이 되고, 입장 코드는 설정 탭에 있어요.
+            <br />
+            <b>게임은 나중에 못 바꿉니다.</b> 티어와 전적이 게임에 묶여 있어요.
           </p>
         </div>
 

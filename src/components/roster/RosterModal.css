@@ -5,3 +5,8 @@
   border: none;
   backdrop-filter: none;
 }
+
+/* 게임 탭. 명단은 게임마다 따로 쌓인다 */
+.roster-games {
+  margin-bottom: 0.7rem;
+}

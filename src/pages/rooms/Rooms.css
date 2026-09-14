@@ -2006,3 +2006,97 @@
     padding-left: 0;
   }
 }
+
+/* ---------- 게임 고르기 ---------- */
+/* 방을 만들 때 한 번 정하고 끝이라, 작은 셀렉트보다 눌러 고르는 편이
+   '이건 되돌릴 수 없는 선택'이라는 게 전해진다 */
+
+.game-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.game-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #8b98ae;
+  font-family: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.game-opt:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.game-opt.is-on {
+  border-color: var(--gg-gold);
+  background: rgba(200, 170, 110, 0.14);
+  color: var(--gg-gold-light);
+}
+
+.game-opt-emoji {
+  font-size: 1.05rem;
+}
+
+.game-opt strong {
+  font-weight: 800;
+}
+
+/* 방 헤더의 게임 표시 */
+.room-game {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-right: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #b9c3d6;
+}
+
+/* 게임 로고. 흰 배경에 그려진 파일이라 어두운 화면에서는 살짝 눌러준다 */
+.game-logo {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.game-logo.is-tiny {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+}
+
+.game-opt.is-on {
+  border-color: var(--game, var(--gg-gold));
+  background: color-mix(in srgb, var(--game, #c8aa6e) 16%, transparent);
+  color: #e6ecf7;
+}
+
+.game-opt.is-on .game-logo {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--game, #c8aa6e) 70%, transparent));
+}
+
+.game-opt:not(.is-on) .game-logo {
+  filter: grayscale(0.6);
+  opacity: 0.7;
+}
+
+/* 로고와 글자가 붙어 보이지 않게 */
+.seg-tab .game-logo,
+.room-card-stat .game-logo,
+.room-game .game-logo {
+  margin-right: 0.28rem;
+}

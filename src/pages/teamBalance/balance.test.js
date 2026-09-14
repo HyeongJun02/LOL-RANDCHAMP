@@ -1,5 +1,5 @@
 import { splitTeams, winChance, IGNORE_RATING } from './balance';
-import { ratingOf } from '../../tiers';
+import { ratingOf } from '../../games';
 
 const p = (name, rating, lock = 0) => ({ name, rating, lock });
 const names = (team) => team.map((x) => x.name).sort();
@@ -72,7 +72,7 @@ test('높은 티어일수록 평점이 높다', () => {
     { tier: 'DIAMOND', division: 1 },
     { tier: 'MASTER' },
     { tier: 'GRANDMASTER' },
-  ].map(ratingOf);
+  ].map((m) => ratingOf('lol', m));
   expect(order).toEqual([...order].sort((a, b) => a - b));
   expect(new Set(order).size).toBe(order.length);
 });
@@ -101,7 +101,7 @@ test('각 후보는 참가자를 빠짐없이 한 번씩만 담는다', () => {
 });
 
 describe('재미용 승률', () => {
-  const r = (tier, division) => ratingOf({ tier, division });
+  const r = (tier, division) => ratingOf('lol', { tier, division });
   const team = (...people) => people.reduce((sum, x) => sum + x, 0);
 
   test('평점이 같으면 50%', () => {

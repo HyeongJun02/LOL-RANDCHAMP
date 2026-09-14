@@ -19,6 +19,7 @@ import { useDialog } from '../../components/common/Dialog';
 import BetTimer from './BetTimer';
 import { timeAgo } from '../../timeAgo';
 import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS } from '../../tuning';
+import { useGameKey } from '../../GameContext';
 
 const num = (n) => Number(n || 0).toLocaleString();
 
@@ -39,6 +40,7 @@ const BetTab = ({
   version,
   onChanged,
 }) => {
+  const gameKey = useGameKey();
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
   const memberName = new Map(members.map((m) => [m.user_id, m.nickname]));
   const me = members.find((m) => m.user_id === myId);
@@ -384,7 +386,7 @@ const BetTab = ({
           <p className="rooms-hint">한 번에 {num(capOf('first_blood'))} 끼꼬까지.</p>
         </div>
 
-        {[killLineOfScrim(scrim)].map((line) => {
+        {[killLineOfScrim(scrim, gameKey)].map((line) => {
           const market = killMarket(line);
           return (
             <div className="bet-market" key={market}>

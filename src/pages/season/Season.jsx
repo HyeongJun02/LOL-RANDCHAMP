@@ -8,7 +8,8 @@ import {
   monthKeyOf,
   monthLabel,
 } from '../../matches';
-import { getTier, tierName } from '../../tiers';
+import { getTier, tierName } from '../../games';
+import { useGameKey } from '../../GameContext';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import RankList from '../../components/common/RankList';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
@@ -26,6 +27,7 @@ const ALL = 'all';
    matches: rooms.js가 이름을 붙여 넘겨준 경기 목록
    players: 방 참가자 명단 (티어 배지용) */
 const Season = ({ matches = [], players = [] }) => {
+  const gameKey = useGameKey();
 
   const months = useMemo(() => monthsOf(matches), [matches]);
   const [month, setMonth] = useState(null);
@@ -132,8 +134,8 @@ const Season = ({ matches = [], players = [] }) => {
                 key: r.name,
                 name: r.name,
                 badge: member && (
-                  <span className="tier-badge" style={{ '--tier': getTier(member.tier).color }}>
-                    {tierName(member)}
+                  <span className="tier-badge" style={{ '--tier': getTier(gameKey, member.tier).color }}>
+                    {tierName(gameKey, member)}
                   </span>
                 ),
                 stat: (

@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaRedo } from 'react-icons/fa';
-import { TIERS, DIVISIONS, getTier, ratingOf, tierName } from '../../tiers';
+import { getTier, ratingOf, tierName, defaultTierOf } from '../../games';
 import { splitTeams, MAX_PLAYERS, winChance, IGNORE_RATING } from './balance';
 import { mergeMembers, useRoster } from '../../roster';
+import { useGame, useGameKey } from '../../GameContext';
 import { statsFor, pointsOf, statOf } from '../../matches';
 import { saveLastSplit } from '../../lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
@@ -31,13 +32,14 @@ const LOCKS = [
 ];
 
 const uid = () => Math.random().toString(36).slice(2, 9);
-const blankPlayer = () => ({ id: uid(), name: '', tier: 'GOLD', division: 4, lock: 0 });
+/* 기본 티어는 게임마다 다르다 (롤 골드4 · 발로 골드3) */
+const blankPlayer = (game) => ({ id: uid(), name: '', lock: 0, ...defaultTierOf(game) });
 
-const TierBadge = ({ player }) => {
-  const tier = getTier(player.tier);
+const TierBadge = ({ game, player }) => {
+  const tier = getTier(game, player.tier);
   return (
     <span className="tier-badge" style={{ '--tier': tier.color }}>
-      {tierName(player)}
+      {tierName(game, player)}
     </span>
   );
 };
@@ -49,8 +51,10 @@ const TierBadge = ({ player }) => {
    onUseTeams: 주면 결과 아래에 '이 팀으로 내전 진행하기'가 붙는다.
    방에서 팀을 짠 다음 이름을 손으로 옮겨 적는 일이 없어진다 */
 const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }) => {
+  const game = useGame();
+  const gameKey = useGameKey();
   const [players, setPlayers] = useState(() =>
-    Array.from({ length: 10 }, blankPlayer)
+    Array.from({ length: 10 }, () => blankPlayer(gameKey))
   );
   const [randomness, setRandomness] = useState(0);
   const [result, setResult] = useState(null);
@@ -58,7 +62,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
   const [showLoader, setShowLoader] = useState(false);
   const [ratingMode, setRatingMode] = useState('tier');
   usePageMeta(embedded ? undefined : PAGE_META.teamBalance);
-  const roster = useRoster();
+  const roster = useRoster(gameKey);
 
   const scrimStats = useMemo(() => statsFor(matches), [matches]);
   const hasScrimData = matches.length > 0;
@@ -70,8 +74,8 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
   const ratingFor = (p) => {
     const scrim = pointsOf(scrimStats, p.name);
     if (ratingMode === 'points') return scrim;
-    if (ratingMode === 'both') return ratingOf(p) + scrim;
-    return ratingOf(p);
+    if (ratingMode === 'both') return ratingOf(gameKey, p) + scrim;
+    return ratingOf(gameKey, p);
   };
 
   /* 결과가 나올 때마다(직접 짜기/후보 고르기 공통) 방의 기록 탭이 이어받을 수 있게 남겨둔다 */
@@ -92,7 +96,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
     setPlayers((prev) =>
       prev.length >= MAX_PLAYERS
         ? prev
-        : [...prev, { ...blankPlayer(), ...preset, id: uid() }]
+        : [...prev, { ...blankPlayer(gameKey), ...preset, id: uid() }]
     );
 
   /* 명단에서 직접 입력한 이름(= 명단에 없는 이름)은 팝업이 건드리지 않는다 */
@@ -123,7 +127,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
     }
     while (queue.length > 0 && next.length < MAX_PLAYERS) {
       const m = queue.shift();
-      next.push({ ...blankPlayer(), name: m.name, tier: m.tier, division: m.division });
+      next.push({ ...blankPlayer(gameKey), name: m.name, tier: m.tier, division: m.division });
     }
 
     setPlayers(next);
@@ -140,12 +144,12 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
     const rows = recent
       .slice(0, MAX_PLAYERS)
       .map((m) => ({
-        ...blankPlayer(),
+        ...blankPlayer(gameKey),
         name: m.name,
         tier: m.tier || 'GOLD',
         division: m.division || 4,
       }));
-    while (rows.length < 10) rows.push(blankPlayer());
+    while (rows.length < 10) rows.push(blankPlayer(gameKey));
     setPlayers(rows);
     setResult(null);
     toast.success(`직전 경기 ${recent.length}명을 가져왔어요.`);
@@ -156,7 +160,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
       toast.error('저장할 이름이 없어요.');
       return;
     }
-    const added = mergeMembers(entered);
+    const added = mergeMembers(gameKey, entered);
     toast.success(
       added > 0
         ? `명단에 ${added}명 추가했어요.`
@@ -196,7 +200,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
             <li key={p.id} style={{ animationDelay: `${i * 90}ms` }}>
               <span className="team-player">{p.name}</span>
               <span className="li-badges">
-                <TierBadge player={p} />
+                <TierBadge game={gameKey} player={p} />
                 {showScrim && (
                   <ScrimBadge
                     points={pointsOf(scrimStats, p.name)}
@@ -241,7 +245,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
 
           <div className="player-rows">
             {players.map((p, i) => {
-              const tier = getTier(p.tier);
+              const tier = getTier(gameKey, p.tier);
               return (
                 <div className="player-row" key={p.id}>
                   <span className="row-no">{i + 1}</span>
@@ -277,7 +281,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
                     style={{ color: tier.color }}
                     onChange={(e) => update(p.id, { tier: e.target.value })}
                   >
-                    {TIERS.map((t) => (
+                    {game.tiers.map((t) => (
                       <option key={t.key} value={t.key}>
                         {t.label}
                       </option>
@@ -290,7 +294,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
                     onChange={(e) => update(p.id, { division: Number(e.target.value) })}
                   >
                     {tier.divisions ? (
-                      DIVISIONS.map((d) => (
+                      game.divisions.map((d) => (
                         <option key={d} value={d}>
                           {d}
                         </option>
@@ -333,7 +337,7 @@ const TeamBalance = ({ matches = [], embedded = false, onUseTeams, recent = [] }
             </button>
             <button
               className="ghost-btn"
-              onClick={() => setPlayers(Array.from({ length: 10 }, blankPlayer))}
+              onClick={() => setPlayers(Array.from({ length: 10 }, () => blankPlayer(gameKey)))}
             >
               전체 비우기
             </button>

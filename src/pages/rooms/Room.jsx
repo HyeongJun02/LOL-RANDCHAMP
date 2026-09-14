@@ -45,7 +45,8 @@ import {
   leaveRoom,
   deleteRoom,
 } from '../../rooms';
-import { TIERS, DIVISIONS, getTier } from '../../tiers';
+import { getGame, getTier } from '../../games';
+import { GameProvider, useGame, useGameKey } from '../../GameContext';
 import { ACCENTS, EMBLEMS, accentVars } from '../../roomStyle';
 import { titlesOf } from '../../titles';
 import { MAX_ROOM_PLAYERS } from '../../limits';
@@ -86,8 +87,10 @@ const TABS = [
    방 전체 재조회까지 붙는다. 초안을 들고 있다가 입력을 끝냈을 때 한 번만 보낸다.
    티어/디비전은 선택 한 번이 곧 확정이라 바로 보낸다 */
 const PlayerRow = ({ player, onPatch, onDrop }) => {
+  const game = useGame();
+  const gameKey = useGameKey();
   const [draft, setDraft] = useState(player.name);
-  const tier = getTier(player.tier);
+  const tier = getTier(gameKey, player.tier);
 
   const commit = () => {
     const name = draft.trim();
@@ -113,7 +116,7 @@ const PlayerRow = ({ player, onPatch, onDrop }) => {
         style={{ color: tier.color }}
         onChange={(e) => onPatch(player.id, { tier: e.target.value })}
       >
-        {TIERS.map((t) => (
+        {game.tiers.map((t) => (
           <option key={t.key} value={t.key}>
             {t.label}
           </option>
@@ -125,7 +128,7 @@ const PlayerRow = ({ player, onPatch, onDrop }) => {
         onChange={(e) => onPatch(player.id, { division: Number(e.target.value) })}
       >
         {tier.divisions ? (
-          DIVISIONS.map((d) => (
+          game.divisions.map((d) => (
             <option key={d} value={d}>
               {d}
             </option>
@@ -143,6 +146,7 @@ const PlayerRow = ({ player, onPatch, onDrop }) => {
 
 /* 방장·부방장만 보이는 설정 묶음. 멤버에게는 멤버 목록과 나가기만 남는다 */
 const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone }) => {
+  const gameKey = useGameKey();
   const isOwner = myRole === 'owner';
   const isAdmin = canEditRole(myRole);
   const [name, setName] = useState(room.name);
@@ -152,7 +156,7 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
   const [showLoader, setShowLoader] = useState(false);
   const busy = useRef(false);
   const { confirm } = useDialog();
-  const roster = useRoster();
+  const roster = useRoster(gameKey);
 
   /* 같은 사람인데 방 명단과 내 팀원 명단의 티어가 다른 경우.
      한쪽만 고치고 잊으면 팀 짜기가 엉뚱한 평점으로 돌아간다 */
@@ -209,7 +213,7 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
 
   const addPlayer = guard(async () => {
     if (!newName.trim()) return;
-    await addRoomPlayer(room.id, { name: newName.trim() });
+    await addRoomPlayer(room.id, { name: newName.trim() }, gameKey);
     setNewName('');
     reload();
   });
@@ -223,7 +227,7 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
     const room_ = MAX_ROOM_PLAYERS - players.length;
     const take = fresh.slice(0, Math.max(0, room_));
     for (const m of take) {
-      await addRoomPlayer(room.id, { name: m.name.trim(), tier: m.tier, division: m.division });
+      await addRoomPlayer(room.id, { name: m.name.trim(), tier: m.tier, division: m.division }, gameKey);
     }
     if (take.length < fresh.length) {
       toast.error(`자리가 모자라 ${fresh.length - take.length}명은 못 넣었어요.`);
@@ -235,7 +239,10 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
 
   /* 방 명단 → 내 팀원 명단. 방 참가자는 방장이 관리하니 그쪽이 기준이다 */
   const pullTiers = guard(async () => {
-    mergeMembers(tierGap.map(({ p }) => ({ name: p.name, tier: p.tier, division: p.division })));
+    mergeMembers(
+      gameKey,
+      tierGap.map(({ p }) => ({ name: p.name, tier: p.tier, division: p.division }))
+    );
     toast.success(`${tierGap.length}명의 티어를 내 팀원 명단에 맞췄어요.`);
   });
 
@@ -659,12 +666,12 @@ const Room = () => {
   const editable = canEditRole(myRole);
 
   const record = async (m) => {
-    await addScrimByNames({ ...m, roomId, players });
+    await addScrimByNames({ ...m, roomId, players, game: room?.game });
     reload();
   };
 
   const openBet = async (m) => {
-    await openBettingByNames({ ...m, roomId, players });
+    await openBettingByNames({ ...m, roomId, players, game: room?.game });
     reload();
   };
 
@@ -707,7 +714,9 @@ const Room = () => {
   const titles = titlesOf({ matches, scrims, players });
 
   return (
-    /* 방 색을 여기 한 번만 얹으면 안쪽 배지·버튼·테두리가 전부 따라온다 */
+    /* 방 색을 여기 한 번만 얹으면 안쪽 배지·버튼·테두리가 전부 따라온다.
+       게임도 마찬가지다 - 티어 목록·라인 유무가 이 아래 전부에 걸린다 */
+    <GameProvider game={room.game}>
     <div className="page room-page" style={accentVars(room.accent)}>
       {/* 링크로 바로 들어온 사람도 여기서 걸린다 */}
       {!myNickname && <NicknameGate onSaved={reload} />}
@@ -721,6 +730,10 @@ const Room = () => {
           <div>
             <h1 className="room-name">{room.name}</h1>
             <p className="room-meta">
+              <span className="room-game" title={getGame(room.game).label}>
+                <img className="game-logo is-tiny" src={getGame(room.game).logo} alt="" />
+                {getGame(room.game).short}
+              </span>
               {members.length}명 · {ROLE_LABEL[myRole]}
             </p>
           </div>
@@ -831,6 +844,7 @@ const Room = () => {
         )}
       </div>
     </div>
+    </GameProvider>
   );
 };
 

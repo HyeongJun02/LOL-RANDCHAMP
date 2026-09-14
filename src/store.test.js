@@ -48,7 +48,7 @@ beforeEach(() => {
 
 test('로그인 전에는 서버를 건드리지 않는다', () => {
   load();
-  roster.addMember({ name: '철수' });
+  roster.addMember('lol', { name: '철수' });
 
   expect(mockUpsert).not.toHaveBeenCalled();
   expect(stored()).toHaveLength(1);
@@ -95,7 +95,7 @@ test('로그인 후 수정하면 서버로 올라간다', async () => {
   await store.setCloudUser('u1');
   mockUpsert.mockClear();
 
-  roster.addMember({ name: '영희' });
+  roster.addMember('lol', { name: '영희' });
   await Promise.resolve();
 
   expect(mockUpsert).toHaveBeenCalledTimes(1);
@@ -114,7 +114,7 @@ test('로그아웃하면 이 기기 값으로 돌아가고 서버를 안 건드�
   /* 계정 데이터는 따라오지 않는다 */
   expect(shown()).toHaveLength(0);
 
-  roster.addMember({ name: '로그아웃후추가' });
+  roster.addMember('lol', { name: '로그아웃후추가' });
   await Promise.resolve();
   expect(mockUpsert).not.toHaveBeenCalled();
   expect(stored()).toHaveLength(1); // 익명 저장소에는 남는다
@@ -127,7 +127,7 @@ test('서버 저장에 실패해도 화면 값은 남고 알림만 간다', asyn
   await store.setCloudUser('u1');
 
   mockError.upsert = { message: 'permission denied' };
-  roster.addMember({ name: '철수' });
+  roster.addMember('lol', { name: '철수' });
   await Promise.resolve();
   await Promise.resolve();
 
@@ -162,7 +162,7 @@ describe('계정당 한도', () => {
     await store.setCloudUser('보통사람');
     mockUpsert.mockClear();
 
-    roster.addMember({ name: '한명더' });
+    roster.addMember('lol', { name: '한명더' });
 
     expect(onError).toHaveBeenCalledWith(expect.stringContaining('최대'));
     expect(shown()).toHaveLength(MAX_ROSTER); // 안 늘었다
@@ -178,7 +178,7 @@ describe('계정당 한도', () => {
     store.setSyncErrorHandler(onError);
     await store.setCloudUser(ADMIN_USER_ID);
 
-    roster.addMember({ name: '한명더' });
+    roster.addMember('lol', { name: '한명더' });
 
     expect(onError).not.toHaveBeenCalled();
     expect(shown()).toHaveLength(MAX_ROSTER + 1);
@@ -189,7 +189,7 @@ describe('계정당 한도', () => {
     localStorage.setItem('lrc.roster', JSON.stringify(many(MAX_ROSTER, 'p')));
     load();
 
-    roster.addMember({ name: '한명더' });
+    roster.addMember('lol', { name: '한명더' });
     expect(stored()).toHaveLength(MAX_ROSTER + 1);
   });
 });
@@ -199,7 +199,7 @@ describe('계정 사이에 데이터가 새지 않는다', () => {
     load();
     await store.setCloudUser('u1');
 
-    roster.addMember({ name: '내계정사람' });
+    roster.addMember('lol', { name: '내계정사람' });
 
     /* 서버로는 갔지만 localStorage에는 안 남는다 */
     expect(names(mockUpsert.mock.calls.at(-1)[0].roster)).toEqual(['내계정사람']);

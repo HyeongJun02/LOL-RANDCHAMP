@@ -174,7 +174,10 @@ describe('addScrimByNames', () => {
     });
 
     const [added] = calls.filter((c) => c.table === 'room_players' && c.op === 'insert');
-    expect(added.payload).toEqual([{ room_id: 7, name: '지훈' }]);
+    /* 기본 티어는 게임에 맞춰 붙는다 (게임을 안 넘기면 롤) */
+    expect(added.payload).toEqual([
+      { room_id: 7, name: '지훈', tier: 'GOLD', division: 4 },
+    ]);
     expect(rpcCalls[0].args.p_team_a).toEqual([1, 50]);
   });
 
@@ -984,4 +987,52 @@ test('끼꼬 조정은 실제로 깎인 만큼만 원장에 적는다', () => {
   /* 원장에 p_delta를 그대로 적으면 안 된다 */
   expect(body).toMatch(/values \(p_user, p_room, applied, 'adjust'/);
   expect(body).not.toMatch(/values \(p_user, p_room, p_delta, 'adjust'/);
+});
+
+/* ---------- 게임 (롤 / 발로란트) ---------- */
+
+test('방은 게임을 하나 들고 있고, 정해둔 것만 받는다', () => {
+  expect(sql).toContain('alter table public.rooms add column if not exists game');
+  expect(sql).toMatch(/check \(game in \('lol', 'valorant'\)\)/);
+  /* 예전에 만든 방은 전부 롤이다 */
+  expect(sql).toMatch(/game text not null default 'lol'/);
+});
+
+test('방을 만들 때 게임을 고른다', () => {
+  const body = fnBody('create_room');
+  expect(body).toContain('p_game');
+  expect(body).toContain("raise exception '그런 게임은 없어요.'");
+  /* 인자가 늘면 옛 함수가 남아 PostgREST가 못 고른다 */
+  expect(sql).toContain('drop function if exists public.create_room(text);');
+  expect(sql).toContain('public.create_room(text, text)');
+});
+
+test('게임을 읽을 수 있게 컬럼이 열려 있다', () => {
+  const grant = sql.match(/grant select \(([^)]+)\) on public\.rooms/);
+  expect(grant[1]).toContain('game');
+});
+
+/* 퍼블 배당 보정은 '골드보다 몇 칸 아래인가'를 센다.
+   두 게임의 티어 이름이 달라서 사다리도 갈라야 한다 */
+test('퍼블 배당 보정이 게임별 티어 사다리를 본다', () => {
+  expect(fnBody('tier_ladder')).toContain('ASCENDANT');
+  expect(fnBody('tier_ladder')).toContain('EMERALD');
+  expect(fnBody('lock_betting')).toContain('public.tier_ladder(r.game)');
+});
+
+test('두 사다리 모두 골드가 네 번째다 (보정식이 공용이라)', () => {
+  const body = fnBody('tier_ladder');
+  const arrays = [...body.matchAll(/array\[([^\]]+)\]/g)].map((m) =>
+    m[1].split(',').map((x) => x.trim().replace(/'/g, ''))
+  );
+  expect(arrays.length).toBe(2);
+  arrays.forEach((a) => expect(a.indexOf('GOLD')).toBe(3));
+});
+
+test('킬 기준선은 게임마다 다르다 (발로란트는 라운드제라 훨씬 적다)', () => {
+  expect(killLineFor(10, 'lol')).toBeGreaterThan(killLineFor(10, 'valorant'));
+  /* 게임을 안 넘기면 롤로 본다 */
+  expect(killLineFor(10)).toBe(killLineFor(10, 'lol'));
+  /* 무승부가 없게 .5로 끊는 건 양쪽 다 */
+  expect(killLineFor(10, 'valorant') % 1).toBe(0.5);
 });

@@ -148,6 +148,17 @@ create table if not exists public.room_members (
 );
 create index if not exists room_members_user on public.room_members (user_id);
 
+-- 이 방은 무슨 게임의 내전인가.
+--
+-- 게임마다 티어 체계가 달라서(롤은 디비전 4칸, 발로란트는 3칸) 한 방에서
+-- 둘을 섞으면 평점과 전적이 의미를 잃는다. 방마다 하나로 고정하고,
+-- 게임을 바꾸려면 방을 새로 만든다.
+-- 예전에 만든 방은 전부 롤이다.
+alter table public.rooms add column if not exists game text not null default 'lol';
+alter table public.rooms drop constraint if exists rooms_game_chk;
+alter table public.rooms add constraint rooms_game_chk
+  check (game in ('lol', 'valorant'));
+
 -- 방 색과 엠블럼. 방마다 다른 색이 돌면 '우리 방'이라는 게 생긴다.
 -- 색은 키만 저장한다. 임의의 CSS 값을 넣게 두면 그걸로 화면을 망가뜨릴 수 있다.
 alter table public.rooms add column if not exists accent text not null default 'gold';
@@ -340,7 +351,7 @@ alter table public.hall_of_fame  enable row level security;
 
 -- 입장 코드는 컬럼 단위로 뺀다. 멤버 전원이 코드를 볼 수 있으면
 -- 재발급이 아무 의미가 없다. 방장·부방장은 get_join_code()로 본다.
-grant select (id, name, owner_id, version, created_at, accent, emblem) on public.rooms to authenticated;
+grant select (id, name, owner_id, version, created_at, accent, emblem, game) on public.rooms to authenticated;
 grant update (name, accent, emblem) on public.rooms to authenticated;
 grant select on public.room_members to authenticated;
 -- 잔액은 같은 방 사람끼리 서로 본다 (포인트 탭의 순위가 그것이다).
@@ -468,7 +479,10 @@ begin
 end; $fn$;
 
 
-create or replace function public.create_room(p_name text)
+-- 인자를 늘리면 옛 함수가 남아 오버로드가 된다. PostgREST가 어느 것을
+-- 부를지 못 골라서 ambiguous 오류를 낸다. 먼저 지운다.
+drop function if exists public.create_room(text);
+create or replace function public.create_room(p_name text, p_game text default 'lol')
 returns public.rooms language plpgsql security definer set search_path = public as $fn$
 declare
   me   text := auth.user_id();
@@ -477,6 +491,7 @@ declare
 begin
   if me is null then raise exception '로그인이 필요해요.'; end if;
   if coalesce(trim(p_name), '') = '' then raise exception '방 이름을 적어주세요.'; end if;
+  if p_game not in ('lol', 'valorant') then raise exception '그런 게임은 없어요.'; end if;
 
   if me <> public.admin_id() then
     select count(*) into n from rooms where owner_id = me;
@@ -488,8 +503,8 @@ begin
   -- 코드가 겹치면 다시 뽑는다. 32^6이라 거의 안 겹치지만 unique가 막아준다.
   for i in 1..5 loop
     begin
-      insert into rooms (name, join_code, owner_id)
-        values (trim(p_name), public.new_join_code(), me)
+      insert into rooms (name, join_code, owner_id, game)
+        values (trim(p_name), public.new_join_code(), me, p_game)
         returning * into room;
       exit;
     exception when unique_violation then
@@ -903,7 +918,7 @@ revoke execute on function public.log_room(bigint, text, jsonb) from public;
 
 grant execute on function
   public.get_me(),
-  public.create_room(text),
+  public.create_room(text, text),
   public.join_room(text),
   public.get_join_code(bigint),
   public.reset_join_code(bigint),
@@ -1021,6 +1036,20 @@ create policy bets_read on public.bets
       or exists (select 1 from public.scrims s where s.id = scrim_id and s.status = 'settled')
     )
   );
+
+
+-- 게임별 티어 사다리. 배당 보정에서 '골드보다 몇 칸 아래인가'를 센다.
+-- 두 게임의 칸 수가 달라서(롤 9단계, 발로 9단계지만 이름이 다르다)
+-- 한 배열로는 안 된다. 골드가 양쪽 다 네 번째(idx 3)라 보정식은 공용이다.
+create or replace function public.tier_ladder(p_game text)
+returns text[] language sql immutable as $fn$
+  select case p_game
+    when 'valorant' then array['IRON','BRONZE','SILVER','GOLD','PLATINUM',
+                               'DIAMOND','ASCENDANT','IMMORTAL','RADIANT']
+    else array['IRON','BRONZE','SILVER','GOLD','PLATINUM',
+               'EMERALD','DIAMOND','MASTER','GRANDMASTER']
+  end;
+$fn$;
 
 
 -- 승부 조작 동의. 한 번만 받는다.
@@ -1280,11 +1309,9 @@ begin
            2)
     from (
       select rp.id,
-             array_position(
-               array['IRON','BRONZE','SILVER','GOLD','PLATINUM',
-                     'EMERALD','DIAMOND','MASTER','GRANDMASTER'],
-               rp.tier) - 1 as idx
+             array_position(public.tier_ladder(r.game), rp.tier) - 1 as idx
         from room_players rp
+        join rooms r on r.id = rp.room_id
     ) t
    where bp.scrim_id = p_scrim
      and bp.market = 'first_blood'

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useRoster } from '../../roster';
-import { getTier, tierName, ratingOf } from '../../tiers';
+import { getTier, tierName, ratingOf } from '../../games';
+import { useGameKey } from '../../GameContext';
 import Modal from './Modal';
 import './RosterLoader.css';
 
@@ -18,7 +19,8 @@ const SORTS = [
    새로 고른 사람만 onConfirm으로 넘어간다. 방 참가자를 빼버리면 그 사람의
    지난 경기 기록이 갈 곳을 잃는다 */
 const RosterLoader = ({ present = [], limit, addOnly = false, onConfirm, onClose }) => {
-  const roster = useRoster();
+  const game = useGameKey();
+  const roster = useRoster(game);
   const presentNames = new Set(present.map((n) => n.trim()).filter(Boolean));
 
   const [sort, setSort] = useState('name');
@@ -31,10 +33,10 @@ const RosterLoader = ({ present = [], limit, addOnly = false, onConfirm, onClose
     const byName = (a, b) => a.name.localeCompare(b.name, 'ko');
     const list = [...roster];
     if (sort === 'tier') {
-      return list.sort((a, b) => ratingOf(b) - ratingOf(a) || byName(a, b));
+      return list.sort((a, b) => ratingOf(game, b) - ratingOf(game, a) || byName(a, b));
     }
     return list.sort(byName);
-  }, [roster, sort]);
+  }, [roster, sort, game]);
 
   const atLimit = limit !== undefined && picked.length >= limit;
 
@@ -124,9 +126,9 @@ const RosterLoader = ({ present = [], limit, addOnly = false, onConfirm, onClose
                     <span className="loader-name">{m.name || '(이름 없음)'}</span>
                     <span
                       className="loader-tier"
-                      style={{ '--tier': getTier(m.tier).color }}
+                      style={{ '--tier': getTier(game, m.tier).color }}
                     >
-                      {tierName(m)}
+                      {tierName(game, m)}
                     </span>
                     {presentNames.has(m.name.trim()) && (
                       <span className="loader-added">참가 중</span>

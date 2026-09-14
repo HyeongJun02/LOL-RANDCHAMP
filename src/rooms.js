@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
 import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP } from './tuning';
+import { getGame, defaultTierOf } from './games';
 
 /* 내전 방. 여기부터는 localStorage가 없다.
 
@@ -60,7 +61,8 @@ export const setNickname = async (nickname) => {
 
 /* ---------- 방 만들기 / 입장 ---------- */
 
-export const createRoom = (name) => rpc('create_room', { p_name: name }).then(first);
+export const createRoom = (name, game) =>
+  rpc('create_room', { p_name: name, p_game: game }).then(first);
 export const joinRoom = (code) => rpc('join_room', { p_code: code });
 
 export const getJoinCode = (roomId) => rpc('get_join_code', { p_room: roomId });
@@ -329,9 +331,11 @@ export const feedLine = (log) =>
 
 /* 같은 이름이 예전에 있었다면 그 행을 되살린다.
    새로 넣어버리면 id가 달라져서 지난 경기의 그 사람과 남남이 된다 */
-export const addRoomPlayer = async (roomId, player) => {
+export const addRoomPlayer = async (roomId, player, game) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
   const name = String(player.name || '').trim();
+  /* 기본 티어는 게임마다 다르다. 발로란트에는 디비전 4가 없다 */
+  const base = defaultTierOf(game);
 
   const gone = unwrap(
     await neon
@@ -346,7 +350,7 @@ export const addRoomPlayer = async (roomId, player) => {
     return unwrap(
       await neon
         .from('room_players')
-        .update({ deleted_at: null, tier: 'GOLD', division: 4, ...player, name })
+        .update({ deleted_at: null, ...base, ...player, name })
         .eq('id', gone[0].id)
     );
   }
@@ -354,7 +358,7 @@ export const addRoomPlayer = async (roomId, player) => {
   return unwrap(
     await neon
       .from('room_players')
-      .insert({ room_id: roomId, tier: 'GOLD', division: 4, ...player, name })
+      .insert({ room_id: roomId, ...base, ...player, name })
   );
 };
 
@@ -395,7 +399,7 @@ export const removeScrim = (id) => rpc('delete_scrim', { p_scrim: id });
 /* 기록지는 이름을 손으로 친다. 명단에 없는 이름이 나오면 참가자로 먼저
    등록하고 그 id로 경기를 남긴다. 그래야 손님으로 한 판 뛴 사람도
    다음부터 이름을 골라 쓸 수 있고, 전적이 한 사람으로 모인다 */
-const toIds = async (roomId, teamA, teamB, players) => {
+const toIds = async (roomId, teamA, teamB, players, game) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
 
   const idOf = new Map(players.map((p) => [p.name, p.id]));
@@ -432,7 +436,7 @@ const toIds = async (roomId, teamA, teamB, players) => {
     const rows = unwrap(
       await neon
         .from('room_players')
-        .insert(fresh.map((name) => ({ room_id: roomId, name })))
+        .insert(fresh.map((name) => ({ room_id: roomId, name, ...defaultTierOf(game) })))
         .select()
     );
     (rows || []).forEach((r) => idOf.set(r.name, r.id));
@@ -441,8 +445,8 @@ const toIds = async (roomId, teamA, teamB, players) => {
   return [teamA.map((n) => idOf.get(n)), teamB.map((n) => idOf.get(n))];
 };
 
-export const addScrimByNames = async ({ roomId, mode, teamA, teamB, winner, players }) => {
-  const [a, b] = await toIds(roomId, teamA, teamB, players);
+export const addScrimByNames = async ({ roomId, mode, teamA, teamB, winner, players, game }) => {
+  const [a, b] = await toIds(roomId, teamA, teamB, players, game);
   return addScrim({ roomId, mode, teamA: a, teamB: b, winner });
 };
 
@@ -454,8 +458,9 @@ export const openBettingByNames = async ({
   players,
   closeSeconds = null,
   killLine = null,
+  game,
 }) => {
-  const [a, b] = await toIds(roomId, teamA, teamB, players);
+  const [a, b] = await toIds(roomId, teamA, teamB, players, game);
   return openBetting(roomId, mode, a, b, closeSeconds, killLine);
 };
 
@@ -568,7 +573,7 @@ export const useMyRooms = (userId) => {
   const fetcher = useCallback(async () => {
     /* RLS가 내가 멤버인 방만 돌려준다. 따로 걸 조건이 없다 */
     const rooms = unwrap(
-      await neon.from('rooms').select('id,name,owner_id,version,created_at,accent,emblem')
+      await neon.from('rooms').select('id,name,owner_id,version,created_at,accent,emblem,game')
     );
     const members = unwrap(await neon.from('room_members').select('room_id,user_id,role'));
     /* 방마다 내 끼꼬가 다르므로 목록에서도 방별로 보여준다 */
@@ -613,7 +618,7 @@ export const useMyRooms = (userId) => {
    PostgREST가 FK를 따라 한 번에 묶어주므로 방+멤버+참가자+경기는 한 요청이다.
    프로필만 FK가 없어 따로 받는다 (RLS가 같은 방 사람으로 이미 좁혀준다) */
 const ROOM_SELECT =
-  'id,name,owner_id,version,created_at,accent,emblem,' +
+  'id,name,owner_id,version,created_at,accent,emblem,game,' +
   'room_members(user_id,role,joined_at,is_ghost),' +
   'room_players(id,name,tier,division,linked_user_id,deleted_at),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +
@@ -728,10 +733,13 @@ export const canEdit = (role) => role === 'owner' || role === 'admin';
    있어서 '어디에 건 건지' 자체가 헷갈리므로 경기마다 하나만 연다. */
 export { KILLS_PER_PLAYER };
 
-export const killLineFor = (playerCount) => {
+/* 게임마다 한 판에 나오는 킬이 다르다. 롤은 인당 9킬 언저리인데
+   발로란트는 라운드제라 절반도 안 된다 (games.js의 killsPerPlayer) */
+export const killLineFor = (playerCount, game) => {
   const n = Number(playerCount) || 0;
+  const per = getGame(game).killsPerPlayer || KILLS_PER_PLAYER;
   if (n === 0) return DEFAULT_KILL_LINE;
-  return Math.round(KILLS_PER_PLAYER * n) + 0.5;
+  return Math.round(per * n) + 0.5;
 };
 
 /* 이 경기의 기준선. team_a/team_b는 배팅을 열 때 박혀서 그 뒤에 명단이
@@ -741,10 +749,10 @@ export const killLineFor = (playerCount) => {
    방장이 또또를 열 때 직접 정했으면 그 값(scrims.kill_line)을 쓴다.
    안 정했으면 인원으로 계산한다. team_a/team_b는 열 때 박혀서 그 뒤에
    명단이 바뀌어도 흔들리지 않으니, 언제 계산해도 같은 마켓 이름이 나온다 */
-export const killLineOfScrim = (scrim) =>
+export const killLineOfScrim = (scrim, game) =>
   scrim?.kill_line != null
     ? Number(scrim.kill_line)
-    : killLineFor((scrim?.team_a?.length || 0) + (scrim?.team_b?.length || 0));
+    : killLineFor((scrim?.team_a?.length || 0) + (scrim?.team_b?.length || 0), game);
 export const killMarket = (line) => `kills_${line}`;
 export const killLineOf = (market) => Number(market.split('_')[1]);
 

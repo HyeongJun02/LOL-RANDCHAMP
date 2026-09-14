@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FaDice, FaMinus, FaPlus } from 'react-icons/fa';
 import Modal from '../../components/common/Modal';
 import { killLineFor } from '../../rooms';
+import { useGameKey } from '../../GameContext';
 import { CLOSE_PRESETS as PRESETS } from '../../tuning';
 
 /* 또또를 열기 전에 방장이 정하는 것들.
@@ -16,7 +17,8 @@ import { CLOSE_PRESETS as PRESETS } from '../../tuning';
 const STEP = 1;
 
 const BetOpenModal = ({ onClose, onOpen, playerCount }) => {
-  const auto = killLineFor(playerCount);
+  const game = useGameKey();
+  const auto = killLineFor(playerCount, game);
   const [seconds, setSeconds] = useState(null);
   const [line, setLine] = useState(auto);
   const [busy, setBusy] = useState(false);

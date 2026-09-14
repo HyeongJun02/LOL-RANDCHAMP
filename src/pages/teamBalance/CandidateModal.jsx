@@ -1,17 +1,18 @@
 import React from 'react';
 import { FaCheck } from 'react-icons/fa';
-import { getTier, tierName } from '../../tiers';
+import { getTier, tierName } from '../../games';
+import { useGameKey } from '../../GameContext';
 import Modal from '../../components/common/Modal';
 
-const TeamColumn = ({ team, sum, side }) => (
+const TeamColumn = ({ team, sum, side, game }) => (
   <div className={`cand-team ${side}`}>
     <span className="cand-sum">{sum}</span>
     <ul>
       {[...team]
         .sort((a, b) => b.rating - a.rating)
         .map((p) => (
-          <li key={p.id} title={tierName(p)}>
-            <i style={{ background: getTier(p.tier).color }} />
+          <li key={p.id} title={tierName(game, p)}>
+            <i style={{ background: getTier(game, p.tier).color }} />
             {p.name}
           </li>
         ))}
@@ -20,6 +21,7 @@ const TeamColumn = ({ team, sum, side }) => (
 );
 
 const CandidateModal = ({ result, onSelect, onClose }) => {
+  const game = useGameKey();
   const hidden = result.count - result.options.length;
 
   return (
@@ -50,9 +52,9 @@ const CandidateModal = ({ result, onSelect, onClose }) => {
               )}
             </div>
             <div className="cand-body">
-              <TeamColumn team={o.teamA} sum={o.sumA} side="blue" />
+              <TeamColumn team={o.teamA} sum={o.sumA} side="blue" game={game} />
               <span className="cand-vs">VS</span>
-              <TeamColumn team={o.teamB} sum={o.sumB} side="red" />
+              <TeamColumn team={o.teamB} sum={o.sumB} side="red" game={game} />
             </div>
           </button>
         ))}

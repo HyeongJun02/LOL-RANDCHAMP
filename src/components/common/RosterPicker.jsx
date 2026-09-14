@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaUserPlus } from 'react-icons/fa';
 import { useRoster } from '../../roster';
-import { tierName } from '../../tiers';
+import { useGameKey } from '../../GameContext';
+import { tierName } from '../../games';
 import './RosterPicker.css';
 
 /* 이름 칸 옆에 붙는 작은 토글. 아직 안 들어간 사람만 보여준다.
@@ -9,7 +10,8 @@ import './RosterPicker.css';
    people: 고를 사람들. 안 주면 내 팀원 명단을 쓴다.
            방 안에서는 그 방의 참가자 명단을 넘긴다 */
 const RosterPicker = ({ taken = [], people, onPick, title = '저장된 팀원 불러오기' }) => {
-  const saved = useRoster();
+  const game = useGameKey();
+  const saved = useRoster(game);
   const roster = people || saved;
   const [open, setOpen] = useState(false);
   const box = useRef(null);
@@ -57,7 +59,7 @@ const RosterPicker = ({ taken = [], people, onPick, title = '저장된 팀원 �
                 }}
               >
                 <span>{m.name}</span>
-                <em>{tierName(m)}</em>
+                <em>{tierName(game, m)}</em>
               </button>
             ))
           )}
