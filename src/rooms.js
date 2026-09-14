@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
 import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP } from './tuning';
-import { getGame, defaultTierOf } from './games';
+import { getGame, getMode, defaultTierOf } from './games';
 
 /* 내전 방. 여기부터는 localStorage가 없다.
 
@@ -733,13 +733,15 @@ export const canEdit = (role) => role === 'owner' || role === 'admin';
    있어서 '어디에 건 건지' 자체가 헷갈리므로 경기마다 하나만 연다. */
 export { KILLS_PER_PLAYER };
 
-/* 게임마다 한 판에 나오는 킬이 다르다. 롤은 인당 9킬 언저리인데
-   발로란트는 라운드제라 절반도 안 된다 (games.js의 killsPerPlayer) */
-export const killLineFor = (playerCount, game) => {
+/* 게임과 모드마다 한 판에 나오는 킬이 다르다.
+   롤 내전은 인당 9킬 언저리인데, 발로란트 일반은 라운드제라 절반도 안 되고
+   신속은 그보다 더 적다. 난투는 킬만 주고받아서 제일 많다.
+   (games.js의 modes[].killsPerPlayer) */
+export const killLineFor = (playerCount, game, mode) => {
   const n = Number(playerCount) || 0;
-  const per = getGame(game).killsPerPlayer || KILLS_PER_PLAYER;
+  const per = getMode(game, mode).killsPerPlayer || getGame(game).killsPerPlayer;
   if (n === 0) return DEFAULT_KILL_LINE;
-  return Math.round(per * n) + 0.5;
+  return Math.round((per || KILLS_PER_PLAYER) * n) + 0.5;
 };
 
 /* 이 경기의 기준선. team_a/team_b는 배팅을 열 때 박혀서 그 뒤에 명단이
@@ -752,7 +754,11 @@ export const killLineFor = (playerCount, game) => {
 export const killLineOfScrim = (scrim, game) =>
   scrim?.kill_line != null
     ? Number(scrim.kill_line)
-    : killLineFor((scrim?.team_a?.length || 0) + (scrim?.team_b?.length || 0), game);
+    : killLineFor(
+        (scrim?.team_a?.length || 0) + (scrim?.team_b?.length || 0),
+        game,
+        scrim?.mode
+      );
 export const killMarket = (line) => `kills_${line}`;
 export const killLineOf = (market) => Number(market.split('_')[1]);
 

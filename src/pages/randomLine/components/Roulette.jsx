@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { LINES, getLine } from '../../../lines';
+import { getRole } from '../../../games';
 import styles from './Roulette.module.css';
 
 const VISIBLE_COUNT = 3;
@@ -7,7 +7,7 @@ const LOOP_COUNT = 40; // 5라인 × 40 = 200칸, 무한 루프처럼 보이게
 const MID = Math.floor(VISIBLE_COUNT / 2);
 const SPIN_MS = 3000;
 
-const Roulette = ({ options, selectedOption, trigger, resetTrigger }) => {
+const Roulette = ({ game, options, selectedOption, trigger, resetTrigger }) => {
   /* 위치를 px가 아니라 '가운데 칸에 놓일 아이템 번호'로 들고 있는다.
      그래야 칸 폭이 바뀌어도(반응형) 항상 아이콘 정중앙에 맞는다 */
   const [landed, setLanded] = useState(0);
@@ -78,7 +78,7 @@ const Roulette = ({ options, selectedOption, trigger, resetTrigger }) => {
     .map(() => options)
     .flat();
 
-  const winner = selectedOption ? getLine(selectedOption) : null;
+  const winner = selectedOption ? getRole(game, selectedOption) : null;
 
   return (
     <div
@@ -100,14 +100,18 @@ const Roulette = ({ options, selectedOption, trigger, resetTrigger }) => {
         }}
       >
         {items.map((name, i) => {
-          const l = LINES.find((line) => line.name === name);
+          const l = getRole(game, name);
           return (
             <div
               key={`${name}-${i}`}
               className={styles.item}
               style={{ flex: `0 0 ${itemWidth}px` }}
             >
-              <img src={l?.icon || ''} alt={name} />
+              {l?.icon ? (
+                <img src={l.icon} alt={name} />
+              ) : (
+                <span className={styles.emoji}>{l?.emoji}</span>
+              )}
               <span style={{ color: l?.color }}>{name}</span>
             </div>
           );

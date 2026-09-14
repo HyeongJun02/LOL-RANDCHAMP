@@ -340,3 +340,55 @@
   font-size: 0.6rem;
   opacity: 0.7;
 }
+
+/* ---------- 모드 고르기 ---------- */
+/* 발로란트만 여럿이다 (일반·신속·난투). 난투는 1대1·2대2라
+   팀 칸 수까지 달라져서, 승패를 남기기 전에 먼저 고르는 자리다 */
+
+.sr-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+}
+
+.sr-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #8b98ae;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.sr-mode:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sr-mode strong {
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.sr-mode em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #6b7a94;
+}
+
+.sr-mode.active {
+  border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 55%, transparent);
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 14%, transparent);
+  color: var(--accent-light, var(--gg-gold-light));
+}
+
+.sr-mode.active em {
+  color: inherit;
+  opacity: 0.75;
+}

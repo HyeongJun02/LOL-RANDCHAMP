@@ -958,6 +958,30 @@ alter table public.scrims add column if not exists betting_closes_at timestamptz
 -- 방장이 팝업에서 직접 정할 수 있어서, 정한 값을 경기에 박아둔다.
 -- (안 박아두면 나중에 명단이 바뀔 때 기준선이 슬쩍 달라진다)
 alter table public.scrims add column if not exists kill_line numeric(5, 1);
+
+-- 모드. 게임마다 다르다.
+--   롤        normal                    (+ 옛 기록의 aram)
+--   발로란트  standard · swift · brawl
+--
+-- 난투(brawl)는 1대1·2대2라 5대5 전적과 섞으면 둘 다 의미를 잃는다.
+-- 집계를 가르는 건 화면이 하고, 여기서는 '있는 값인가'만 본다.
+-- 표를 만들 때 인라인 CHECK로 붙여둔 옛 제약은 이름을 모르니 찾아서 뗀다.
+do $$
+declare c text;
+begin
+  select conname into c
+    from pg_constraint
+   where conrelid = 'public.scrims'::regclass
+     and contype = 'c'
+     and pg_get_constraintdef(oid) ilike '%mode%';
+  if c is not null then
+    execute format('alter table public.scrims drop constraint %I', c);
+  end if;
+end $$;
+
+alter table public.scrims drop constraint if exists scrims_mode_chk;
+alter table public.scrims add constraint scrims_mode_chk
+  check (mode in ('normal', 'aram', 'standard', 'swift', 'brawl'));
 alter table public.scrims add column if not exists settled_at timestamptz;
 
 alter table public.scrims drop constraint if exists scrims_status_chk;
@@ -1038,6 +1062,18 @@ create policy bets_read on public.bets
   );
 
 
+-- 이 게임에 있는 모드인가. 발로란트 모드를 롤 방에 넣거나 그 반대가
+-- 되면 화면이 모드 이름을 못 읽어 빈칸이 된다.
+create or replace function public.valid_mode(p_game text, p_mode text)
+returns boolean language sql immutable as $fn$
+  select case p_game
+    when 'valorant' then p_mode in ('standard', 'swift', 'brawl')
+    -- 롤은 normal 하나. aram은 옛 기록이라 받아만 준다
+    else p_mode in ('normal', 'aram')
+  end;
+$fn$;
+
+
 -- 게임별 티어 사다리. 배당 보정에서 '골드보다 몇 칸 아래인가'를 센다.
 -- 두 게임의 칸 수가 달라서(롤 9단계, 발로 9단계지만 이름이 다르다)
 -- 한 배열로는 안 된다. 골드가 양쪽 다 네 번째(idx 3)라 보정식은 공용이다.
@@ -1105,6 +1141,9 @@ begin
   if p_winner not in ('A', 'B') then
     raise exception '이긴 팀을 골라주세요.';
   end if;
+  if not public.valid_mode((select game from rooms where id = p_room), p_mode) then
+    raise exception '이 방의 게임에 없는 모드예요.';
+  end if;
 
   select count(*) into n from scrims where room_id = p_room;
   if n >= 1000 then
@@ -1141,6 +1180,9 @@ begin
   end if;
   if exists (select 1 from scrims where room_id = p_room and status in ('betting', 'locked')) then
     raise exception '아직 끝나지 않은 배팅 경기가 있어요. 그것부터 정산해 주세요.';
+  end if;
+  if not public.valid_mode((select game from rooms where id = p_room), p_mode) then
+    raise exception '이 방의 게임에 없는 모드예요.';
   end if;
 
   select count(*) into n from scrims where room_id = p_room;

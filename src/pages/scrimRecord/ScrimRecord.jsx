@@ -18,15 +18,14 @@ import RosterPicker from '../../components/common/RosterPicker';
 import ClearInput from '../../components/common/ClearInput';
 import { useDialog } from '../../components/common/Dialog';
 import { timeAgo } from '../../timeAgo';
+import { defaultModeOf, getMode, hasModeChoice } from '../../games';
+import { useGame, useGameKey } from '../../GameContext';
 import './ScrimRecord.css';
 
-/* 칼바람/일반을 나눠 세지 않기로 했다. scrims.mode는 NOT NULL이라 값은
-   있어야 하는데, 이제 그 값으로 갈라 보는 곳이 없어 하나로 고정한다.
-   (옛 기록의 'aram'도 그대로 남아 있고, 집계는 둘을 함께 센다) */
-const MODE = 'normal';
-
-const TEAM_SIZE = 5;
-const blankTeam = () => Array.from({ length: TEAM_SIZE }, () => '');
+/* 모드는 게임이 정한다. 롤은 하나뿐이라 고르는 칸이 안 뜨고,
+   발로란트는 일반·신속·난투 셋이다.
+   난투는 1대1·2대2라 팀 칸 수도 달라진다 */
+const blankTeam = (size = 5) => Array.from({ length: size }, () => '');
 
 /* 컴포넌트 함수 안에서 매 렌더마다 새로 만들면 리액트가 다른 컴포넌트로 보고
    통째로 재마운트한다 (인풋 포커스가 키 입력마다 날아가는 버그로 이어짐).
@@ -76,9 +75,13 @@ const TeamPanel = ({ label, team, otherTeam, players, onChangeAt, onRemoveAt, on
    players: 방 참가자 명단 (티어 배지와 이름 고르기에 쓴다)
    canEdit: 방장·부방장만 true. 나머지는 보기만 한다 */
 const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRemove, onOpenBetting }) => {
+  const game = useGame();
+  const gameKey = useGameKey();
+  const [mode, setMode] = useState(() => defaultModeOf(gameKey));
+  const modeInfo = getMode(gameKey, mode);
   const { confirm } = useDialog();
-  const [teamA, setTeamA] = useState(blankTeam);
-  const [teamB, setTeamB] = useState(blankTeam);
+  const [teamA, setTeamA] = useState(() => blankTeam(modeInfo.teamSize));
+  const [teamB, setTeamB] = useState(() => blankTeam(modeInfo.teamSize));
   /* 더블클릭으로 같은 경기가 두 번 들어가는 걸 막는다.
      상태로 잡으면 렌더 클로저의 옛 값을 읽어서 두 번 통과한다 */
   const saving = useRef(false);
@@ -136,9 +139,20 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     setTeamB(lastGame.teamB);
   }, [canEdit, lastGame, teamA, teamB]);
 
+  /* 모드를 바꾸면 팀 칸 수도 달라진다(난투는 2명). 이미 이름을 적어뒀으면
+     건드리지 않는다 - 다 지워버리면 잘못 누른 사람이 곤란해진다 */
+  const pickMode = (next) => {
+    setMode(next);
+    const size = getMode(gameKey, next).teamSize;
+    const empty = [...teamA, ...teamB].every((n) => !n.trim());
+    if (!empty) return;
+    setTeamA(blankTeam(size));
+    setTeamB(blankTeam(size));
+  };
+
   const clearTeams = () => {
-    setTeamA(blankTeam());
-    setTeamB(blankTeam());
+    setTeamA(blankTeam(modeInfo.teamSize));
+    setTeamB(blankTeam(modeInfo.teamSize));
   };
 
   const recordWin = async (winner) => {
@@ -157,7 +171,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
 
     saving.current = true;
     try {
-      await onAdd({ mode: MODE, teamA: a, teamB: b, winner });
+      await onAdd({ mode, teamA: a, teamB: b, winner });
       toast.success(`${winner === 'A' ? '1팀' : '2팀'} 승리! 기록했어요.`);
     } catch (e) {
       toast.error(e.message);
@@ -182,7 +196,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     }
     saving.current = true;
     try {
-      await onOpenBetting({ mode: MODE, teamA: a, teamB: b, closeSeconds, killLine });
+      await onOpenBetting({ mode, teamA: a, teamB: b, closeSeconds, killLine });
       setShowBetOpen(false);
       toast.success(
         closeSeconds
@@ -221,6 +235,22 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     <>
       {canEdit && (
         <>
+          {/* 모드가 하나뿐인 게임(롤)에서는 아예 안 그린다 */}
+          {hasModeChoice(gameKey) && (
+            <div className="sr-modes">
+              {game.modes.map((m) => (
+                <button
+                  key={m.key}
+                  className={`sr-mode ${mode === m.key ? 'active' : ''}`}
+                  onClick={() => pickMode(m.key)}
+                >
+                  <strong>{m.label}</strong>
+                  {m.desc && <em>{m.desc}</em>}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="sr-toolbar">
             {/* 이것만 팝업을 여는 버튼이다. 나머지는 이 화면에서 바로 끝나는
                 동작이라, 같은 회색 버튼으로 두면 무슨 일이 날지 모르고 누른다 */}
@@ -295,6 +325,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
             <BetOpenModal
               onClose={() => setShowBetOpen(false)}
               onOpen={openBetting}
+              mode={mode}
               playerCount={
                 teamA.filter((n) => n.trim()).length + teamB.filter((n) => n.trim()).length
               }

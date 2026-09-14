@@ -1036,3 +1036,47 @@ test('킬 기준선은 게임마다 다르다 (발로란트는 라운드제라 �
   /* 무승부가 없게 .5로 끊는 건 양쪽 다 */
   expect(killLineFor(10, 'valorant') % 1).toBe(0.5);
 });
+
+/* ---------- 모드 ---------- */
+
+test('모드는 게임에 있는 것만 받는다', () => {
+  expect(sql).toContain("check (mode in ('normal', 'aram', 'standard', 'swift', 'brawl'))");
+  const v = fnBody('valid_mode');
+  expect(v).toContain("p_mode in ('standard', 'swift', 'brawl')");
+  /* 옛 칼바람 기록은 그대로 받아준다 */
+  expect(v).toContain("p_mode in ('normal', 'aram')");
+});
+
+test('표를 만들 때 붙은 옛 mode 제약을 찾아서 뗀다', () => {
+  /* 인라인 CHECK라 이름을 모른다. 이름으로 drop하면 안 지워진다 */
+  expect(sql).toContain("pg_get_constraintdef(oid) ilike '%mode%'");
+});
+
+test('경기를 남기거나 또또를 열 때 모드를 검사한다', () => {
+  ['record_scrim', 'open_betting'].forEach((fn) => {
+    expect(fnBody(fn)).toContain('public.valid_mode((select game from rooms where id = p_room)');
+  });
+});
+
+test('킬 기준선이 모드마다 다르다', () => {
+  /* 난투는 킬만 주고받아 제일 많고, 신속은 5선취라 제일 적다 */
+  expect(killLineFor(4, 'valorant', 'brawl')).toBeGreaterThan(
+    killLineFor(4, 'valorant', 'standard')
+  );
+  expect(killLineFor(10, 'valorant', 'swift')).toBeLessThan(
+    killLineFor(10, 'valorant', 'standard')
+  );
+  /* 어느 조합이든 무승부가 없게 .5로 끊는다 */
+  ['standard', 'swift', 'brawl'].forEach((m) => {
+    expect(killLineFor(6, 'valorant', m) % 1).toBe(0.5);
+  });
+});
+
+test('경기에 박아둔 기준선이 있으면 모드보다 그게 먼저다', () => {
+  const scrim = { kill_line: '30.5', mode: 'brawl', team_a: [1], team_b: [2] };
+  expect(killLineOfScrim(scrim, 'valorant')).toBe(30.5);
+  /* 안 박아뒀으면 그 경기의 모드로 계산한다 */
+  expect(killLineOfScrim({ mode: 'swift', team_a: [1, 2, 3, 4, 5], team_b: [6, 7, 8, 9, 10] }, 'valorant')).toBe(
+    killLineFor(10, 'valorant', 'swift')
+  );
+});

@@ -187,3 +187,9 @@
   display: flex;
   gap: 0.35rem;
 }
+
+/* 집계 묶음 고르기 (전체 / 5대5 / 난투).
+   난투는 1대1·2대2라 5대5 전적과 섞으면 둘 다 못 읽는다 */
+.season-groups {
+  margin-bottom: 0.8rem;
+}

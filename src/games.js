@@ -20,6 +20,8 @@
    팀에 넣으면 게임이 안 된다.
    ---------------------------------------------------------------- */
 
+import { LINES, VALORANT_ROLES } from './lines';
+
 /* ratings는 낮은 디비전 → 높은 디비전 순 (골드4, 골드3, 골드2, 골드1).
    디비전이 없는 티어는 한 칸만 둔다 */
 const tier = (key, label, color, ratings) => ({
@@ -80,10 +82,21 @@ export const GAMES = [
     divisions: [4, 3, 2, 1],
     defaultTier: 'GOLD',
     teamSize: 5,
-    /* 탑·정글·미드·원딜·서폿. 발로란트에는 이런 게 없다 */
-    hasLines: true,
-    /* 총 킬 언더/오버의 인당 기준. 발로란트는 라운드제라 킬이 훨씬 적다 */
-    killsPerPlayer: 8.9,
+    /* 탑·정글·미드·원딜·서폿. 다섯 자리를 다섯 명이 하나씩 나눠 갖는다 */
+    roles: LINES,
+    roleLabel: '라인',
+    uniqueRoles: true,
+    /* 내전 모드. 하나뿐이면 화면에 고르는 칸을 아예 안 그린다 */
+    modes: [
+      {
+        key: 'normal',
+        label: '내전',
+        group: 'team',
+        teamSize: 5,
+        /* 총 킬 언더/오버의 인당 기준 */
+        killsPerPlayer: 8.9,
+      },
+    ],
   },
   {
     key: 'valorant',
@@ -96,15 +109,88 @@ export const GAMES = [
     divisions: [3, 2, 1],
     defaultTier: 'GOLD',
     teamSize: 5,
-    hasLines: false,
-    /* 13라운드 선취라 한 판 총 킬이 대략 인당 4~5킬 언저리다 */
-    killsPerPlayer: 4.5,
+    /* 역할이 넷인데 팀은 다섯이라 하나는 겹친다. 롤과 다른 점 */
+    roles: VALORANT_ROLES,
+    roleLabel: '역할',
+    uniqueRoles: false,
+    modes: [
+      {
+        key: 'standard',
+        label: '일반',
+        desc: '13선취 5대5',
+        group: 'team',
+        teamSize: 5,
+        /* 라운드제라 롤보다 킬이 훨씬 적다 */
+        killsPerPlayer: 4.5,
+      },
+      {
+        key: 'swift',
+        label: '신속',
+        desc: '5선취 5대5',
+        group: 'team',
+        teamSize: 5,
+        killsPerPlayer: 2.6,
+      },
+      {
+        key: 'brawl',
+        label: '난투',
+        desc: '1대1 · 2대2도',
+        /* 5대5 전적과 섞으면 둘 다 의미를 잃는다. 따로 센다 */
+        group: 'brawl',
+        teamSize: 2,
+        /* 킬만 주고받는 판이라 인원 대비 킬이 제일 많다 */
+        killsPerPlayer: 14,
+      },
+    ],
   },
 ];
 
 export const DEFAULT_GAME = 'lol';
 
 export const getGame = (key) => GAMES.find((g) => g.key === key) || GAMES[0];
+
+/* ---------- 모드 ---------- */
+
+export const modesOf = (game) => getGame(game).modes;
+
+export const getMode = (game, key) => {
+  const list = modesOf(game);
+  return list.find((m) => m.key === key) || list[0];
+};
+
+export const defaultModeOf = (game) => modesOf(game)[0].key;
+
+/* 이 게임에 실제로 있는 모드인가. 옛 기록('aram')이나 다른 게임의 모드가
+   섞여 들어오면 기본 모드로 본다 */
+export const hasMode = (game, key) => modesOf(game).some((m) => m.key === key);
+
+/* 집계를 가르는 단위. 5대5끼리는 함께 세고, 난투는 따로 센다.
+   1대1 전적과 5대5 전적을 한 표에 올리면 둘 다 읽을 수 없다 */
+export const modeGroupOf = (game, key) => getMode(game, key).group;
+
+/* 모드가 하나뿐인 게임은 고르는 칸을 안 그린다 */
+export const hasModeChoice = (game) => modesOf(game).length > 1;
+
+export const ALL_GROUPS = 'all';
+
+const GROUP_LABEL = { team: '5대5', brawl: '난투' };
+
+/* 이 게임에 실제로 있는 집계 묶음들. 하나뿐이면 화면이 안 그린다 */
+export const modeGroupsOf = (game) => {
+  const seen = [];
+  modesOf(game).forEach((m) => {
+    if (!seen.some((g) => g.key === m.group)) {
+      seen.push({ key: m.group, label: GROUP_LABEL[m.group] || m.group });
+    }
+  });
+  return seen;
+};
+
+/* ---------- 역할 (롤 라인 · 발로 역할군) ---------- */
+
+export const rolesOf = (game) => getGame(game).roles;
+export const roleNamesOf = (game) => getGame(game).roles.map((r) => r.name);
+export const getRole = (game, name) => getGame(game).roles.find((r) => r.name === name);
 
 /* ---------- 티어 ---------- */
 

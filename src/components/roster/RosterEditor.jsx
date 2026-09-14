@@ -75,10 +75,10 @@ const RosterEditor = () => {
                   <option value={m.division}>-</option>
                 )}
               </select>
-              {/* 라인은 롤에만 있다. 발로란트에는 탑·정글 같은 게 없다 */}
-              {game.hasLines && (
-              <div className="member-lines" title="못 가는 라인">
+              {/* 롤은 라인, 발로란트는 역할군. 이름만 다르고 쓰임은 같다 */}
+              <div className="member-lines" title={`안 하는 ${game.roleLabel}`}>
                 <LineSelector
+                  game={gameKey}
                   compact
                   disabledLines={m.lines || []}
                   onToggle={(line) =>
@@ -90,7 +90,6 @@ const RosterEditor = () => {
                   }
                 />
               </div>
-              )}
               <button
                 className="member-del"
                 onClick={() => removeMember(m.id)}

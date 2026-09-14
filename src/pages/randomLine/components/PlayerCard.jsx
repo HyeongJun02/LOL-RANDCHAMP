@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FaDice, FaUndo } from 'react-icons/fa';
-import { LINE_NAMES, getLine } from '../../../lines';
+import { getRole, roleNamesOf } from '../../../games';
 import LineSelector from '../../../components/common/LineSelector';
 import RosterPicker from '../../../components/common/RosterPicker';
 import Roulette from './Roulette';
@@ -9,6 +9,7 @@ import styles from './PlayerCard.module.css';
 const PLACEHOLDER_NAMES = ['탑차이', '정글탓', '관종미드', '버스원딜', '헌신서폿'];
 
 const PlayerCard = ({
+  game,
   index,
   name,
   disabledLines,
@@ -29,8 +30,8 @@ const PlayerCard = ({
     setDisplayName(name);
   }, [name]);
 
-  const line = assignedLine ? getLine(assignedLine) : null;
-  const remaining = LINE_NAMES.filter((l) => !disabledLines.includes(l)).length;
+  const line = assignedLine ? getRole(game, assignedLine) : null;
+  const remaining = roleNamesOf(game).filter((l) => !disabledLines.includes(l)).length;
   const noWayOut = remaining === 0;
 
   return (
@@ -78,6 +79,7 @@ const PlayerCard = ({
 
       <div className={styles.selectorLabel}>가기 싫은 라인 밴하기</div>
       <LineSelector
+        game={game}
         disabledLines={disabledLines}
         onToggle={(l) => onToggleLine(index, l)}
       />
@@ -88,7 +90,8 @@ const PlayerCard = ({
         <span className={`${styles.corner} ${styles.cornerBL}`} />
         <span className={`${styles.corner} ${styles.cornerBR}`} />
         <Roulette
-          options={LINE_NAMES.filter((l) => !disabledLines.includes(l))}
+          game={game}
+          options={roleNamesOf(game).filter((l) => !disabledLines.includes(l))}
           selectedOption={assignedLine}
           trigger={spinTrigger}
           resetTrigger={resetTrigger}

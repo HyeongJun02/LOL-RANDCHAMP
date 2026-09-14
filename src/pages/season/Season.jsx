@@ -8,7 +8,7 @@ import {
   monthKeyOf,
   monthLabel,
 } from '../../matches';
-import { getTier, tierName } from '../../games';
+import { getTier, tierName, modeGroupOf, modeGroupsOf, ALL_GROUPS } from '../../games';
 import { useGameKey } from '../../GameContext';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import RankList from '../../components/common/RankList';
@@ -29,7 +29,20 @@ const ALL = 'all';
 const Season = ({ matches = [], players = [] }) => {
   const gameKey = useGameKey();
 
-  const months = useMemo(() => monthsOf(matches), [matches]);
+  /* 난투(1대1·2대2)를 5대5 전적과 한 표에 올리면 둘 다 못 읽는다.
+     게임에 묶음이 둘 이상일 때만 고르는 칸이 뜬다 */
+  const groups = useMemo(() => modeGroupsOf(gameKey), [gameKey]);
+  const [group, setGroup] = useState(ALL_GROUPS);
+
+  const scoped = useMemo(
+    () =>
+      group === ALL_GROUPS
+        ? matches
+        : matches.filter((m) => modeGroupOf(gameKey, m.mode) === group),
+    [matches, group, gameKey]
+  );
+
+  const months = useMemo(() => monthsOf(scoped), [scoped]);
   const [month, setMonth] = useState(null);
 
   /* 기록이 들어오면 가장 최근 달이 기본. 고른 달의 기록을 다 지우면 되돌린다 */
@@ -40,8 +53,8 @@ const Season = ({ matches = [], players = [] }) => {
   const isAll = active === ALL;
 
   const monthMatches = useMemo(
-    () => (isAll ? matches : inMonth(matches, active)),
-    [matches, active, isAll]
+    () => (isAll ? scoped : inMonth(scoped, active)),
+    [scoped, active, isAll]
   );
 
   /* 그 달만 떼어 처음부터 다시 계산한다. 달마다 0에서 시작하는 시즌 개념 */
@@ -111,6 +124,26 @@ const Season = ({ matches = [], players = [] }) => {
             </div>
 
           </div>
+
+          {groups.length > 1 && (
+            <div className="seg-tabs season-groups">
+              <button
+                className={`seg-tab ${group === ALL_GROUPS ? 'active' : ''}`}
+                onClick={() => setGroup(ALL_GROUPS)}
+              >
+                전체
+              </button>
+              {groups.map((g) => (
+                <button
+                  key={g.key}
+                  className={`seg-tab ${group === g.key ? 'active' : ''}`}
+                  onClick={() => setGroup(g.key)}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="season-summary">
             <span>

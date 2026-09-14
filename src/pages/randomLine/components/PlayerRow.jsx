@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaUndo } from 'react-icons/fa';
-import { LINE_NAMES, getLine } from '../../../lines';
+import { getRole, roleNamesOf } from '../../../games';
 import LineSelector from '../../../components/common/LineSelector';
 import RosterPicker from '../../../components/common/RosterPicker';
 import styles from './PlayerRow.module.css';
@@ -9,6 +9,7 @@ const PLACEHOLDER_NAMES = ['탑차이', '정글탓', '관종미드', '버스원�
 
 /* 카드 뷰의 한 줄짜리 버전. 룰렛을 빼고 결과만 보여준다 */
 const PlayerRow = ({
+  game,
   index,
   name,
   takenNames,
@@ -21,8 +22,8 @@ const PlayerRow = ({
   onAssign,
   onResetOne,
 }) => {
-  const line = assignedLine ? getLine(assignedLine) : null;
-  const noWayOut = LINE_NAMES.every((l) => disabledLines.includes(l));
+  const line = assignedLine ? getRole(game, assignedLine) : null;
+  const noWayOut = roleNamesOf(game).every((l) => disabledLines.includes(l));
 
   return (
     <div
@@ -46,6 +47,7 @@ const PlayerRow = ({
 
       <div className={styles.linesCell}>
         <LineSelector
+          game={game}
           compact
           disabledLines={disabledLines}
           onToggle={(l) => onToggleLine(index, l)}
@@ -56,7 +58,7 @@ const PlayerRow = ({
         {line ? (
           <>
             <span className={styles.lineTag}>
-              <img src={line.icon} alt="" />
+              {line.icon ? <img src={line.icon} alt="" /> : <span>{line.emoji}</span>}
               {line.name}
             </span>
             <span className={styles.quote}>{quote}</span>

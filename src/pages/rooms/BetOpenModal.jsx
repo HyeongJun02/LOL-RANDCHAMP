@@ -16,9 +16,9 @@ import { CLOSE_PRESETS as PRESETS } from '../../tuning';
 
 const STEP = 1;
 
-const BetOpenModal = ({ onClose, onOpen, playerCount }) => {
+const BetOpenModal = ({ onClose, onOpen, playerCount, mode }) => {
   const game = useGameKey();
-  const auto = killLineFor(playerCount, game);
+  const auto = killLineFor(playerCount, game, mode);
   const [seconds, setSeconds] = useState(null);
   const [line, setLine] = useState(auto);
   const [busy, setBusy] = useState(false);

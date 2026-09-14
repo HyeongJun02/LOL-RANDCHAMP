@@ -7,6 +7,13 @@ import {
   tierName,
   defaultTierOf,
   fitTier,
+  getMode,
+  hasMode,
+  hasModeChoice,
+  modeGroupOf,
+  modeGroupsOf,
+  rolesOf,
+  roleNamesOf,
 } from './games';
 
 test('모르는 게임 키는 기본 게임으로 떨어진다', () => {
@@ -91,4 +98,71 @@ test('그 게임에 없는 티어는 기본값으로 갈아끼운다', () => {
 test('없는 티어 키를 물어도 터지지 않는다', () => {
   expect(getTier('valorant', 'EMERALD').key).toBe('IRON');
   expect(ratingOf('valorant', { tier: 'EMERALD', division: 1 })).toBeGreaterThanOrEqual(0);
+});
+
+/* ---------- 모드 ---------- */
+
+test('롤은 모드가 하나뿐이라 고르는 칸을 안 그린다', () => {
+  expect(hasModeChoice('lol')).toBe(false);
+  expect(hasModeChoice('valorant')).toBe(true);
+});
+
+test('발로란트 난투는 1대1·2대2라 팀 칸이 5가 아니다', () => {
+  expect(getMode('valorant', 'brawl').teamSize).toBe(2);
+  expect(getMode('valorant', 'standard').teamSize).toBe(5);
+});
+
+/* 난투 전적이 5대5 전적에 섞이면 둘 다 못 읽는다 */
+test('난투는 5대5와 다른 묶음으로 센다', () => {
+  expect(modeGroupOf('valorant', 'brawl')).toBe('brawl');
+  expect(modeGroupOf('valorant', 'standard')).toBe('team');
+  expect(modeGroupOf('valorant', 'swift')).toBe('team');
+  expect(modeGroupOf('lol', 'normal')).toBe('team');
+});
+
+test('묶음 목록은 게임에 실제로 있는 것만 준다', () => {
+  expect(modeGroupsOf('lol').map((g) => g.key)).toEqual(['team']);
+  expect(modeGroupsOf('valorant').map((g) => g.key)).toEqual(['team', 'brawl']);
+});
+
+test('모르는 모드는 그 게임의 첫 모드로 떨어진다 (옛 aram 기록 등)', () => {
+  expect(getMode('lol', 'aram').key).toBe('normal');
+  expect(getMode('valorant', undefined).key).toBe('standard');
+  expect(hasMode('lol', 'brawl')).toBe(false);
+  expect(hasMode('valorant', 'brawl')).toBe(true);
+});
+
+test('모드마다 한 판에 나오는 킬이 다르다', () => {
+  const per = (g, m) => getMode(g, m).killsPerPlayer;
+  /* 난투 > 롤 내전 > 발로 일반 > 발로 신속 */
+  expect(per('valorant', 'brawl')).toBeGreaterThan(per('lol', 'normal'));
+  expect(per('lol', 'normal')).toBeGreaterThan(per('valorant', 'standard'));
+  expect(per('valorant', 'standard')).toBeGreaterThan(per('valorant', 'swift'));
+});
+
+/* ---------- 역할 (롤 라인 · 발로 역할군) ---------- */
+
+test('게임마다 역할이 다르다', () => {
+  expect(roleNamesOf('lol')).toEqual(['탑', '정글', '미드', '원딜', '서폿']);
+  expect(roleNamesOf('valorant')).toEqual(['타격대', '척후대', '감시자', '전략가']);
+});
+
+test('롤은 한 명씩 다른 라인, 발로란트는 겹쳐도 된다', () => {
+  /* 롤은 다섯 자리를 다섯 명이 나눠 갖는다 */
+  expect(getGame('lol').uniqueRoles).toBe(true);
+  expect(roleNamesOf('lol')).toHaveLength(5);
+  /* 발로란트는 역할이 넷인데 팀이 다섯이라 겹칠 수밖에 없다 */
+  expect(getGame('valorant').uniqueRoles).toBe(false);
+  expect(roleNamesOf('valorant')).toHaveLength(4);
+});
+
+test('역할마다 색과 그릴 것이 있다', () => {
+  ['lol', 'valorant'].forEach((g) => {
+    rolesOf(g).forEach((r) => {
+      expect(r.color).toMatch(/^#/);
+      /* 롤은 아이콘 파일, 발로는 이모지 */
+      expect(r.icon || r.emoji).toBeTruthy();
+      expect(r.quotes.length).toBeGreaterThan(0);
+    });
+  });
 });
