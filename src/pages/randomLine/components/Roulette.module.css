@@ -39,28 +39,47 @@
   height: 100%;
 }
 
+/* 아이콘과 이름을 세로로 가운데 맞춘다.
+
+   전에는 text-align과 padding-top에 기대고 있었는데, 그러면 아이콘이
+   글자의 기준선(baseline) 위에 앉는다. 롤은 <img>, 발로란트는 색을
+   입히려고 마스크 <span>을 쓰는데 이 둘이 기준선 위에서 차지하는 높이가
+   달라서, 게임을 바꾸면 그림과 글자 사이가 어긋나 보였다.
+   flex로 묶으면 기준선이 끼어들 자리가 없다 */
 .item {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  height: 100%;
   color: #e2e8f0;
-  padding-top: 0.35rem;
   opacity: 0.85;
 }
 
 .item img,
 .item :global(.role-icon) {
+  display: block;
+  flex: none;
   width: 34px;
   height: 34px;
-  margin-bottom: 0.25rem;
+  margin: 0;
 }
 
 .item img {
+  object-fit: contain;
   filter: drop-shadow(0 0 6px rgba(200, 170, 110, 0.2));
 }
 
 .item span {
   display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.7rem;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.3px;
 }
 
