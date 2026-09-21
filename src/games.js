@@ -116,6 +116,9 @@ export const GAMES = [
     roles: VALORANT_ROLES,
     roleLabel: '역할',
     uniqueRoles: false,
+    /* 역할이 넷인데 팀은 다섯이라 하나는 반드시 겹친다. 보통 타격대를
+       둘 둔다. 화면에서 체크로 바꿀 수 있고 여기는 처음 값일 뿐이다 */
+    defaultDoubles: ['타격대'],
     sampleNames: ['원딜러', '연막충', '벽잡이', '칼잡이', '설치왕'],
     banHint: '하기 싫은 역할 밴하기',
     modes: [

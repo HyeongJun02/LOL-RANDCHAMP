@@ -6,9 +6,10 @@ import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
 import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
+import RoleIcon from '../../components/common/RoleIcon';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
 import { randomQuote } from '../../lines';
-import { GAMES, DEFAULT_GAME, getGame, roleNamesOf } from '../../games';
+import { GAMES, DEFAULT_GAME, getGame, getRole, roleNamesOf } from '../../games';
 import { GameProvider } from '../../GameContext';
 import { usePageMeta, PAGE_META } from '../../seo';
 import styles from './RandomLine.module.css';
@@ -44,6 +45,8 @@ export default function RandomLinePage() {
   const [celebrate, setCelebrate] = useState(false);
   const [compact, setCompact] = useState(prefersCompact);
   const [showLoader, setShowLoader] = useState(false);
+  /* 겹쳐도 되는 게임에서 '둘까지 받는 역할'. 롤은 쓰지 않는다 */
+  const [doubles, setDoubles] = useState(() => getGame(DEFAULT_GAME).defaultDoubles || []);
   const roster = useRoster(gameKey);
   usePageMeta(PAGE_META.randomLine);
   const [subtitle] = useState(
@@ -108,6 +111,16 @@ export default function RandomLinePage() {
     setPlayers(cp);
   };
 
+  /* 역할 하나가 받을 수 있는 사람 수.
+     롤은 한 자리에 한 명이고, 발로란트는 체크한 역할만 둘까지 받는다 */
+  const capOf = (role) =>
+    !game.uniqueRoles && doubles.includes(role) ? 2 : 1;
+
+  const toggleDouble = (role) =>
+    setDoubles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
+
   const checkCelebrate = (arr) => {
     if (arr.every(Boolean)) {
       setCelebrate(true);
@@ -119,11 +132,11 @@ export default function RandomLinePage() {
     const used = assigned.filter((_, idx) => idx !== i);
     const open = ROLES.filter((l) => !players[i].disabled.includes(l));
 
-    /* 롤은 한 자리에 한 명이라 남이 가져간 라인은 뺀다.
-       발로란트는 역할이 넷이라 겹칠 수밖에 없다. 그래도 아직 아무도 안 맡은
-       역할을 먼저 준다 - 그래야 넷이 다 채워지고 조합이 된다 */
-    const fresh = open.filter((l) => !used.includes(l));
-    const allow = game.uniqueRoles ? fresh : (fresh.length ? fresh : open);
+    /* 아직 정원이 안 찬 역할을 먼저 준다. 롤은 정원이 다 1이라
+       '남이 가져간 라인은 뺀다'와 같은 말이 된다 */
+    const countOf = (l) => used.filter((x) => x === l).length;
+    const fresh = open.filter((l) => countOf(l) < capOf(l));
+    const allow = game.uniqueRoles ? fresh : fresh.length ? fresh : open;
 
     if (!allow.length) {
       toast.error(`갈 수 있는 ${game.roleLabel}이 없습니다. 밴을 풀어주세요.`);
@@ -163,20 +176,13 @@ export default function RandomLinePage() {
       }
     }
 
-    /* 겹쳐도 되는 게임(발로란트)은 짝 맞추기를 할 게 없다.
-       안 맡은 역할부터 채우고, 다 맡았으면 아무거나 준다 */
-    if (!game.uniqueRoles) {
-      const taken = new Set();
-      const picked = players.map((_, i) => {
-        const list = shuffle([...allowed[i]]);
-        const first = list.find((l) => !taken.has(l)) || list[0];
-        taken.add(first);
-        return first;
-      });
-      setAssigned(picked);
-      setQuotes(picked.map((line) => randomQuote(line)));
-      setTriggers((trigs) => trigs.map((v) => v + 1));
-      checkCelebrate(picked);
+    /* 자리가 사람보다 적으면 애초에 못 채운다. 배정을 돌려보고
+       '안 된다'고 하는 것보다, 무엇을 고쳐야 하는지 먼저 말해준다 */
+    const seats = ROLES.reduce((sum, l) => sum + capOf(l), 0);
+    if (seats < players.length) {
+      toast.error(
+        `자리가 ${seats}개뿐이라 ${players.length}명을 못 넣어요. 둘까지 받는 역할을 늘려주세요.`
+      );
       return;
     }
 
@@ -186,17 +192,19 @@ export default function RandomLinePage() {
 
     const choices = allowed.map((list) => shuffle([...list]));
     const result = Array(players.length).fill(null);
-    const used = new Set();
+    /* 쓴 횟수를 센다. 정원이 1이면 예전의 Set과 똑같이 굴러간다 */
+    const used = new Map();
 
     const dfs = (k) => {
       if (k === order.length) return true;
       const i = order[k];
       for (const line of choices[i]) {
-        if (used.has(line)) continue;
+        const n = used.get(line) || 0;
+        if (n >= capOf(line)) continue;
         result[i] = line;
-        used.add(line);
+        used.set(line, n + 1);
         if (dfs(k + 1)) return true;
-        used.delete(line);
+        used.set(line, n);
         result[i] = null;
       }
       return false;
@@ -218,6 +226,7 @@ export default function RandomLinePage() {
   const pickGame = (next) => {
     if (next === gameKey) return;
     setGameKey(next);
+    setDoubles(getGame(next).defaultDoubles || []);
     setPlayers((prev) => prev.map((p) => ({ ...p, disabled: [] })));
     setAssigned(Array(5).fill(null));
     setQuotes(Array(5).fill(''));
@@ -272,6 +281,38 @@ export default function RandomLinePage() {
           </div>
         </div>
       </PageHeader>
+
+      {/* 역할이 사람보다 적은 게임에서만. 롤은 다섯 자리 다섯 명이라
+          고를 게 없다 */}
+      {!game.uniqueRoles && (
+        <div className={styles.doubles}>
+          <span className={styles.doublesLabel}>둘까지 받는 역할</span>
+          <div className={styles.doublesList}>
+            {ROLES.map((name) => {
+              const role = getRole(gameKey, name);
+              const on = doubles.includes(name);
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  className={`${styles.doubleChip} ${on ? styles.doubleOn : ''}`}
+                  aria-pressed={on}
+                  onClick={() => toggleDouble(name)}
+                  style={on ? { borderColor: role?.color, color: role?.color } : undefined}
+                >
+                  <RoleIcon role={role} style={on ? { color: role?.color } : undefined} />
+                  {name}
+                  {on && <em>2명</em>}
+                </button>
+              );
+            })}
+          </div>
+          <p className={styles.doublesHint}>
+            역할 {ROLES.length}개에 {players.length}명이라 {players.length - ROLES.length}자리가
+            겹칩니다. 겹쳐도 되는 역할을 골라주세요.
+          </p>
+        </div>
+      )}
 
       <div className={compact ? styles.rowWrapper : styles.cardWrapper}>
         {players.map((p, i) => {

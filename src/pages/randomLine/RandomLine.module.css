@@ -202,3 +202,84 @@
 }
 
 
+
+/* ---------- 둘까지 받는 역할 ---------- */
+/* 발로란트는 역할 넷에 다섯 명이라 하나는 반드시 겹친다.
+   어느 역할을 겹칠지는 판마다 다르니 고르게 둔다 */
+
+.doubles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.doublesLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.doublesList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.doubleChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 999px;
+  background: rgba(8, 12, 20, 0.5);
+  color: #8b98ae;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.doubleChip:hover {
+  color: #e2e8f0;
+}
+
+.doubleOn {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* 꺼진 칩의 아이콘은 글자와 같이 흐리게. 켜지면 역할 색을 되찾는다 */
+.doubleChip :global(.role-icon),
+.doubleChip img {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex: none;
+}
+
+.doubleChip img {
+  opacity: 0.5;
+}
+
+.doubleOn img {
+  opacity: 1;
+}
+
+.doubleChip em {
+  font-style: normal;
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+.doublesHint {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.6;
+  color: #6b7686;
+}

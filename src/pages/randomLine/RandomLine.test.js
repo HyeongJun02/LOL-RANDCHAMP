@@ -213,3 +213,56 @@ test('체크를 풀면 참가자에서 빠지고 밴도 지워진다', () => {
   expect(el.querySelector('.rowWrapper .nameInput').value).toBe('');
   expect(el.querySelectorAll('.banned')).toHaveLength(0);
 });
+
+/* ---------- 발로란트: 역할 넷에 다섯 명 ---------- */
+/* 한 자리는 반드시 겹치는데, 어느 역할을 겹칠지는 체크로 고른다 */
+
+const goValorant = (el) => click(byText(el, '발로란트'));
+
+/* 배정되면 각 줄에 .lineTag가 생긴다 (다른 테스트와 같은 기준) */
+const tagCount = (el) => el.querySelectorAll('.rowWrapper .lineTag').length;
+
+const chips = () => [...document.querySelectorAll('[class*="doubleChip"]')];
+
+test('롤에는 둘까지 받는 역할을 고르는 칸이 없다', () => {
+  render();
+  expect(chips()).toHaveLength(0);
+});
+
+test('발로란트로 바꾸면 타격대가 기본으로 켜져 있다', () => {
+  const el = render();
+  goValorant(el);
+
+  const on = chips().filter((c) => c.getAttribute('aria-pressed') === 'true');
+  expect(on).toHaveLength(1);
+  expect(on[0].textContent).toContain('타격대');
+});
+
+test('체크를 다 끄면 자리가 모자라 배정하지 않는다', () => {
+  const el = render();
+  goValorant(el);
+  click(byText(el, '한눈에'));
+
+  /* 켜진 것 하나를 끈다 - 자리가 넷뿐이라 다섯 명을 못 넣는다 */
+  const on = chips().find((c) => c.getAttribute('aria-pressed') === 'true');
+  click(on);
+  expect(chips().every((c) => c.getAttribute('aria-pressed') === 'false')).toBe(true);
+
+  click(el.querySelector('[class*="assignAll"]'));
+  expect(tagCount(el)).toBe(0);
+});
+
+test('타격대만 켜두면 다섯 자리가 채워지고 타격대가 둘이 된다', () => {
+  const el = render();
+  goValorant(el);
+  click(byText(el, '한눈에'));
+
+  click(el.querySelector('[class*="assignAll"]'));
+
+  const tags = [...el.querySelectorAll('.rowWrapper .lineTag')].map((n) => n.textContent.trim());
+  expect(tags).toHaveLength(5);
+  /* 넷은 하나씩, 켜둔 하나만 둘 */
+  const count = (name) => tags.filter((t) => t.includes(name)).length;
+  expect(count('타격대')).toBe(2);
+  ['척후대', '감시자', '전략가'].forEach((r) => expect(count(r)).toBe(1));
+});
