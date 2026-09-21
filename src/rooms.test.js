@@ -287,15 +287,11 @@ const fnBody = (name) => {
   return sql.slice(from, sql.indexOf('$fn$;', from));
 };
 
-test('마켓 이름과 상한이 앱과 DB에서 같다', () => {
+/* 마켓 이름은 SQL의 split_part(market, '_', 2)가 기준선을 떼어낼 수 있는
+   모양이어야 한다. 상한 값 자체는 아래 BET_CAP 대조 테스트가 본다 */
+test('킬 마켓 이름에 기준선이 그대로 들어간다', () => {
   expect(killMarket(53.5)).toBe('kills_53.5');
-  expect(capOf('first_blood')).toBe(2000);
-  expect(capOf(killMarket(53.5))).toBe(3000);
-  expect(capOf('winner')).toBeNull();
-
-  const body = fnBody('place_bets');
-  expect(body).toContain("when b->>'market' = 'first_blood' then 2000");
-  expect(body).toContain("when b->>'market' like 'kills%' then 3000");
+  expect(fnBody('place_bets')).toContain("like 'kills%'");
 });
 
 test('배팅도 잔액 확인과 차감을 한 문장으로 한다 (방 지갑에서)', () => {
@@ -854,11 +850,26 @@ test('취소는 로그에 남는다 (남의 돈이 오간 일이다)', () => {
 /* 굴려보고 정하는 값은 tuning.js에 모아뒀는데, 그중 몇 개는 DB에도
    같은 숫자가 박혀 있다. 한쪽만 고치면 "3,000까지 걸 수 있어요"라고
    해놓고 서버가 거절하는 꼴이 된다 */
+/* 한쪽만 바꾸면 화면에서는 "3,000까지" 라고 해놓고 서버가 거절한다.
+   BET_CAP에 마켓을 추가하면 여기서 DB 쪽도 같이 고쳤는지 본다 */
 test('배팅 상한이 tuning.js와 DB에서 같다', () => {
-  const tuning = require('./tuning');
+  const { BET_CAP } = require('./tuning');
   const body = fnBody('place_bets');
-  expect(body).toContain(`then ${tuning.BET_CAP.kills}`);
-  expect(body).toContain(String(tuning.BET_CAP.first_blood));
+  const sqlOf = { winner: "= 'winner' then", first_blood: "= 'first_blood' then", kills: "like 'kills%' then" };
+
+  Object.entries(BET_CAP).forEach(([market, cap]) => {
+    expect(sqlOf[market]).toBeDefined();
+    expect(body).toContain(`${sqlOf[market]} ${cap === null ? 'null' : cap}`);
+  });
+});
+
+test('상한 없는 마켓은 capOf가 null을 준다', () => {
+  const { capOf, killMarket } = require('./rooms');
+  const { BET_CAP } = require('./tuning');
+  expect(capOf('winner')).toBe(BET_CAP.winner);
+  expect(capOf('first_blood')).toBe(BET_CAP.first_blood);
+  expect(capOf(killMarket(45.5))).toBe(BET_CAP.kills);
+  expect(capOf('없는마켓')).toBeNull();
 });
 
 test('배당이 tuning.js와 DB에서 같다', () => {
@@ -1095,4 +1106,30 @@ test('경기에 박아둔 기준선이 있으면 모드보다 그게 먼저다',
   expect(killLineOfScrim({ mode: 'swift', team_a: [1, 2, 3, 4, 5], team_b: [6, 7, 8, 9, 10] }, 'valorant')).toBe(
     killLineFor(10, 'valorant', 'swift')
   );
+});
+
+/* 전부 초록으로 두면 취소 로그가 축하처럼 보인다 */
+describe('로그 색', () => {
+  const kinds = (log) => feedParts(log).parts.map((x) => x.k);
+
+  test('되돌리기·취소는 빨강으로 세운다', () => {
+    expect(kinds({ type: 'settle_undone', payload: { count: 1 } })).toContain('bad');
+    expect(
+      kinds({ type: 'scrim_cancelled', payload: { people: 3, refund: 900, status: 'betting' } })
+    ).toContain('bad');
+  });
+
+  test('끼꼬 조정은 방향에 따라 색이 갈린다', () => {
+    const up = { type: 'adjust', payload: { who: '철수', delta: 1000, after: 11000 } };
+    const down = { type: 'adjust', payload: { who: '철수', delta: -1000, after: 9000 } };
+    expect(kinds(up)).toContain('hot');
+    expect(kinds(up)).not.toContain('bad');
+    expect(kinds(down)).toContain('bad');
+    expect(kinds(down)).not.toContain('hot');
+  });
+
+  test('경기 결과와 신기록은 초록·금색 그대로다', () => {
+    expect(kinds({ type: 'settled', payload: { winner: 'A' } })).toContain('hot');
+    expect(kinds({ type: 'record', payload: { kind: 'kills', value: 50 } })).toContain('hot');
+  });
 });

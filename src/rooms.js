@@ -186,6 +186,9 @@ const num = (n) => Number(n || 0).toLocaleString();
    tag는 이 줄이 무엇에 관한 것인지 (경기/이체/배팅). 목록에서 눈으로
    훑을 때 종류부터 걸러진다. */
 const t = (v) => ({ k: 'text', v });
+/* 초록(hot)은 '좋은 일이 일어났다', 빨강(bad)은 '되돌렸다·깎였다·취소했다'.
+   전부 초록으로 두면 취소 로그가 축하처럼 보인다 */
+const bad = (v) => ({ k: 'bad', v });
 const nameOf_ = (v) => ({ k: 'name', v });
 const amountOf = (v) => ({ k: 'amount', v: `${num(v)} 끼꼬` });
 
@@ -279,7 +282,9 @@ export const feedParts = (log) => {
           t('방장이 '),
           nameOf_(p.who),
           t(' 님 끼꼬를 '),
-          { k: 'hot', v: `${num(Math.abs(p.delta))}` },
+          p.delta > 0
+            ? { k: 'hot', v: `${num(Math.abs(p.delta))}` }
+            : bad(`${num(Math.abs(p.delta))}`),
           t(p.delta > 0 ? ' 올렸어요' : ' 내렸어요'),
           t(` · 남은 ${num(p.after)}`),
           ...(p.reason ? [t(' · '), nameOf_(p.reason)] : []),
@@ -301,8 +306,8 @@ export const feedParts = (log) => {
       return {
         tag,
         parts: [
-          t('방장이 또또를 '),
-          { k: 'hot', v: '취소' },
+          t(p.by === 'admin' ? '관리자가 또또를 ' : '방장이 또또를 '),
+          bad('취소'),
           t('했어요 · '),
           nameOf_(`${p.people}명`),
           t(' '),
@@ -313,7 +318,7 @@ export const feedParts = (log) => {
     case 'settle_undone':
       return {
         tag,
-        parts: [t('방장이 정산을 '), { k: 'hot', v: '되돌렸어요' }, t(` (${p.count}번째)`)],
+        parts: [t('방장이 정산을 '), bad('되돌렸어요'), t(` (${p.count}번째)`)],
       };
     default:
       return { tag, parts: [t(log.type)] };
@@ -799,8 +804,9 @@ export const winningSelection = (scrim, market) => {
    숫자는 tuning.js에 있다 */
 export { BET_CAP };
 
+/* 상한은 tuning.js의 BET_CAP 한 곳에서만 정한다. null이면 상한 없음 */
 export const capOf = (market) =>
-  market === 'first_blood' ? BET_CAP.first_blood : isKillMarket(market) ? BET_CAP.kills : null;
+  (isKillMarket(market) ? BET_CAP.kills : BET_CAP[market]) ?? null;
 
 export const marketLabel = (market) => {
   if (market === 'winner') return '승리팀';

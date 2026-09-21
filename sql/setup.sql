@@ -1258,8 +1258,12 @@ begin
     if (b->>'amount')::int <= 0 then
       raise exception '배팅 금액은 1 이상이어야 해요.';
     end if;
+    -- 마켓별 1인 상한. src/tuning.js의 BET_CAP과 같은 숫자여야 한다.
+    -- null이면 상한 없음 (승리팀은 패리뮤추얼이라 기본이 무제한이다).
+    -- 방 안에서 끼꼬 차이가 너무 빨리 벌어지면 여기에 숫자를 넣는다.
     cap := case
-      when b->>'market' = 'first_blood' then 2000
+      when b->>'market' = 'winner' then null
+      when b->>'market' = 'first_blood' then 1000
       when b->>'market' like 'kills%' then 3000
       else null
     end;

@@ -869,6 +869,12 @@
   font-weight: 800;
 }
 
+/* 되돌렸거나 깎였거나 취소된 줄. 초록과 같은 무게로 두되 색만 반대다 */
+.feed-bad {
+  color: var(--gg-red);
+  font-weight: 800;
+}
+
 .feed-pager {
   display: flex;
   align-items: center;
