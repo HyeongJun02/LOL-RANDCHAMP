@@ -306,30 +306,34 @@
   color: #6b7a94;
 }
 
-/* 아직 안 끝난 달. 이대로면 네가 박제된다는 게 요점이다 */
+/* 아직 안 끝난 달. 이대로면 네가 박제된다는 게 요점이다.
+
+   전에는 여기에 왕좌 두 개를 세웠는데, 바로 위 순위표가 같은 말을
+   이미 하고 있어서 같은 이름이 한 화면에 두 번 나왔다. 게다가
+   패널 > 박스 > 왕좌로 테두리가 세 겹이라 눈이 먼저 지쳤다.
+   지난 달은 왕좌로, 이번 달은 한 줄로 */
 .hof-running {
-  margin-bottom: 0.8rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px dashed rgba(251, 191, 36, 0.35);
-  border-radius: 10px;
-  background: rgba(251, 191, 36, 0.05);
-}
-
-.hof-running-label {
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #fbbf24;
-}
-
-.hof-running p {
-  margin: 0.25rem 0 0;
-  font-size: 0.82rem;
-  line-height: 1.6;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.7;
   color: #cbd5e1;
 }
 
 .hof-running b {
   color: #fde68a;
+  font-weight: 800;
+}
+
+/* 이름 뒤에 붙는 작은 꼬리표. '무엇의 1위'인지가 이름만큼 중요하다 */
+.hof-running-tag {
+  margin-left: 0.25rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .hof-blank {
@@ -339,6 +343,10 @@
   font-size: 0.82rem;
   line-height: 1.7;
   color: var(--gg-text-muted);
+}
+
+.hof-season {
+  margin-top: 1rem;
 }
 
 .hof-season + .hof-season {

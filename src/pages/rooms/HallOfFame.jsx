@@ -94,16 +94,19 @@ const HallOfFame = ({ rows = [], matches = [], members = [] }) => {
   }, [rows, matches]);
 
   /* 이번 달 잠정 1위. 아직 아무것도 확정이 아니라는 게 요점이다 */
-  const runningKkiko = useMemo(
-    () => [...members].sort((a, b) => b.points - a.points)[0] || null,
-    [members]
-  );
+  /* 전원이 0이면 1위랄 게 없다. '0 끼꼬 1위'가 서 있으면 우습다 */
+  const runningKkiko = useMemo(() => {
+    const top = [...members].sort((a, b) => b.points - a.points)[0];
+    return top && top.points > 0 ? top : null;
+  }, [members]);
   const runningKing = useMemo(() => scrimKingOf(matches, month), [matches, month]);
 
-  const needNow = Math.max(
-    HOF_MIN_GAMES,
-    Math.ceil(inMonth(matches || [], month).length * HOF_MIN_SHARE)
-  );
+  /* 이번 달 왕좌를 그대로 세우면 바로 위 순위표와 같은 말을 두 번 한다.
+     진행 중은 '이대로면 누가 박제되는지' 한 줄이면 족하다 */
+  const running = [
+    runningKkiko && { label: '끼꼬', name: runningKkiko.nickname },
+    runningKing && { label: '내전', name: runningKing.name },
+  ].filter(Boolean);
 
   return (
     <section className="hof">
@@ -111,42 +114,33 @@ const HallOfFame = ({ rows = [], matches = [], members = [] }) => {
         <h3>
           <FaCrown /> 명예의 전당
         </h3>
-        <span className="hof-note">매월 1일, 그 달의 끼꼬와 내전 성적이 박제됩니다</span>
+        <span className="hof-note">
+          {seasons.length === 0
+            ? '매월 1일에 박제됩니다. 첫 박제는 다음 달 1일이에요'
+            : '매월 1일, 그 달의 끼꼬와 내전 성적이 박제됩니다'}
+        </span>
       </div>
 
       {/* 이번 달은 아직 안 끝났다. 지금 1등을 걸어두면 남은 날이 달라진다 */}
-      <div className="hof-running">
-        <span className="hof-running-label">{monthText(month)} · 진행 중</span>
-        <div className="hof-thrones">
-          <Throne
-            kind="kkiko"
-            icon={<FaCoins />}
-            label="끼꼬"
-            name={runningKkiko?.nickname}
-            value={`${num(runningKkiko?.points)} 끼꼬`}
-            blank="아직 아무도 없어요"
-          />
-          <Throne
-            kind="scrim"
-            icon={<FaTrophy />}
-            label="내전"
-            name={runningKing?.name}
-            value={`${num(runningKing?.points)}점`}
-            sub={
-              runningKing &&
-              `${runningKing.wins}승 ${runningKing.losses}패 · 승률 ${runningKing.rate}%`
-            }
-            blank={`${needNow}판 이상 뛴 사람부터`}
-          />
-        </div>
-      </div>
+      <p className="hof-running">
+        {running.length === 0 ? (
+          <>{monthText(month)}는 아직 박제할 기록이 없어요.</>
+        ) : (
+          <>
+            이대로 끝나면{' '}
+            {running.map((r, i) => (
+              <React.Fragment key={r.label}>
+                {i > 0 && ', '}
+                <b>{r.name}</b>
+                <span className="hof-running-tag">{r.label} 1위</span>
+              </React.Fragment>
+            ))}
+            {' 로 박제됩니다.'}
+          </>
+        )}
+      </p>
 
-      {seasons.length === 0 ? (
-        <p className="hof-blank">
-          아직 끝난 달이 없어요.
-          <br />첫 박제는 다음 달 1일입니다.
-        </p>
-      ) : (
+      {seasons.length > 0 &&
         seasons.map((s) => (
           <div className="hof-season" key={s.month}>
             <div className="hof-season-head">
@@ -185,8 +179,7 @@ const HallOfFame = ({ rows = [], matches = [], members = [] }) => {
               </ol>
             )}
           </div>
-        ))
-      )}
+        ))}
     </section>
   );
 };

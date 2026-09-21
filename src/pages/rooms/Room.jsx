@@ -803,8 +803,10 @@ const Room = () => {
         )}
         {tab === 'season' && (
           <>
-            <HallOfFame rows={hofRows} matches={matches} members={members} />
+            {/* 순위표가 먼저다. 이 탭에 온 이유가 그것이고, 전당은
+                지난 달 이야기라 아래에 둔다 */}
             <Season matches={matches} players={players} />
+            <HallOfFame rows={hofRows} matches={matches} members={members} />
           </>
         )}
         {tab === 'bet' && (
