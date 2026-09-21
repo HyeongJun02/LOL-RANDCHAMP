@@ -15,6 +15,23 @@ import '../scrimRecord/ScrimRecord.css';
 
 const num = (n) => Number(n || 0).toLocaleString();
 
+const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+const dayKey = (ts) => {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+};
+
+/* 시간만 죽 나열하면 언제 몰아서 했는지가 안 보인다. 내전은 하루에
+   여러 판을 붙어서 하는 놀이라 '그날'이 묶음의 단위다 */
+const dayLabel = (ts) => {
+  const d = new Date(ts);
+  const today = dayKey(Date.now());
+  const yesterday = dayKey(Date.now() - 86400000);
+  if (dayKey(ts) === today) return '오늘';
+  if (dayKey(ts) === yesterday) return '어제';
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEK[d.getDay()]})`;
+};
+
 const MatchHistory = ({
   matches = [],
   scrims = [],
@@ -31,6 +48,16 @@ const MatchHistory = ({
   const [open, setOpen] = useState(null);
 
   const history = [...matches].sort((a, b) => b.playedAt - a.playedAt);
+
+  /* 날짜별로 묶는다. Map은 넣은 순서를 지키므로 최신 날이 먼저 온다 */
+  const days = new Map();
+  history.forEach((m) => {
+    const k = dayKey(m.playedAt);
+    if (!days.has(k)) days.set(k, []);
+    days.get(k).push(m);
+  });
+
+  const betGames = history.filter((m) => m.betCount > 0).length;
 
   /* 지우면 그 경기가 지갑에 한 일까지 전부 되돌아간다.
      또또가 걸렸던 판이면 남의 돈이 오가므로 무슨 일이 일어나는지 적어준다 */
@@ -57,13 +84,10 @@ const MatchHistory = ({
     return <p className="rooms-blank">아직 기록된 경기가 없어요.</p>;
   }
 
-  return (
-    <>
-      <ul className="history-list">
-        {history.map((m) => {
-          const hasBets = m.betCount > 0;
-          return (
-            <li key={m.id} className={hasBets ? 'has-bets' : ''}>
+  const card = (m) => {
+    const hasBets = m.betCount > 0;
+    return (
+      <li key={m.id} className={hasBets ? 'has-bets' : ''}>
               <div className="hist-head">
                 <span className="hist-time">{timeAgo(m.playedAt)}</span>
 
@@ -143,10 +167,37 @@ const MatchHistory = ({
                   </div>
                 ))}
               </div>
-            </li>
-          );
-        })}
-      </ul>
+      </li>
+    );
+  };
+
+  return (
+    <>
+      {/* 며칠에 걸쳐 몇 판 했는지가 먼저 보이면 아래 목록이 읽히기 시작한다 */}
+      <div className="hist-summary">
+        <span>
+          <b>{history.length}</b>판
+        </span>
+        <span>
+          <b>{days.size}</b>일
+        </span>
+        {betGames > 0 && (
+          <span className="is-bet">
+            또또 <b>{betGames}</b>판
+          </span>
+        )}
+      </div>
+
+      {[...days.entries()].map(([key, list]) => (
+        <section className="hist-day" key={key}>
+          <h3 className="hist-day-label">
+            {dayLabel(list[0].playedAt)}
+            <em>{list.length}판</em>
+          </h3>
+          {/* 넓은 화면에서는 두 열. 한 열로만 두면 좌우가 통째로 비어 있다 */}
+          <ul className="history-list">{list.map(card)}</ul>
+        </section>
+      ))}
 
       {/* 또또 탭과 같은 화면을 그대로 띄운다. 결과를 두 벌로 그리면
           둘이 조금씩 달라지고, 어느 쪽이 맞는지 아무도 모르게 된다 */}

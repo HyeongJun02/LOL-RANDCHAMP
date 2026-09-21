@@ -193,3 +193,66 @@
 .season-groups {
   margin-bottom: 0.8rem;
 }
+
+/* ---------- 요약 숫자 ---------- */
+/* 한 줄 문장으로 두면 숫자가 글자에 묻힌다. 훑는 화면이니 세워 올린다 */
+
+.season-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: #8b98ae;
+}
+
+.season-nums b {
+  margin-right: 0.15rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #e6ecf7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 그 기간 1등. 이름이라 숫자와 다른 무게로 둔다 */
+.season-nums .is-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(200, 170, 110, 0.14);
+  color: var(--gg-gold-light);
+  font-weight: 700;
+}
+
+/* ---------- 두 단 ---------- */
+/* 세로로만 쌓으면 순위를 다 지나야 숨은 기록에 닿는다.
+   넓은 화면에서는 나란히 둔다 */
+
+.season-cols {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.2rem;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .season-cols {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 1.4rem;
+  }
+
+  /* 순위가 길어도 숨은 기록은 화면에 머문다 */
+  .season-cols .season-insights {
+    position: sticky;
+    top: calc(var(--header-h, 80px) + 3.6rem);
+    max-height: calc(100vh - var(--header-h, 80px) - 5rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+.season-col {
+  min-width: 0;
+}

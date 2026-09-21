@@ -151,3 +151,34 @@ test('수정 권한이 없으면 삭제 버튼이 안 보인다', () => {
   /* 기록 자체는 보인다 */
   expect(el.querySelector('.history-list li').textContent).toContain('철수');
 });
+
+/* 시간만 죽 나열하면 언제 몰아서 했는지가 안 보인다 */
+test('날짜로 묶고 오늘·어제는 말로 적는다', () => {
+  const day = 86400000;
+  const el = render({
+    initial: [
+      { ...game(), id: 'a', playedAt: Date.now() },
+      { ...game(), id: 'b', playedAt: Date.now() - 60000 },
+      { ...game(), id: 'c', playedAt: Date.now() - day },
+    ],
+  });
+
+  const labels = [...el.querySelectorAll('.hist-day-label')].map((n) => n.textContent);
+  expect(labels).toHaveLength(2);
+  expect(labels[0]).toContain('오늘');
+  expect(labels[0]).toContain('2판');
+  expect(labels[1]).toContain('어제');
+});
+
+test('몇 판·며칠·또또 몇 판인지 먼저 보여준다', () => {
+  const el = render({
+    initial: [
+      { ...game(), id: 'a', playedAt: Date.now(), betCount: 3, betTotal: 900 },
+      { ...game(), id: 'b', playedAt: Date.now() - 86400000 },
+    ],
+  });
+  const sum = el.querySelector('.hist-summary').textContent;
+  expect(sum).toContain('2판');
+  expect(sum).toContain('2일');
+  expect(sum).toContain('또또');
+});

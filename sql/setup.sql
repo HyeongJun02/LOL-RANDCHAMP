@@ -1370,6 +1370,24 @@ begin
   update bet_pools set odds = 1.98
    where scrim_id = p_scrim and market like 'kills%';
 
+  -- 그 판에 실제로 쓴 킬 기준선을 여기서 박아둔다.
+  -- 방장이 직접 안 정하면 kill_line이 비어 있었고, 나중에 화면에서
+  -- 인원으로 다시 계산해 보여줬다. 그런데 계산에 쓰는 값(tuning.js의
+  -- KILLS_PER_PLAYER)은 굴려보고 고치는 숫자라, 그걸 바꾸는 순간
+  -- 지난 기록의 기준선까지 따라 바뀌었다. 53.5로 걸었던 판이 62.5로
+  -- 보이면서 오버가 언더로 뒤집혔다.
+  --
+  -- 실제로 쓴 값은 마켓 이름에 들어 있다 (kills_53.5).
+  if s.kill_line is null then
+    update scrims set kill_line = (
+      select split_part(bp.market, '_', 2)::numeric
+        from bet_pools bp
+       where bp.scrim_id = p_scrim and bp.market like 'kills%'
+       limit 1
+    )
+    where id = p_scrim;
+  end if;
+
   update scrims set status = 'locked', locked_at = now() where id = p_scrim;
 
   perform public.log_room(s.room_id, 'betting_locked', jsonb_build_object(
@@ -2016,5 +2034,18 @@ grant execute on function
   public.admin_audit_wallets(),
   public.admin_user_detail(text)
 to authenticated;
+
+-- 이미 지나간 판의 기준선을 마켓 이름에서 되살린다.
+-- 여러 번 돌려도 비어 있는 줄만 채운다.
+update public.scrims s
+   set kill_line = x.line
+  from (
+    select bp.scrim_id, min(split_part(bp.market, '_', 2)::numeric) as line
+      from public.bet_pools bp
+     where bp.market like 'kills%'
+     group by bp.scrim_id
+  ) x
+ where s.id = x.scrim_id and s.kill_line is null;
+
 
 notify pgrst, 'reload schema';

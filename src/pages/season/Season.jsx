@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaTrophy, FaCopy, FaImage } from 'react-icons/fa';
+import { FaTrophy, FaCopy, FaImage, FaCrown } from 'react-icons/fa';
 import {
   statsFor,
   monthsOf,
@@ -71,6 +71,7 @@ const Season = ({ matches = [], players = [] }) => {
     [stats]
   );
 
+  const top = ranking[0] || null;
   const played = monthMatches.length;
 
   const insights = useMemo(() => buildInsights(monthMatches), [monthMatches]);
@@ -145,10 +146,23 @@ const Season = ({ matches = [], players = [] }) => {
             </div>
           )}
 
+          {/* 한 줄 문장으로 두면 숫자가 글자에 묻힌다. 훑는 화면이니
+              숫자를 세워 먼저 눈에 들어오게 한다 */}
           <div className="season-summary">
-            <span>
-              {periodLabel} · <strong>{played}</strong>경기 · {ranking.length}명 참여
-            </span>
+            <div className="season-nums">
+              <span>
+                <b>{played}</b>경기
+              </span>
+              <span>
+                <b>{ranking.length}</b>명
+              </span>
+              {top && (
+                <span className="is-top" title={`${top.wins}승 ${top.losses}패`}>
+                  <FaCrown />
+                  {top.name}
+                </span>
+              )}
+            </div>
             <span className="season-actions">
               <button className="ghost-btn" onClick={share} disabled={played === 0}>
                 <FaCopy /> 결과 복사
@@ -159,6 +173,8 @@ const Season = ({ matches = [], players = [] }) => {
             </span>
           </div>
 
+          <div className="season-cols">
+          <div className="season-col">
           <RankList
             empty={`${isAll ? '전체 기간에' : `${monthLabel(active)}에는`} 내전 기록이 없습니다.`}
             rows={ranking.map((r) => {
@@ -183,11 +199,15 @@ const Season = ({ matches = [], players = [] }) => {
           />
 
           <ScrimPointsHelp />
+          </div>
 
-          <section className="season-insights">
+          {/* 넓은 화면에서는 순위 옆에 붙인다. 세로로만 쌓으면 순위를
+              다 지나야 숨은 기록에 닿는다 */}
+          <section className="season-insights season-col">
             <h2>숨은 기록</h2>
             <Insights items={insights} />
           </section>
+          </div>
         </>
       )}
 

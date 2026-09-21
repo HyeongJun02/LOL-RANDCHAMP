@@ -495,10 +495,11 @@ export const toMatches = (scrims = [], players = [], game) => {
       /* 결과를 넣은 판에만 있다. 또또 없이 남긴 기록은 비어 있다 */
       totalKills: s.total_kills ?? null,
       firstBlood: nameOf.get(s.first_blood_player_id) || null,
-      /* 총 킬만 보여주면 그게 많은 건지 적은 건지 알 수가 없다.
-         그 판의 기준선을 같이 줘야 오버였는지 언더였는지 읽힌다.
-         방장이 직접 정했으면 그 값, 아니면 인원으로 계산한 값 */
-      killLine: s.total_kills == null ? null : killLineOfScrim(s, game),
+      /* 그 판에 실제로 쓴 기준선. 저장된 값만 쓴다.
+         없다고 지금 인원으로 다시 계산하면, 계산에 쓰는 숫자를 고치는
+         순간 지난 기록의 오버/언더가 통째로 뒤집힌다. 모르면 안 적는 게
+         틀리게 적는 것보다 낫다 */
+      killLine: s.kill_line == null ? null : Number(s.kill_line),
     }))
     .sort((a, b) => a.playedAt - b.playedAt);
 };

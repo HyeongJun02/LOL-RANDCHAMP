@@ -1173,3 +1173,26 @@ describe('로그 색', () => {
     expect(kinds({ type: 'record', payload: { kind: 'kills', value: 50 } })).toContain('hot');
   });
 });
+
+/* 계산에 쓰는 숫자(KILLS_PER_PLAYER)는 굴려보고 고치는 값이다.
+   지난 기록의 기준선을 그걸로 다시 계산하면, 53.5로 걸었던 판이
+   62.5로 보이면서 오버가 언더로 뒤집힌다 */
+test('지난 기록의 기준선은 저장된 값만 쓴다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const body = src.slice(src.indexOf('export const toMatches'));
+  expect(body).toContain('s.kill_line == null ? null : Number(s.kill_line)');
+  /* 여기서 다시 계산하면 안 된다 */
+  expect(body.slice(0, body.indexOf('};'))).not.toContain('killLineOfScrim');
+});
+
+test('마감할 때 그 판에 쓴 기준선을 박아둔다', () => {
+  const body = fnBody('lock_betting');
+  expect(body).toContain('if s.kill_line is null then');
+  /* 실제로 쓴 값은 마켓 이름에 들어 있다 (kills_53.5) */
+  expect(body).toContain("split_part(bp.market, '_', 2)::numeric");
+});
+
+test('이미 지나간 판도 마켓 이름에서 되살린다', () => {
+  expect(sql).toContain('update public.scrims s');
+  expect(sql).toMatch(/set kill_line = x\.line[\s\S]*where s\.id = x\.scrim_id and s\.kill_line is null;/);
+});
