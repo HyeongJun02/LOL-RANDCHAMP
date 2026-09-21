@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FaPlus, FaSignInAlt, FaUsers, FaPen, FaCoins, FaDoorOpen } from 'react-icons/fa';
+import { FaPlus, FaSignInAlt, FaUsers, FaPen, FaCoins, FaDoorOpen, FaSyncAlt } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../rooms';
 import { MAX_ROOMS } from '../../limits';
@@ -18,7 +18,14 @@ const RoomList = () => {
   usePageMeta(PAGE_META.rooms);
 
   const { me, reload: reloadMe } = useMe(user?.id);
-  const { rooms, loading, error, reload } = useMyRooms(user?.id);
+  /* me가 온 뒤에 읽는다 - 그때가 토큰이 확실히 붙은 시점이다 */
+  const { rooms, loading, error, reload } = useMyRooms(user?.id, Boolean(me));
+
+  /* me가 아직이면 방 목록도 못 읽는다. 둘 다 다시 읽어야 확실히 풀린다 */
+  const refreshAll = () => {
+    reloadMe();
+    reload();
+  };
 
   const [name, setName] = useState('');
   const [game, setGame] = useState(DEFAULT_GAME);
@@ -77,7 +84,12 @@ const RoomList = () => {
   if (!user) {
     return (
       <div className="page">
-        <PageHeader title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다." />
+        <PageHeader title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다.">
+        {/* 목록만 다시 읽는다. 페이지를 통째로 새로고침하지 않아도 되게 */}
+        <button className="ghost-btn rooms-refresh" onClick={refreshAll} disabled={loading}>
+          <FaSyncAlt className={loading ? 'spin' : ''} /> 새로고침
+        </button>
+      </PageHeader>
         <p className="rooms-blank">
           내전 방은 여러 명이 같이 보는 공간이라 로그인이 필요합니다.
           <br />
@@ -89,7 +101,12 @@ const RoomList = () => {
 
   return (
     <div className="page">
-      <PageHeader title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다." />
+      <PageHeader title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다.">
+        {/* 목록만 다시 읽는다. 페이지를 통째로 새로고침하지 않아도 되게 */}
+        <button className="ghost-btn rooms-refresh" onClick={refreshAll} disabled={loading}>
+          <FaSyncAlt className={loading ? 'spin' : ''} /> 새로고침
+        </button>
+      </PageHeader>
 
       {/* 이름을 안 정했으면 여기서 막는다 */}
       {me && !me.nickname && <NicknameGate onSaved={reloadMe} />}
@@ -155,6 +172,10 @@ const RoomList = () => {
             <br />
             아래에서 방을 만들거나 코드를 넣어보세요.
           </span>
+          {/* 분명히 방이 있는데 비어 보이는 경우를 위한 출구 */}
+          <button className="ghost-btn" style={{ marginTop: '0.5rem' }} onClick={refreshAll}>
+            <FaSyncAlt /> 다시 읽기
+          </button>
         </div>
       ) : (
         <ul className="rooms-grid">

@@ -572,7 +572,16 @@ export const useMe = (userId) => {
   return { me: data, loading, error, reload };
 };
 
-export const useMyRooms = (userId) => {
+/* ready: 서버가 나를 알아본 게 확인된 뒤에만 읽는다.
+
+   RLS는 토큰이 없으면 오류를 내지 않고 '0행'을 돌려준다. 그래서 로그인
+   직후 토큰이 아직 안 붙은 채로 요청이 나가면, 멀쩡히 성공하면서 빈 목록이
+   오고 화면에는 '아직 들어간 방이 없어요'가 뜬다. 새로고침하면 낫는 게
+   이것 때문이다 - 오류가 아니라서 재시도도 안 걸린다.
+
+   get_me()는 auth.user_id()가 없으면 반드시 실패하므로, 그게 한 번
+   성공했다는 건 토큰이 확실히 붙었다는 뜻이다. 그걸 기다렸다 읽는다. */
+export const useMyRooms = (userId, ready = true) => {
   const fetcher = useCallback(async () => {
     /* RLS가 내가 멤버인 방만 돌려준다. 따로 걸 조건이 없다 */
     const rooms = unwrap(
@@ -612,9 +621,10 @@ export const useMyRooms = (userId) => {
 
   const { data, loading, error, reload } = useFetch(
     fetcher,
-    Boolean(userId) && isNeonConfigured
+    Boolean(userId) && ready && isNeonConfigured
   );
-  return { rooms: data || [], loading, error, reload };
+  /* 아직 기다리는 중인데 '없음'으로 보이면 안 된다 */
+  return { rooms: data || [], loading: loading || (Boolean(userId) && !ready), error, reload };
 };
 
 /* 방 상세를 몇 번에 나눠 받을지가 곧 DB 부하다.

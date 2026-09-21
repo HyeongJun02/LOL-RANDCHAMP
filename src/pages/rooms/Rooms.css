@@ -2144,3 +2144,24 @@
 .room-card-game + .room-card-head {
   margin-top: -0.15rem;
 }
+
+/* 목록만 다시 읽는 버튼. 페이지를 통째로 새로고침하지 않아도 되게 */
+.rooms-refresh {
+  margin-top: 0.6rem;
+}
+
+.rooms-refresh .spin {
+  animation: rooms-spin 0.9s linear infinite;
+}
+
+@keyframes rooms-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rooms-refresh .spin {
+    animation: none;
+  }
+}
