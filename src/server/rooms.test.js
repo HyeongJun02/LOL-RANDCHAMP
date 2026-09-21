@@ -1196,3 +1196,11 @@ test('이미 지나간 판도 마켓 이름에서 되살린다', () => {
   expect(sql).toContain('update public.scrims s');
   expect(sql).toMatch(/set kill_line = x\.line[\s\S]*where s\.id = x\.scrim_id and s\.kill_line is null;/);
 });
+
+/* 한참 내려보다 다른 탭으로 넘어가면 새 화면의 중간에 떨어진다.
+   주소를 #으로 바꾸므로 브라우저가 알아서 올려주지 않는다 */
+test('탭을 옮기면 맨 위부터 본다', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'Room.jsx'), 'utf8');
+  const body = src.slice(src.indexOf('const setTab'), src.indexOf('const editable'));
+  expect(body).toContain('window.scrollTo');
+});

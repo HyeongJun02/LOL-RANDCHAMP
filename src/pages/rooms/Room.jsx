@@ -716,8 +716,13 @@ const Room = () => {
   const location = useLocation();
   const fromHash = location.hash.replace('#', '');
   const tab = TABS.some((t) => t.key === fromHash) ? fromHash : 'home';
-  const setTab = (key) =>
+  /* 탭을 옮기면 맨 위부터 본다. 한참 내려보다 다른 탭으로 넘어가면
+     새 화면의 중간에 떨어져서, 매번 위로 올려야 했다.
+     주소를 #으로 바꾸므로 브라우저가 알아서 올려주지는 않는다 */
+  const setTab = (key) => {
     navigate(`${location.pathname}${key === 'home' ? '' : `#${key}`}`, { replace: true });
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  };
 
   const editable = canEditRole(myRole);
 

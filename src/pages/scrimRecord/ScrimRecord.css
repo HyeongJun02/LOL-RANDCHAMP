@@ -257,36 +257,36 @@
   margin-top: 1.1rem;
 }
 
+/* 한두 판만 한 날도 많다. 큰 제목을 얹으면 그런 날이 우스워지므로,
+   묶음을 알려주는 가는 선 하나로 둔다 */
 .hist-day-label {
   display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
+  align-items: center;
+  gap: 0.5rem;
   margin: 0 0 0.45rem;
-  font-family: var(--font-display);
-  font-size: 0.9rem;
-  font-weight: 400;
-  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6b7a94;
+  white-space: nowrap;
+}
+
+/* 날짜 뒤로 이어지는 선. 여기서부터 저 아래까지가 한 묶음이라는 표시 */
+.hist-day-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.09),
+    rgba(255, 255, 255, 0)
+  );
 }
 
 .hist-day-label em {
   font-style: normal;
-  font-family: inherit;
-  font-size: 0.7rem;
-  color: #5b6b85;
-}
-
-/* 날짜 머리는 스크롤을 내려도 따라온다. 한참 내려가면 지금 보는 게
-   어느 날 기록인지 놓친다 */
-.hist-day-label {
-  position: sticky;
-  top: calc(var(--header-h, 80px) + 3.6rem);
-  z-index: 1;
-  padding: 0.25rem 0;
-  background: linear-gradient(
-    to bottom,
-    var(--gg-bg, #080c14) 70%,
-    transparent
-  );
+  font-weight: 400;
+  color: #4b5872;
 }
 
 /* ---------- 최근 기록 ---------- */
