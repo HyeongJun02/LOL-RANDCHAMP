@@ -3,15 +3,15 @@ import toast from 'react-hot-toast';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 import { fetchChampionData, championIcon } from '../../services/api';
 import { ROLES } from './roles';
-import { LINES } from '../../lines';
-import { LANE_META, countUnclassified } from '../../champLanes';
-import { PICK_GROUPS } from '../../champPicks';
+import { LINES } from '../../rules/lines';
+import { LANE_META, countUnclassified } from '../../rules/champLanes';
+import { PICK_GROUPS } from '../../rules/champPicks';
 import { filterChampions } from './filter';
-import { ROLL_MS, rollDelay } from '../../rollTiming';
-import { readSkipAnim, writeSkipAnim } from '../../skipAnim';
+import { ROLL_MS, rollDelay } from '../../lib/rollTiming';
+import { readSkipAnim, writeSkipAnim } from '../../lib/skipAnim';
 import ResultPanel from './ResultPanel';
 import PageHeader from '../../components/common/PageHeader';
-import { usePageMeta, PAGE_META } from '../../seo';
+import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './RandomChampion.css';
 
 const RandomChampion = () => {

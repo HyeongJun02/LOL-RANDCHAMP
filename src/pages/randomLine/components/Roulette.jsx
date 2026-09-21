@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { getRole } from '../../../games';
+import { getRole } from '../../../rules/games';
 import RoleIcon from '../../../components/common/RoleIcon';
 import styles from './Roulette.module.css';
 

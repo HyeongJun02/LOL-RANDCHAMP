@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchUserDetail } from '../../admin';
-import { marketLabel } from '../../rooms';
+import { fetchUserDetail } from '../../server/admin';
+import { marketLabel } from '../../server/rooms';
 import Modal from '../../components/common/Modal';
 import { SkelRows } from '../../components/common/Skeleton';
 

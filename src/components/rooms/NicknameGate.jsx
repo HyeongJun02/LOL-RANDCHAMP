@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { setNickname } from '../../rooms';
+import { setNickname } from '../../server/rooms';
 import Modal from '../common/Modal';
 
 /* 방에서 쓸 이름을 정하기 전에는 아무것도 못 하게 막는다.

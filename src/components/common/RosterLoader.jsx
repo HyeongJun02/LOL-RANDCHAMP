@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { useRoster } from '../../roster';
-import { getTier, tierName, ratingOf } from '../../games';
-import { useGameKey } from '../../GameContext';
+import { useRoster } from '../../server/roster';
+import { getTier, tierName, ratingOf } from '../../rules/games';
+import { useGameKey } from '../../lib/GameContext';
 import Modal from './Modal';
 import './RosterLoader.css';
 

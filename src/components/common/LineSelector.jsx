@@ -1,6 +1,6 @@
 import React from 'react';
-import { rolesOf } from '../../games';
-import { DEFAULT_GAME } from '../../games';
+import { rolesOf } from '../../rules/games';
+import { DEFAULT_GAME } from '../../rules/games';
 import RoleIcon from './RoleIcon';
 import styles from './LineSelector.module.css';
 

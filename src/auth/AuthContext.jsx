@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { neon, isNeonConfigured } from '../neon';
-import { setCloudUser } from '../store';
+import { neon, isNeonConfigured } from '../server/neon';
+import { setCloudUser } from '../server/store';
 
 /* Neon Auth의 vanilla 클라이언트는 훅이 아니라 getSession() 비동기 함수라,
    로그인/로그아웃 직후 직접 refresh를 호출해서 우리 쪽 상태를 갱신한다. */

@@ -13,8 +13,8 @@ import {
   FaStethoscope,
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
-import { useMe, feedParts } from '../../rooms';
-import { getGame } from '../../games';
+import { useMe, feedParts } from '../../server/rooms';
+import { getGame } from '../../rules/games';
 import {
   useAdminData,
   fetchAllLogs,
@@ -22,7 +22,7 @@ import {
   adminDeleteRoom,
   rollSeasonNow,
   ADMIN_LOG_PAGE,
-} from '../../admin';
+} from '../../server/admin';
 import { useDialog } from '../../components/common/Dialog';
 import PageHeader from '../../components/common/PageHeader';
 import { SkelRows, SkelBox } from '../../components/common/Skeleton';

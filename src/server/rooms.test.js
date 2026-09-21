@@ -229,7 +229,7 @@ test('모르는 종류의 로그도 태그를 달아 그냥 지나가게 둔다'
 /* ---------- SQL 쪽 ---------- */
 /* 실행해볼 수 없으니, 무너지면 조용히 잘못되는 부분만 눈으로 못 지나치게 잡아둔다 */
 
-const raw = fs.readFileSync(path.join(__dirname, '..', 'sql', 'setup.sql'), 'utf8');
+const raw = fs.readFileSync(path.join(__dirname, '..', '..', 'sql', 'setup.sql'), 'utf8');
 /* 정렬용 여백 때문에 테스트가 깨지지 않도록 공백을 하나로 눌러서 본다 */
 const sql = raw.replace(/[ 	]+/g, ' ');
 
@@ -688,7 +688,7 @@ test('방을 읽을 때 화면이 쓰는 컬럼을 다 읽는다', () => {
    그 아래를 통째로 다시 마운트한다. 스크롤이 맨 위로 튀고 입력 포커스가
    날아간다. 두 번 겪었으니 소스에서 못 들어오게 막아둔다 */
 test('BetTab은 렌더 안에서 컴포넌트를 정의하지 않는다', () => {
-  const src = fs.readFileSync(path.join(__dirname, 'pages', 'rooms', 'BetTab.jsx'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'BetTab.jsx'), 'utf8');
   const body = src.slice(src.indexOf('const BetTab = ('));
   const inner = [...body.matchAll(/^ {2}const ([A-Z]\w*) = \(/gm)].map((m) => m[1]);
   expect(inner).toEqual([]);
@@ -699,7 +699,7 @@ test('BetTab은 렌더 안에서 컴포넌트를 정의하지 않는다', () => 
 /* useState에만 담아두면 새로고침할 때마다 첫 탭으로 돌아간다.
    또또를 보다 새로고침하면 게임 시작 탭이 뜨던 버그 */
 test('방 탭은 주소에 남는다 (새로고침해도 보던 탭)', () => {
-  const src = fs.readFileSync(path.join(__dirname, 'pages', 'rooms', 'Room.jsx'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'Room.jsx'), 'utf8');
   expect(src).not.toMatch(/const \[tab, setTab\] = useState/);
   expect(src).toContain('location.hash');
   /* 뒤로 가기가 탭을 되짚으면 방을 빠져나가는 데 일곱 번 눌러야 한다 */
@@ -741,7 +741,7 @@ test('한 번 못 읽었다고 들고 있던 방을 버리지 않는다', () => 
 });
 
 test('방 코드는 눌러서 복사한다', () => {
-  const src = fs.readFileSync(path.join(__dirname, 'pages', 'rooms', 'Room.jsx'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'Room.jsx'), 'utf8');
   expect(src).toContain('copyText');
   /* 아직 안 열어본 상태에서 눌러도 받아와서 복사해야 한다 */
   expect(src).toMatch(/code \|\| \(await getJoinCode\(room\.id\)\)/);
@@ -761,7 +761,7 @@ test('첫 조회가 실패하면 다시 시도하는 동안 계속 읽는 중이
 });
 
 test("방 목록은 '못 읽었음'과 '방이 없음'을 다르게 보여준다", () => {
-  const src = fs.readFileSync(path.join(__dirname, 'pages', 'rooms', 'RoomList.jsx'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'RoomList.jsx'), 'utf8');
   expect(src).toContain('방 목록을 불러오지 못했어요');
   /* 오류일 때 빈 상태 문구가 같이 뜨면 방을 다 잃은 것처럼 보인다 */
   const empty = src.indexOf('아직 들어간 방이 없어요');
@@ -853,7 +853,7 @@ test('취소는 로그에 남는다 (남의 돈이 오간 일이다)', () => {
 /* 한쪽만 바꾸면 화면에서는 "3,000까지" 라고 해놓고 서버가 거절한다.
    BET_CAP에 마켓을 추가하면 여기서 DB 쪽도 같이 고쳤는지 본다 */
 test('배팅 상한이 tuning.js와 DB에서 같다', () => {
-  const { BET_CAP } = require('./tuning');
+  const { BET_CAP } = require('../rules/tuning');
   const body = fnBody('place_bets');
   const sqlOf = { winner: "= 'winner' then", first_blood: "= 'first_blood' then", kills: "like 'kills%' then" };
 
@@ -865,7 +865,7 @@ test('배팅 상한이 tuning.js와 DB에서 같다', () => {
 
 test('상한 없는 마켓은 capOf가 null을 준다', () => {
   const { capOf, killMarket } = require('./rooms');
-  const { BET_CAP } = require('./tuning');
+  const { BET_CAP } = require('../rules/tuning');
   expect(capOf('winner')).toBe(BET_CAP.winner);
   expect(capOf('first_blood')).toBe(BET_CAP.first_blood);
   expect(capOf(killMarket(45.5))).toBe(BET_CAP.kills);
@@ -873,7 +873,7 @@ test('상한 없는 마켓은 capOf가 null을 준다', () => {
 });
 
 test('배당이 tuning.js와 DB에서 같다', () => {
-  const tuning = require('./tuning');
+  const tuning = require('../rules/tuning');
   const body = fnBody('lock_betting');
   expect(body).toContain(`n * ${tuning.FIRST_BLOOD_RATE}`);
   expect(body).toContain(`* ${tuning.FIRST_BLOOD_TIER_BONUS}`);
@@ -881,7 +881,7 @@ test('배당이 tuning.js와 DB에서 같다', () => {
 });
 
 test('참여 보상과 시즌 초기화 값이 tuning.js와 DB에서 같다', () => {
-  const tuning = require('./tuning');
+  const tuning = require('../rules/tuning');
   expect(fnBody('award_participation')).toContain(
     `then ${tuning.SCRIM_REWARD.win} else ${tuning.SCRIM_REWARD.lose}`
   );

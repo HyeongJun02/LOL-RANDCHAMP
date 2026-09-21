@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { createStore } from './store';
-import { DEFAULT_GAME, defaultTierOf } from './games';
+import { DEFAULT_GAME, defaultTierOf } from '../rules/games';
 
 /* 저장된 팀원 명단. localStorage가 기본이고, 로그인하면 Neon과 동기화된다.
    저장 방식은 store.js가 전부 맡고 여기는 명단 규칙만 갖는다.

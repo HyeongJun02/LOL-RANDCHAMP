@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { FaCrown, FaCoins, FaTrophy } from 'react-icons/fa';
-import { statsFor, inMonth, monthKeyOf } from '../../matches';
-import { HOF_MIN_GAMES, HOF_MIN_SHARE } from '../../tuning';
+import { statsFor, inMonth, monthKeyOf } from '../../rules/matches';
+import { HOF_MIN_GAMES, HOF_MIN_SHARE } from '../../rules/tuning';
 
 /* 명예의 전당.
 

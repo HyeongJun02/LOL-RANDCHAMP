@@ -1,5 +1,5 @@
 import React from 'react';
-import { K_FACTOR, PRIOR_GAMES } from '../../matches';
+import { K_FACTOR, PRIOR_GAMES } from '../../rules/matches';
 import './ScrimPointsHelp.css';
 
 /* 점수 규칙 설명. <details>라 여닫는 상태를 따로 들 필요가 없다 */

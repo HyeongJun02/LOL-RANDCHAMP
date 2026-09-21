@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FaBan, FaCheckCircle, FaExclamationTriangle, FaSyncAlt } from 'react-icons/fa';
-import { fetchStuckScrims, adminCancelScrim, fetchWalletAudit } from '../../admin';
+import { fetchStuckScrims, adminCancelScrim, fetchWalletAudit } from '../../server/admin';
 import { useDialog } from '../../components/common/Dialog';
 import { SkelRows } from '../../components/common/Skeleton';
 

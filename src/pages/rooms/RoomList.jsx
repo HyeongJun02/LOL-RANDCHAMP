@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FaPlus, FaSignInAlt, FaUsers, FaPen, FaCoins, FaDoorOpen, FaSyncAlt } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
-import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../rooms';
-import { MAX_ROOMS } from '../../limits';
-import { accentVars } from '../../roomStyle';
-import { GAMES, DEFAULT_GAME, getGame } from '../../games';
+import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../server/rooms';
+import { MAX_ROOMS } from '../../server/limits';
+import { accentVars } from '../../lib/roomStyle';
+import { GAMES, DEFAULT_GAME, getGame } from '../../rules/games';
 import PageHeader from '../../components/common/PageHeader';
 import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelRows } from '../../components/common/Skeleton';
-import { usePageMeta, PAGE_META } from '../../seo';
+import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './Rooms.css';
 
 const RoomList = () => {

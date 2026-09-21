@@ -38,4 +38,4 @@ export const formatReport = ({ periodLabel, played, ranking, insights = [] }) =>
 };
 
 /* 복사는 방 코드에서도 쓴다. 한 군데 두고 같이 쓴다 */
-export { copyText } from '../../clipboard';
+export { copyText } from '../../lib/clipboard';

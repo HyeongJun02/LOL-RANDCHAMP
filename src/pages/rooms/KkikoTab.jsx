@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaPaperPlane, FaSlidersH, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { transferPoints, adjustPoints, fetchLedger, LEDGER_PAGE } from '../../rooms';
+import { transferPoints, adjustPoints, fetchLedger, LEDGER_PAGE } from '../../server/rooms';
 import { useDialog } from '../../components/common/Dialog';
 import RankList from '../../components/common/RankList';
 

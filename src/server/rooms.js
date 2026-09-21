@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
-import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP } from './tuning';
-import { getGame, getMode, defaultTierOf, fitTier } from './games';
+import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP } from '../rules/tuning';
+import { getGame, getMode, defaultTierOf, fitTier } from '../rules/games';
 
 /* 내전 방. 여기부터는 localStorage가 없다.
 

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaDice, FaRedo } from 'react-icons/fa';
-import { useRoster } from '../../roster';
+import { useRoster } from '../../server/roster';
 import { addItems, poolOf } from './pick';
 import Reel from './Reel';
-import { readSkipAnim, writeSkipAnim } from '../../skipAnim';
+import { readSkipAnim, writeSkipAnim } from '../../lib/skipAnim';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
 import PageHeader from '../../components/common/PageHeader';
-import { usePageMeta, PAGE_META } from '../../seo';
+import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './RandomPick.css';
 
 const PRESETS = [

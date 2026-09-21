@@ -9,7 +9,7 @@ import {
   gameCountsOf,
   MIN_PAIR_GAMES,
   BREAK_MIN,
-} from '../../matches';
+} from '../../rules/matches';
 
 /* 손으로 세기 힘든 것만 모은다. 단순 승패는 순위표가 이미 보여준다.
    화면과 공유용 글이 같은 결과를 쓰도록 값 계산은 여기 한 곳에서만 한다.

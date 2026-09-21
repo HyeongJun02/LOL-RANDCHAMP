@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { DEFAULT_GAME, getGame } from './games';
+import { DEFAULT_GAME, getGame } from '../rules/games';
 
 /* 지금 보고 있는 게임.
 

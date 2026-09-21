@@ -1,4 +1,4 @@
-import { monthKeyOf, monthsOf, inMonth, monthLabel } from '../../matches';
+import { monthKeyOf, monthsOf, inMonth, monthLabel } from '../../rules/matches';
 
 const at = (y, m, d) => new Date(y, m - 1, d, 21, 0).getTime();
 

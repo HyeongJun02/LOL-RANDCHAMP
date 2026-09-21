@@ -9,7 +9,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
    0이 되면 onExpire를 한 번만 부른다. 실제 마감은 그걸 받은 쪽에서
    lock_betting을 불러 서버에 남긴다. */
-import { WARN_SECONDS, HEAT_SECONDS } from '../../tuning';
+import { WARN_SECONDS, HEAT_SECONDS } from '../../rules/tuning';
 
 
 const mmss = (sec) => {

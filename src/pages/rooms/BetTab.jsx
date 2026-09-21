@@ -14,12 +14,12 @@ import {
   unsettleScrim,
   removeScrim,
   fetchBetting,
-} from '../../rooms';
+} from '../../server/rooms';
 import { useDialog } from '../../components/common/Dialog';
 import BetTimer from './BetTimer';
-import { timeAgo } from '../../timeAgo';
-import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS } from '../../tuning';
-import { useGameKey } from '../../GameContext';
+import { timeAgo } from '../../lib/timeAgo';
+import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS } from '../../rules/tuning';
+import { useGameKey } from '../../lib/GameContext';
 
 const num = (n) => Number(n || 0).toLocaleString();
 

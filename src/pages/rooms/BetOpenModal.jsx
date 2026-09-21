@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { FaDice, FaMinus, FaPlus } from 'react-icons/fa';
 import Modal from '../../components/common/Modal';
-import { killLineFor } from '../../rooms';
-import { useGameKey } from '../../GameContext';
-import { CLOSE_PRESETS as PRESETS } from '../../tuning';
+import { killLineFor } from '../../server/rooms';
+import { useGameKey } from '../../lib/GameContext';
+import { CLOSE_PRESETS as PRESETS } from '../../rules/tuning';
 
 /* 또또를 열기 전에 방장이 정하는 것들.
 

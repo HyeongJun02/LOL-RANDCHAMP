@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useRoster } from '../../roster';
+import { useRoster } from '../../server/roster';
 import { FaThLarge, FaListUl } from 'react-icons/fa';
 import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
@@ -8,10 +8,10 @@ import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
 import RoleIcon from '../../components/common/RoleIcon';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
-import { randomQuote } from '../../lines';
-import { GAMES, DEFAULT_GAME, getGame, getRole, roleNamesOf } from '../../games';
-import { GameProvider } from '../../GameContext';
-import { usePageMeta, PAGE_META } from '../../seo';
+import { randomQuote } from '../../rules/lines';
+import { GAMES, DEFAULT_GAME, getGame, getRole, roleNamesOf } from '../../rules/games';
+import { GameProvider } from '../../lib/GameContext';
+import { usePageMeta, PAGE_META } from '../../lib/seo';
 import styles from './RandomLine.module.css';
 
 const SUBTITLES = [

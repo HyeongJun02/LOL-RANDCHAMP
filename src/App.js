@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { Toaster, useToasterStore, toast } from 'react-hot-toast';
-import { setSyncErrorHandler } from './store';
+import { setSyncErrorHandler } from './server/store';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Backdrop from './components/common/Backdrop';
 import RosterModal from './components/roster/RosterModal';

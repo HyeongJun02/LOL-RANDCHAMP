@@ -11,13 +11,13 @@ const read = (rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8');
    '*'(없는 주소)도 뺀다. 404는 색인시킬 페이지가 아니다.
    /admin도 뺀다. 관리자에게만 보이는 화면이라 색인 대상이 아니다 */
 const routePaths = () =>
-  [...read('App.js').matchAll(/<Route\s+path="([^"]+)"/g)]
+  [...read('../App.js').matchAll(/<Route\s+path="([^"]+)"/g)]
     .map((m) => m[1])
     .filter((p) => !p.includes(':') && p !== '*' && p !== '/admin')
     .sort();
 
 const sitemapPaths = () =>
-  [...read('../public/sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)]
+  [...read('../../public/sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)]
     .map((m) => new URL(m[1]).pathname)
     .map((p) => (p === '/' ? '/' : p.replace(/\/$/, '')))
     .sort();
@@ -75,13 +75,13 @@ test('도메인이 아직 자리표시자면 알려준다', () => {
    라우팅은 브라우저가 하므로 없는 경로는 index.html로 넘겨줘야 한다.
    호스팅마다 읽는 파일이 달라서(그래서 한 번 놓쳤다) 둘 다 있는지 본다 */
 test('새로고침해도 404가 나지 않게 SPA 폴백이 있다', () => {
-  const redirects = read('../public/_redirects');
+  const redirects = read('../../public/_redirects');
   expect(redirects).toMatch(/^\/\*\s+\/index\.html\s+200/m);
 
-  const netlify = read('../netlify.toml');
+  const netlify = read('../../netlify.toml');
   expect(netlify).toContain('from = "/*"');
   expect(netlify).toContain('status = 200');
 
-  const vercel = JSON.parse(read('../vercel.json'));
+  const vercel = JSON.parse(read('../../vercel.json'));
   expect(vercel.rewrites[0].destination).toBe('/index.html');
 });

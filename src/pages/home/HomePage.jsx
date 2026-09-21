@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaDice, FaArrowRight, FaUserFriends } from 'react-icons/fa';
-import { TOOL_SECTIONS, SOON_TOOLS } from '../../tools';
-import { openRosterModal } from '../../rosterModal';
-import { usePageMeta, PAGE_META } from '../../seo';
+import { TOOL_SECTIONS, SOON_TOOLS } from '../../rules/tools';
+import { openRosterModal } from '../../lib/rosterModal';
+import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './HomePage.css';
 
 /* --i 순서대로 올라온다. 섹션 개수가 바뀌어도 알아서 이어지도록 계산해서 넘긴다 */

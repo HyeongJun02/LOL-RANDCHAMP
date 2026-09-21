@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaChevronDown, FaSignOutAlt, FaUserFriends, FaUserShield } from 'react-icons/fa';
-import { openRosterModal } from '../../rosterModal';
+import { openRosterModal } from '../../lib/rosterModal';
 import './UserMenu.css';
 
 const initialOf = (user) =>

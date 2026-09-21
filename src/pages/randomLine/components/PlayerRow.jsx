@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaUndo } from 'react-icons/fa';
-import { getGame, getRole, roleNamesOf } from '../../../games';
+import { getGame, getRole, roleNamesOf } from '../../../rules/games';
 import LineSelector from '../../../components/common/LineSelector';
 import RoleIcon from '../../../components/common/RoleIcon';
 import RosterPicker from '../../../components/common/RosterPicker';

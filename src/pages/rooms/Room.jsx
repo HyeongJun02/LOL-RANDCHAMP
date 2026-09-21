@@ -45,12 +45,12 @@ import {
   removeGhostMember,
   leaveRoom,
   deleteRoom,
-} from '../../rooms';
-import { getGame, getTier } from '../../games';
-import { GameProvider, useGame, useGameKey } from '../../GameContext';
-import { ACCENTS, EMBLEMS, accentVars } from '../../roomStyle';
-import { titlesOf } from '../../titles';
-import { MAX_ROOM_PLAYERS } from '../../limits';
+} from '../../server/rooms';
+import { getGame, getTier } from '../../rules/games';
+import { GameProvider, useGame, useGameKey } from '../../lib/GameContext';
+import { ACCENTS, EMBLEMS, accentVars } from '../../lib/roomStyle';
+import { titlesOf } from '../../rules/titles';
+import { MAX_ROOM_PLAYERS } from '../../server/limits';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
 import HallOfFame from './HallOfFame';
@@ -59,13 +59,13 @@ import KkikoTab from './KkikoTab';
 import FeedTab from './FeedTab';
 import RoomHome from './RoomHome';
 import { useDialog } from '../../components/common/Dialog';
-import { copyText } from '../../clipboard';
+import { copyText } from '../../lib/clipboard';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
-import { useRoster, mergeMembers } from '../../roster';
+import { useRoster, mergeMembers } from '../../server/roster';
 import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelLine, SkelRows } from '../../components/common/Skeleton';
-import { usePageMeta, PAGE_META } from '../../seo';
+import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './Rooms.css';
 
 /* 탭 순서 = 실제로 쓰는 순서. 방에 들어와서 게임을 시작하고, 또또를 열고,

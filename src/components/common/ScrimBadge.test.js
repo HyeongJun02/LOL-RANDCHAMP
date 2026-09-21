@@ -1,4 +1,4 @@
-import { statsFor, statOf, pointsOf } from '../../matches';
+import { statsFor, statOf, pointsOf } from '../../rules/matches';
 
 /* 배지 툴팁이 실제 계산값과 어긋나지 않는지 본다.
    (렌더 없이, 툴팁에 들어갈 재료가 맞는지) */

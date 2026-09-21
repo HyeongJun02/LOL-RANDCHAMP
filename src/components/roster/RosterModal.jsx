@@ -1,7 +1,7 @@
 import React from 'react';
 import Modal from '../common/Modal';
 import RosterEditor from './RosterEditor';
-import { useRosterModalOpen, closeRosterModal } from '../../rosterModal';
+import { useRosterModalOpen, closeRosterModal } from '../../lib/rosterModal';
 import './RosterModal.css';
 
 /* App에 한 번만 놓고, 어디서든 openRosterModal()로 연다 */

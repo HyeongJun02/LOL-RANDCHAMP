@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FaPlus, FaTimes } from 'react-icons/fa';
-import { GAMES, DEFAULT_GAME, getGame, getTier } from '../../games';
-import { useRoster, addMember, updateMember, removeMember } from '../../roster';
+import { GAMES, DEFAULT_GAME, getGame, getTier } from '../../rules/games';
+import { useRoster, addMember, updateMember, removeMember } from '../../server/roster';
 import LineSelector from '../common/LineSelector';
 
 /* 이 명단은 라인 분배·랜덤 뽑기처럼 로그인 없이 쓰는 도구용이다.

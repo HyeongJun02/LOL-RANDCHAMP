@@ -1,5 +1,5 @@
-import { lanesOf } from '../../champLanes';
-import { inAnyPick } from '../../champPicks';
+import { lanesOf } from '../../rules/champLanes';
+import { inAnyPick } from '../../rules/champPicks';
 
 /* 역할군끼리 OR, 라인끼리 OR, 픽 유형끼리 OR, 검색어는 이름(한글) 또는 영문 id.
    조건들 사이는 AND.

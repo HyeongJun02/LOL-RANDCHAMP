@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaUserPlus } from 'react-icons/fa';
-import { useRoster } from '../../roster';
-import { useGameKey } from '../../GameContext';
-import { tierName } from '../../games';
+import { useRoster } from '../../server/roster';
+import { useGameKey } from '../../lib/GameContext';
+import { tierName } from '../../rules/games';
 import './RosterPicker.css';
 
 /* 이름 칸 옆에 붙는 작은 토글. 아직 안 들어간 사람만 보여준다.

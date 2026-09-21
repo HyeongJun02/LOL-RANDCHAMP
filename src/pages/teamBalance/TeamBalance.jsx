@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaRedo } from 'react-icons/fa';
-import { getTier, ratingOf, tierName, defaultTierOf } from '../../games';
+import { getTier, ratingOf, tierName, defaultTierOf } from '../../rules/games';
 import { splitTeams, MAX_PLAYERS, winChance, IGNORE_RATING } from './balance';
-import { mergeMembers, useRoster } from '../../roster';
-import { GameProvider, useGame, useGameKey } from '../../GameContext';
-import { GAMES, DEFAULT_GAME } from '../../games';
-import { statsFor, pointsOf, statOf } from '../../matches';
-import { saveLastSplit } from '../../lastSplit';
+import { mergeMembers, useRoster } from '../../server/roster';
+import { GameProvider, useGame, useGameKey } from '../../lib/GameContext';
+import { GAMES, DEFAULT_GAME } from '../../rules/games';
+import { statsFor, pointsOf, statOf } from '../../rules/matches';
+import { saveLastSplit } from '../../lib/lastSplit';
 import RosterPicker from '../../components/common/RosterPicker';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import ClearInput from '../../components/common/ClearInput';
@@ -16,7 +16,7 @@ import PageHeader from '../../components/common/PageHeader';
 import RosterLoader from '../../components/common/RosterLoader';
 import RosterLoadButton from '../../components/common/RosterLoadButton';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';
-import { usePageMeta, PAGE_META } from '../../seo';
+import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './TeamBalance.css';
 
 const RATING_MODES = [

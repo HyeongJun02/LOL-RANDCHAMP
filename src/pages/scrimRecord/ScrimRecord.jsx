@@ -10,16 +10,16 @@ import {
   FaRedo,
   FaExternalLinkAlt,
 } from 'react-icons/fa';
-import { loadLastSplit } from '../../lastSplit';
+import { loadLastSplit } from '../../lib/lastSplit';
 import Modal from '../../components/common/Modal';
 import TeamBalance from '../teamBalance/TeamBalance';
 import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
 import ClearInput from '../../components/common/ClearInput';
 import { useDialog } from '../../components/common/Dialog';
-import { timeAgo } from '../../timeAgo';
-import { defaultModeOf, getMode, hasModeChoice } from '../../games';
-import { useGame, useGameKey } from '../../GameContext';
+import { timeAgo } from '../../lib/timeAgo';
+import { defaultModeOf, getMode, hasModeChoice } from '../../rules/games';
+import { useGame, useGameKey } from '../../lib/GameContext';
 import './ScrimRecord.css';
 
 /* 모드는 게임이 정한다. 롤은 하나뿐이라 고르는 칸이 안 뜨고,

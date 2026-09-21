@@ -1,5 +1,5 @@
 import { splitTeams, winChance, IGNORE_RATING } from './balance';
-import { ratingOf } from '../../games';
+import { ratingOf } from '../../rules/games';
 
 const p = (name, rating, lock = 0) => ({ name, rating, lock });
 const names = (team) => team.map((x) => x.name).sort();

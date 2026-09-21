@@ -23,7 +23,7 @@ jest.mock(
 
 /* @neondatabase/neon-js는 ESM 전용 빌드라 jest 리졸버가 못 읽는다.
    Header 테스트는 로그인 UI 자체를 검증하지 않으니 미설정 상태로 갈음한다. */
-jest.mock('../../../neon', () => ({ neon: null, isNeonConfigured: false }));
+jest.mock('../../../server/neon', () => ({ neon: null, isNeonConfigured: false }));
 
 const render = () => {
   jest.resetModules();

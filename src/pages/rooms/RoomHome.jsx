@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { FaTrophy, FaFire, FaDice, FaExclamationTriangle } from 'react-icons/fa';
-import { statsFor, streaksOf } from '../../matches';
-import { titlesOf } from '../../titles';
-import { timeAgo } from '../../timeAgo';
+import { statsFor, streaksOf } from '../../rules/matches';
+import { titlesOf } from '../../rules/titles';
+import { timeAgo } from '../../lib/timeAgo';
 import './RoomHome.css';
 
 /* 방의 대문.

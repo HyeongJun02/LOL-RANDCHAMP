@@ -11,7 +11,7 @@ import {
   MAX_SCRIMS,
 } from './limits';
 
-const sql = fs.readFileSync(path.join(__dirname, '..', 'sql', 'setup.sql'), 'utf8');
+const sql = fs.readFileSync(path.join(__dirname, '..', '..', 'sql', 'setup.sql'), 'utf8');
 
 test('로그인 안 한 사람은 한도가 없다 (서버를 안 쓰니까)', () => {
   expect(withinLimit('roster', 9999, null)).toBe(true);

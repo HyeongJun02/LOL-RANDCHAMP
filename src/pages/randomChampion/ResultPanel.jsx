@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaDice, FaRedo } from 'react-icons/fa';
 import { championIcon, championPortrait } from '../../services/api';
-import { lanesOf } from '../../champLanes';
+import { lanesOf } from '../../rules/champLanes';
 import { findRole } from './roles';
 
 const ResultPanel = ({

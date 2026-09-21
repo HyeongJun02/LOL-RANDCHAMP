@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaCheck } from 'react-icons/fa';
-import { getTier, tierName } from '../../games';
-import { useGameKey } from '../../GameContext';
+import { getTier, tierName } from '../../rules/games';
+import { useGameKey } from '../../lib/GameContext';
 import Modal from '../../components/common/Modal';
 
 const TeamColumn = ({ team, sum, side, game }) => (

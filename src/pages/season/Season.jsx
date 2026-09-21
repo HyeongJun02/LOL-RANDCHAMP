@@ -7,9 +7,9 @@ import {
   inMonth,
   monthKeyOf,
   monthLabel,
-} from '../../matches';
-import { getTier, tierName, modeGroupOf, modeGroupsOf, ALL_GROUPS } from '../../games';
-import { useGameKey } from '../../GameContext';
+} from '../../rules/matches';
+import { getTier, tierName, modeGroupOf, modeGroupsOf, ALL_GROUPS } from '../../rules/games';
+import { useGameKey } from '../../lib/GameContext';
 import ScrimBadge from '../../components/common/ScrimBadge';
 import RankList from '../../components/common/RankList';
 import ScrimPointsHelp from '../../components/common/ScrimPointsHelp';

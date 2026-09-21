@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaDice, FaHome } from 'react-icons/fa';
-import { READY_TOOLS } from '../tools';
+import { READY_TOOLS } from '../rules/tools';
 import './NotFound.css';
 
 /* 없는 주소로 들어왔을 때.

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { fetchLogs, feedParts, FEED_PAGE } from '../../rooms';
+import { fetchLogs, feedParts, FEED_PAGE } from '../../server/rooms';
 import { SkelRows } from '../../components/common/Skeleton';
 
 const when = (iso) => {

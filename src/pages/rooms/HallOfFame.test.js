@@ -1,5 +1,5 @@
 import { scrimKingOf } from './HallOfFame';
-import { HOF_MIN_GAMES, HOF_MIN_SHARE } from '../../tuning';
+import { HOF_MIN_GAMES, HOF_MIN_SHARE } from '../../rules/tuning';
 
 /* 그 달에 치른 경기 하나. playedAt만 맞으면 된다 */
 let seq = 0;
