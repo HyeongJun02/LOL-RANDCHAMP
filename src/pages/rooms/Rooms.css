@@ -2212,3 +2212,41 @@
 .member-warn b {
   color: #fff;
 }
+
+/* 또또가 열려 있다는 표시. 다른 탭을 보고 있는 동안 배팅이 열렸다
+   닫히면 그만이라, 탭 자체에 붙여 눈에 걸리게 한다 */
+.room-tab-live {
+  margin-left: 0.3rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: rgba(249, 115, 98, 0.18);
+  color: var(--gg-red);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* 아직 걸 수 있을 때만 숨 쉰다. 마감된 판은 알려주기만 하면 된다 */
+.room-tab-live.is-open {
+  animation: tab-live 1.6s ease-in-out infinite;
+}
+
+@keyframes tab-live {
+  0%,
+  100% {
+    background: rgba(249, 115, 98, 0.18);
+    box-shadow: 0 0 0 0 rgba(249, 115, 98, 0);
+  }
+  50% {
+    background: rgba(249, 115, 98, 0.32);
+    box-shadow: 0 0 8px 0 rgba(249, 115, 98, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-tab-live.is-open {
+    animation: none;
+    background: rgba(249, 115, 98, 0.32);
+  }
+}

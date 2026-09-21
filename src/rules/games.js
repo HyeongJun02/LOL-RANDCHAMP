@@ -80,7 +80,7 @@ export const GAMES = [
     /* 낮은 칸부터 적는다. 롤은 숫자가 작을수록 상위라 4가 제일 아래다
        (골드4 → 골드1). 이 순서가 평점 계산과 화면 목록의 기준이 된다 */
     divisions: [4, 3, 2, 1],
-    defaultTier: 'GOLD',
+    defaultTier: 'SILVER',
     teamSize: 5,
     /* 탑·정글·미드·원딜·서폿. 다섯 자리를 다섯 명이 하나씩 나눠 갖는다 */
     roles: LINES,
@@ -110,7 +110,7 @@ export const GAMES = [
     /* 발로란트는 롤과 반대로 숫자가 클수록 상위다 (브론즈1 → 브론즈3).
        여기도 '낮은 칸부터'라는 규칙은 같아서 1이 먼저 온다 */
     divisions: [1, 2, 3],
-    defaultTier: 'GOLD',
+    defaultTier: 'SILVER',
     teamSize: 5,
     /* 역할이 넷인데 팀은 다섯이라 하나는 겹친다. 롤과 다른 점 */
     roles: VALORANT_ROLES,
@@ -125,29 +125,29 @@ export const GAMES = [
       {
         key: 'standard',
         label: '일반',
-        desc: '13선취 5대5',
+        desc: '5대5 (13선승)',
         group: 'team',
         teamSize: 5,
         /* 라운드제라 롤보다 킬이 훨씬 적다 */
-        killsPerPlayer: 4.5,
+        killsPerPlayer: 13.6,
       },
       {
         key: 'swift',
         label: '신속',
-        desc: '5선취 5대5',
+        desc: '5대5 (5선승)',
         group: 'team',
         teamSize: 5,
-        killsPerPlayer: 2.6,
+        killsPerPlayer: 5.5,
       },
       {
         key: 'brawl',
         label: '난투',
-        desc: '1대1 · 2대2도',
+        desc: '1대1 · 2대2',
         /* 5대5 전적과 섞으면 둘 다 의미를 잃는다. 따로 센다 */
         group: 'brawl',
-        teamSize: 2,
+        teamSize: 3,
         /* 킬만 주고받는 판이라 인원 대비 킬이 제일 많다 */
-        killsPerPlayer: 14,
+        killsPerPlayer: 7.5,
       },
     ],
   },

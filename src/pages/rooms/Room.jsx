@@ -815,6 +815,15 @@ const Room = () => {
             >
               <span className="room-tab-icon">{t.icon}</span>
               {t.label}
+              {/* 또또가 열려 있으면 탭에서 바로 보여야 한다. 다른 탭을
+                  보고 있는 동안 배팅이 열렸다 닫히면 그만이다 */}
+              {t.key === 'bet' && activeScrim && (
+                <span
+                  className={`room-tab-live ${activeScrim.status === 'betting' ? 'is-open' : ''}`}
+                >
+                  {activeScrim.status === 'betting' ? 'LIVE' : '경기 중'}
+                </span>
+              )}
             </button>
           </React.Fragment>
         ))}
