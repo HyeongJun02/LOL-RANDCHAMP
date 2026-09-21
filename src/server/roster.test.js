@@ -1,3 +1,5 @@
+const { defaultTierOf } = require('../rules/games');
+
 const KEY = 'lrc.roster';
 
 let store;
@@ -18,8 +20,9 @@ test('추가하면 id와 기본 티어가 붙는다', () => {
   store.addMember('lol', { name: '철수' });
   const [m] = stored();
   expect(m.name).toBe('철수');
-  expect(m.tier).toBe('GOLD');
-  expect(m.division).toBe(4);
+  /* 기본 티어는 games.js에서 정한다. 여기에 박아두면 그걸 고칠 때마다
+     관계없는 테스트가 깨진다 */
+  expect({ tier: m.tier, division: m.division }).toEqual(defaultTierOf('lol'));
   expect(m.id).toBeTruthy();
 });
 

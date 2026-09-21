@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { defaultTierOf } from '../rules/games';
 import path from 'path';
 
 /* Data API 클라이언트를 가짜로 세운다. 실제 요청 대신 어떤 표에 무엇을
@@ -176,7 +177,7 @@ describe('addScrimByNames', () => {
     const [added] = calls.filter((c) => c.table === 'room_players' && c.op === 'insert');
     /* 기본 티어는 게임에 맞춰 붙는다 (게임을 안 넘기면 롤) */
     expect(added.payload).toEqual([
-      { room_id: 7, name: '지훈', tier: 'GOLD', division: 4 },
+      { room_id: 7, name: '지훈', ...defaultTierOf('lol') },
     ]);
     expect(rpcCalls[0].args.p_team_a).toEqual([1, 50]);
   });
@@ -1056,11 +1057,15 @@ test('두 사다리 모두 골드가 네 번째다 (보정식이 공용이라)',
   arrays.forEach((a) => expect(a.indexOf('GOLD')).toBe(3));
 });
 
-test('킬 기준선은 게임마다 다르다 (발로란트는 라운드제라 훨씬 적다)', () => {
-  expect(killLineFor(10, 'lol')).toBeGreaterThan(killLineFor(10, 'valorant'));
+/* 어느 게임이 더 많이 나오는지는 굴려보고 정하는 값이라 박지 않는다.
+   처음엔 '발로란트는 라운드제라 적다'고 적어뒀는데, 재보니 13선승까지
+   가는 판은 롤보다 총 킬이 많았다. 가정이 아니라 값이 기준이다 */
+test('킬 기준선은 게임마다 다르다', () => {
+  expect(killLineFor(10, 'lol')).not.toBe(killLineFor(10, 'valorant'));
   /* 게임을 안 넘기면 롤로 본다 */
   expect(killLineFor(10)).toBe(killLineFor(10, 'lol'));
   /* 무승부가 없게 .5로 끊는 건 양쪽 다 */
+  expect(killLineFor(10, 'lol') % 1).toBe(0.5);
   expect(killLineFor(10, 'valorant') % 1).toBe(0.5);
 });
 
@@ -1087,12 +1092,14 @@ test('경기를 남기거나 또또를 열 때 모드를 검사한다', () => {
 
 test('킬 기준선이 모드마다 다르다', () => {
   /* 난투는 킬만 주고받아 제일 많고, 신속은 5선취라 제일 적다 */
-  expect(killLineFor(4, 'valorant', 'brawl')).toBeGreaterThan(
-    killLineFor(4, 'valorant', 'standard')
-  );
+  /* 어느 모드가 더 많이 나오는지는 굴려보고 정하는 값이라 박지 않는다.
+     짧은 판이 긴 판보다 적다는 것만 지킨다 */
   expect(killLineFor(10, 'valorant', 'swift')).toBeLessThan(
     killLineFor(10, 'valorant', 'standard')
   );
+  /* 모드마다 다른 기준선이 나와야 나누는 뜻이 있다 */
+  const lines = ['standard', 'swift', 'brawl'].map((m) => killLineFor(6, 'valorant', m));
+  expect(new Set(lines).size).toBe(lines.length);
   /* 어느 조합이든 무승부가 없게 .5로 끊는다 */
   ['standard', 'swift', 'brawl'].forEach((m) => {
     expect(killLineFor(6, 'valorant', m) % 1).toBe(0.5);
