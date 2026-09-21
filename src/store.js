@@ -21,9 +21,6 @@ export const setSyncErrorHandler = (fn) => {
   onError = fn;
 };
 
-/* 로그인한 사용자만 서버 용량을 쓴다 */
-export const cloudUserId = () => userId;
-
 export const createStore = ({ key, column, hydrate = (x) => x, merge, limitKind }) => {
   const readLocal = () => {
     try {

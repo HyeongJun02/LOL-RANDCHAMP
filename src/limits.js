@@ -15,8 +15,6 @@ export const MAX_ROOMS = 3;
 export const MAX_MEMBERS = 50;
 export const MAX_ROOM_PLAYERS = 50;
 export const MAX_SCRIMS = 1000;
-export const MAX_LOGS = 500;
-
 export const isAdmin = (userId) => userId === ADMIN_USER_ID;
 
 export const LIMIT_MESSAGE = {

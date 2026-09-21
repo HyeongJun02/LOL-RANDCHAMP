@@ -269,13 +269,6 @@
 
 /* ---------- 팀원 명단 ---------- */
 
-.roster-desc {
-  margin: -0.6rem 0 1rem;
-  font-size: 0.82rem;
-  color: #6b7a94;
-  line-height: 1.55;
-}
-
 .roster-panel {
   display: flex;
   flex-direction: column;

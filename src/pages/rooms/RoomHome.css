@@ -151,16 +151,6 @@
   color: #8b98ae;
 }
 
-/* 지난 달 챔피언은 한 칸 위에 둔다. 여기 오르려고 뛰는 것이다 */
-.rh-champ {
-  border-color: rgba(251, 191, 36, 0.35);
-  background: linear-gradient(160deg, rgba(251, 191, 36, 0.1), rgba(15, 23, 42, 0.45) 60%);
-}
-
-.rh-champ .rh-card-label {
-  color: #fbbf24;
-}
-
 .rh-panel {
   padding: 0.9rem 1rem;
   border: 1px solid var(--gg-panel-border);
@@ -336,15 +326,6 @@
   white-space: nowrap;
 }
 
-.hof-blank {
-  margin: 0;
-  padding: 1.2rem 0;
-  text-align: center;
-  font-size: 0.82rem;
-  line-height: 1.7;
-  color: var(--gg-text-muted);
-}
-
 .hof-season {
   margin-top: 1rem;
 }
@@ -367,11 +348,6 @@
   font-size: 0.86rem;
   font-weight: 800;
   color: #e6ecf7;
-}
-
-.hof-king-legacy-unused {
-  font-size: 0.72rem;
-  color: #8b98ae;
 }
 
 .hof-podium {

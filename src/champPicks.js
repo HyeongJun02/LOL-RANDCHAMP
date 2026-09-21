@@ -57,8 +57,6 @@ export const PICK_GROUPS = [
 
 const BY_KEY = new Map(PICK_GROUPS.map((g) => [g.key, new Set(g.champions)]));
 
-export const PICK_KEYS = PICK_GROUPS.map((g) => g.key);
-
 /* 이 챔피언이 속한 그룹 키들 */
 export const picksOf = (championId) =>
   PICK_GROUPS.filter((g) => BY_KEY.get(g.key).has(championId)).map((g) => g.key);

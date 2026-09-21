@@ -23,8 +23,6 @@ export const EMBLEMS = [
   '🌙', '⭐', '🍀', '🎮',
 ];
 
-export const DEFAULT_EMBLEM = '⚔️';
-
 export const accentOf = (key) =>
   ACCENTS.find((a) => a.key === key) || ACCENTS.find((a) => a.key === DEFAULT_ACCENT);
 

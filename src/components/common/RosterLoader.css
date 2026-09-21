@@ -56,15 +56,6 @@
   cursor: pointer;
 }
 
-.loader-list .is-added label {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.loader-list .is-added label:hover {
-  background: none;
-}
-
 .loader-name {
   font-size: 0.87rem;
   font-weight: 700;
@@ -83,14 +74,6 @@
   color: var(--tier);
   background: color-mix(in srgb, var(--tier) 16%, transparent);
   border: 1px solid color-mix(in srgb, var(--tier) 40%, transparent);
-  white-space: nowrap;
-}
-
-.loader-lines {
-  font-size: 0.7rem;
-  color: #5b6b85;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

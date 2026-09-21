@@ -52,9 +52,6 @@ export const useRoster = (game = DEFAULT_GAME) => {
   return useMemo(() => all.filter((m) => (m.game || DEFAULT_GAME) === game), [all, game]);
 };
 
-/* 모든 게임을 한 번에 봐야 할 때 (설정 화면의 개수 표시 등) */
-export const useAllRoster = store.use;
-
 /* React 밖에서 지금 값을 읽어야 할 때 */
 export const getRoster = (game) =>
   game ? store.get().filter((m) => (m.game || DEFAULT_GAME) === game) : store.get();

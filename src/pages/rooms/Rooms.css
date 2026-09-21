@@ -79,14 +79,6 @@
   color: #64748b;
 }
 
-/* 남는 자리를 다 먹어서 끼꼬가 오른쪽 끝에 붙는다 */
-.rooms-me-points {
-  margin-left: auto;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #fbbf24;
-}
-
 /* ---------- 만들기 / 입장 ---------- */
 
 /* 목록 아래로 내려간 만들기·입장. 자주 쓰는 물건이 아니라
@@ -293,14 +285,6 @@
   font-style: normal;
   font-weight: 400;
   color: #64748b;
-}
-
-.rooms-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  color: #94a3b8;
 }
 
 .rooms-role {
@@ -620,17 +604,6 @@
   padding: 0;
   display: grid;
   gap: 0.45rem;
-}
-
-/* 패널 안에서 설명 → 목록 → 입력줄이 이어질 때 서로 붙어버리는 자리들.
-   목록(ul)은 margin: 0으로 초기화해 두는 게 보통이라, 뒤에 뭐가 오면
-   딱 달라붙는다. 붙는 조합만 짚어서 띄운다 */
-.room-members + .rooms-form-row,
-.room-members + .rooms-hint,
-.room-player-list + .rooms-form-row,
-.kkiko-ledger + .rooms-form-row,
-.feed-list + .rooms-form-row {
-  margin-top: 0.7rem;
 }
 
 /* 위는 '누구인가', 아래는 '무엇과 이어져 있나'.
@@ -1671,20 +1644,6 @@
   flex: none;
 }
 
-/* 끼꼬는 방마다 따로다. 목록에서 방별 잔액이 바로 보여야 한다 */
-.rooms-kkiko {
-  flex: none;
-  padding: 0.12rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid rgba(200, 170, 110, 0.3);
-  background: rgba(200, 170, 110, 0.1);
-  color: var(--gg-gold-light);
-  font-size: 0.74rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 /* ---------- 또또: 사람별 이번 판 정산 ---------- */
 /* 선택지별 목록만 있으면 '결국 내가 얼마 잃었나'를 눈으로 더해야 한다 */
 
@@ -2128,10 +2087,6 @@
   border-color: var(--gg-gold);
   background: rgba(200, 170, 110, 0.14);
   color: var(--gg-gold-light);
-}
-
-.game-opt-emoji {
-  font-size: 1.05rem;
 }
 
 .game-opt strong {
