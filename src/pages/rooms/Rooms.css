@@ -2171,3 +2171,31 @@
     animation: none;
   }
 }
+
+/* 설정 탭 멤버 패널 위의 같은 경고. 여기엔 한 번에 잇는 버튼이 붙는다 */
+.member-warn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgba(249, 115, 98, 0.4);
+  border-radius: 10px;
+  background: rgba(249, 115, 98, 0.09);
+  font-size: 0.82rem;
+  color: #ffd9d3;
+}
+
+.member-warn > span {
+  flex: 1;
+  min-width: 12rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.5;
+}
+
+.member-warn b {
+  color: #fff;
+}

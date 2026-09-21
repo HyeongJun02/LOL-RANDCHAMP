@@ -16,6 +16,7 @@ import {
   FaCog,
   FaGhost,
   FaLink,
+  FaExclamationTriangle,
   FaRegCopy,
   FaPalette,
   FaExchangeAlt,
@@ -56,7 +57,6 @@ import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
 import FeedTab from './FeedTab';
 import RoomHome from './RoomHome';
-import HallOfFame from './HallOfFame';
 import { useDialog } from '../../components/common/Dialog';
 import { copyText } from '../../clipboard';
 import RosterLoader from '../../components/common/RosterLoader';
@@ -275,8 +275,36 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
 
   /* 멤버 한 명당 참가자 하나. 이미 다른 멤버가 가져간 참가자는 아래에서
      못 고르게 막아두므로 여기서는 그대로 보낸다 */
+  /* 유령은 뛰라고 만든 자리표시자라 같이 센다. 이어져야 포인트가 간다 */
+  const unlinked = members.filter((m) => !m.player);
+
   const link = guard(async (m, playerId) => {
     await linkRoomPlayer(room.id, m.user_id, playerId);
+    reload();
+  });
+
+  /* 연결은 이 방에서 제일 중요한 설정인데(안 하면 참여 포인트가 아무에게도
+     안 들어간다) 멤버마다 셀렉트를 하나씩 고르게 되어 있었다. 열 명이면
+     열 번이다. 이름이 같은 짝은 기계가 찾아준다 */
+  const autoLink = guard(async () => {
+    const free = players.filter((p) => !p.linked_user_id);
+    const pairs = members
+      .filter((m) => !m.player)
+      .map((m) => ({
+        member: m,
+        player: free.find((p) => p.name.trim() === m.nickname.trim()),
+      }))
+      .filter((x) => x.player);
+
+    /* 같은 참가자를 두 멤버가 집는 일은 없다 - 이름이 방 안에서 유일하다 */
+    if (pairs.length === 0) {
+      toast('이름이 똑같은 짝을 못 찾았어요. 아래에서 직접 골라주세요.');
+      return;
+    }
+    for (const { member, player } of pairs) {
+      await linkRoomPlayer(room.id, member.user_id, player.id);
+    }
+    toast.success(`${pairs.length}명을 이어줬어요.`);
     reload();
   });
 
@@ -519,6 +547,20 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
             이어주면 됩니다.
           </p>
         )}
+
+        {/* 조용히 안 되고 있으면 아무도 모른다. 끼꼬가 전부 0인데
+            이유를 못 찾는 일이 실제로 있었다 */}
+        {isAdmin && unlinked.length > 0 && (
+          <div className="member-warn">
+            <span>
+              <FaExclamationTriangle /> <b>{unlinked.length}명</b>이 참가자와 이어지지 않아
+              내전 참여 포인트를 못 받고 있어요.
+            </span>
+            <button className="ghost-btn" onClick={autoLink}>
+              <FaLink /> 이름이 같은 사람 한 번에 잇기
+            </button>
+          </div>
+        )}
         <ul className="room-members">
           {members.map((m) => (
             <li key={m.user_id}>
@@ -650,7 +692,7 @@ const Room = () => {
     error,
     reload,
   } = useRoom(roomId, user?.id);
-  const { hofRows, champion } = useHallOfFame(roomId);
+  const { hofRows } = useHallOfFame(roomId);
   /* 탭을 주소(#bet)에 둔다. useState에만 담아두면 새로고침하거나
      링크를 공유했을 때 항상 첫 탭으로 돌아간다.
      replace라 뒤로 가기는 탭을 되짚지 않고 방 목록으로 나간다.
@@ -777,7 +819,8 @@ const Room = () => {
           players={players}
           members={members}
           activeScrim={activeScrim}
-          champion={champion}
+          hofRows={hofRows}
+          canEdit={editable}
           tabs={TABS.filter((t) => t.key !== 'home')}
           onGo={setTab}
         />
@@ -803,10 +846,7 @@ const Room = () => {
         )}
         {tab === 'season' && (
           <>
-            {/* 순위표가 먼저다. 이 탭에 온 이유가 그것이고, 전당은
-                지난 달 이야기라 아래에 둔다 */}
             <Season matches={matches} players={players} />
-            <HallOfFame rows={hofRows} matches={matches} members={members} />
           </>
         )}
         {tab === 'bet' && (

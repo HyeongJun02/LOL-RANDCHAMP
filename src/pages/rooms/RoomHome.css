@@ -604,3 +604,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 조용히 안 되고 있으면 아무도 모른다. 끼꼬가 전부 0인데 이유를
+   못 찾는 일이 실제로 있었다 */
+.rh-warn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  margin-bottom: 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(249, 115, 98, 0.4);
+  border-radius: 12px;
+  background: rgba(249, 115, 98, 0.1);
+  color: #ffd9d3;
+  font-family: inherit;
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rh-warn:hover {
+  background: rgba(249, 115, 98, 0.16);
+}
+
+.rh-warn > span {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.rh-warn b {
+  color: #fff;
+}
+
+.rh-warn em {
+  font-style: normal;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gg-red);
+  white-space: nowrap;
+}

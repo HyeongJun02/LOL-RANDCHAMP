@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { FaTrophy, FaFire, FaDice, FaCrown } from 'react-icons/fa';
+import { FaTrophy, FaFire, FaDice, FaExclamationTriangle } from 'react-icons/fa';
 import { statsFor, streaksOf } from '../../matches';
 import { titlesOf } from '../../titles';
 import { timeAgo } from '../../timeAgo';
+import HallOfFame from './HallOfFame';
 import './RoomHome.css';
 
 /* 방의 대문.
@@ -59,10 +60,14 @@ const RoomHome = ({
   players,
   members,
   activeScrim,
-  champion,
+  hofRows,
+  canEdit,
   tabs,
   onGo,
 }) => {
+  /* 이어지지 않은 멤버는 경기를 뛰어도 참여 포인트를 못 받는다.
+     설정 탭까지 들어가야만 보이면 아무도 모른다 */
+  const unlinked = (members || []).filter((m) => !m.player).length;
   const stats = useMemo(() => statsFor(matches), [matches]);
   const titles = useMemo(
     () => titlesOf({ matches, scrims, players }),
@@ -97,6 +102,16 @@ const RoomHome = ({
         </button>
       )}
 
+      {canEdit && unlinked > 0 && (
+        <button className="rh-warn" onClick={() => onGo('settings')}>
+          <FaExclamationTriangle />
+          <span>
+            <b>{unlinked}명</b>이 참가자와 이어지지 않아 내전 참여 포인트를 못 받고 있어요.
+          </span>
+          <em>설정에서 잇기</em>
+        </button>
+      )}
+
       <section className="rh-hero">
         <span className="rh-emblem">{room.emblem}</span>
         <div className="rh-hero-text">
@@ -115,24 +130,8 @@ const RoomHome = ({
       </section>
 
       <div className="rh-row">
-        {/* 지난 달 챔피언 - 오르고 싶게 만드는 자리 */}
-        <button className="rh-card rh-champ" onClick={() => onGo('season')}>
-          <span className="rh-card-label">
-            <FaCrown /> 지난 달 챔피언
-          </span>
-          {champion ? (
-            <>
-              <strong>{champion.display_name}</strong>
-              <em>{num(champion.kkiko_points)} 끼꼬</em>
-            </>
-          ) : (
-            <>
-              <strong className="is-empty">아직 없음</strong>
-              <em>이번 달이 끝나면 1등이 박제됩니다</em>
-            </>
-          )}
-        </button>
-
+        {/* '지난 달 챔피언' 카드가 여기 있었는데, 아래 명예의 전당이 같은 말을
+           승률·포인트까지 붙여서 더 잘 한다. 카드는 뺐다 */}
         <button className="rh-card" onClick={() => onGo('season')}>
           <span className="rh-card-label">
             <FaTrophy /> 내전 1위
@@ -170,6 +169,11 @@ const RoomHome = ({
           )}
         </button>
       </div>
+
+      {/* 방의 대문이 트로피 진열장의 제자리다. 기록 탭은 '이번 달 순위',
+          전당은 '역대 챔피언'이라 시간 축이 달라서, 한 화면에 이어 붙이면
+          어느 쪽을 보러 왔는지가 흐려진다 */}
+      <HallOfFame rows={hofRows} matches={matches} members={members} />
 
       {crew.length > 0 && (
         <section className="rh-panel">
