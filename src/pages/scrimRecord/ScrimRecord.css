@@ -214,14 +214,15 @@
   margin: 0 0 0.8rem;
 }
 
-/* 넓은 화면에서는 두 열. 한 열로만 두면 카드는 좁은데 좌우가
-   통째로 비어서, 화면은 큰데 볼 수 있는 판은 서너 개뿐이 된다 */
+/* 한 행에 한 판. 두 열로 늘어놓아 봤는데 눈이 좌우로 왔다 갔다 하느라
+   오히려 안 읽혔다. 카드 안이 이미 1팀/2팀 두 칸이라, 밖에서 또 나누면
+   한 화면에 네 덩어리가 된다 */
 .history-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 0.4rem;
 }
 
