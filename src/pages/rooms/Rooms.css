@@ -633,14 +633,127 @@
   margin-top: 0.7rem;
 }
 
+/* 위는 '누구인가', 아래는 '무엇과 이어져 있나'.
+   전에는 대여섯 개를 한 줄에 flex-wrap으로 흘려서, 배지가 있고 없고에
+   따라 줄 높이와 칸 위치가 사람마다 달랐다 */
 .room-members li {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: rgba(30, 41, 59, 0.45);
+}
+
+/* 안 이어진 멤버는 참여 포인트를 못 받는다. 목록에서 바로 보여야 한다 */
+.room-members li.is-unlinked {
+  border-color: rgba(249, 115, 98, 0.32);
+  background: rgba(249, 115, 98, 0.06);
+}
+
+.mem-top,
+.mem-bottom {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.mem-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mem-name em {
+  font-style: normal;
+  font-weight: 400;
+  color: #6b7686;
+}
+
+/* 끼꼬는 남는 자리를 먹고 오른쪽 끝에 붙는다. 사람마다 배지 수가 달라도
+   숫자는 늘 같은 자리에 선다 */
+.mem-points {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gg-gold);
+  white-space: nowrap;
+}
+
+.mem-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+  color: #8b98ae;
+  font-size: 0.78rem;
+}
+
+.mem-link select {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 7px;
+  background: rgba(8, 12, 20, 0.6);
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+
+.is-unlinked .mem-link {
+  color: var(--gg-red);
+}
+
+.is-unlinked .mem-link select {
+  border-color: rgba(249, 115, 98, 0.45);
+  color: #ffd9d3;
+}
+
+/* 멤버에게는 고르는 칸 대신 결과만 */
+.mem-linked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  color: #8b98ae;
+}
+
+.mem-linked.is-none {
+  color: var(--gg-red);
+}
+
+.mem-acts {
+  display: flex;
+  gap: 0.3rem;
   flex-wrap: wrap;
-  padding: 0.5rem 0.65rem;
-  border-radius: 8px;
-  background: rgba(30, 41, 59, 0.45);
+  justify-content: flex-end;
+}
+
+.mem-acts .ghost-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 520px) {
+  .mem-bottom {
+    flex-wrap: wrap;
+  }
+
+  .mem-acts {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 /* 한 줄에 이름·권한·끼꼬·연결·버튼이 다 들어간다. flex:1인 이름칸은
@@ -651,66 +764,11 @@
   min-width: 5.5rem;
 }
 
-.room-member-points {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #fbbf24;
-  white-space: nowrap;
-}
-
-.room-member-acts {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
 /* 유령 멤버 표시. 아이콘 하나로 '이 사람은 계정이 없다'가 읽힌다 */
 .member-ghost-icon {
   margin-right: 0.3rem;
   color: #94a3b8;
   vertical-align: -1px;
-}
-
-/* 참가자 연결 고르기. 셀렉트가 이름칸을 밀어내지 않게 폭을 묶어둔다 */
-.member-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.15rem 0.45rem;
-  border: 1px solid var(--gg-panel-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  color: #64748b;
-  font-size: 0.7rem;
-}
-
-.member-link select {
-  max-width: 8rem;
-  padding: 0.1rem 0.1rem;
-  border: 0;
-  background: none;
-  color: #cbd5e1;
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.member-link select option {
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-.member-linked {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: #94a3b8;
-}
-
-.room-member-acts .ghost-btn {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.72rem;
 }
 
 .room-danger {

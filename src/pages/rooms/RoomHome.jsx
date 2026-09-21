@@ -3,7 +3,6 @@ import { FaTrophy, FaFire, FaDice, FaExclamationTriangle } from 'react-icons/fa'
 import { statsFor, streaksOf } from '../../matches';
 import { titlesOf } from '../../titles';
 import { timeAgo } from '../../timeAgo';
-import HallOfFame from './HallOfFame';
 import './RoomHome.css';
 
 /* 방의 대문.
@@ -60,7 +59,6 @@ const RoomHome = ({
   players,
   members,
   activeScrim,
-  hofRows,
   canEdit,
   tabs,
   onGo,
@@ -169,11 +167,6 @@ const RoomHome = ({
           )}
         </button>
       </div>
-
-      {/* 방의 대문이 트로피 진열장의 제자리다. 기록 탭은 '이번 달 순위',
-          전당은 '역대 챔피언'이라 시간 축이 달라서, 한 화면에 이어 붙이면
-          어느 쪽을 보러 왔는지가 흐려진다 */}
-      <HallOfFame rows={hofRows} matches={matches} members={members} />
 
       {crew.length > 0 && (
         <section className="rh-panel">

@@ -53,6 +53,7 @@ import { titlesOf } from '../../titles';
 import { MAX_ROOM_PLAYERS } from '../../limits';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
+import HallOfFame from './HallOfFame';
 import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
 import FeedTab from './FeedTab';
@@ -561,78 +562,86 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
             </button>
           </div>
         )}
+        {/* 한 줄에 대여섯 개를 flex-wrap으로 흘려보내고 있어서, 배지가
+            있고 없고에 따라 줄 높이와 칸 위치가 사람마다 달랐다.
+            위는 '누구인가', 아래는 '무엇과 이어져 있나'로 고정한다 */}
         <ul className="room-members">
-          {members.map((m) => (
-            <li key={m.user_id}>
-              <span className="rooms-name">
-                {m.is_ghost && <FaGhost className="member-ghost-icon" title="유령 멤버" />}
-                {m.nickname}
-                {m.user_id === myId && <em> (나)</em>}
-              </span>
-              {m.player && titles.get(m.player.name) && (
-                <span className={`title-badge tone-${titles.get(m.player.name).tone}`}>
-                  {titles.get(m.player.name).icon} {titles.get(m.player.name).label}
-                </span>
-              )}
-              <span className={`rooms-role role-${m.role}`}>
-                {m.is_ghost ? '유령' : ROLE_LABEL[m.role]}
-              </span>
-              <span className="room-member-points">{m.points.toLocaleString()} 끼꼬</span>
-
-              {/* 연결은 방장·부방장만 건드린다. 멤버에게는 결과만 보인다 */}
-              {isAdmin ? (
-                <label className="member-link">
-                  <FaLink />
-                  <select
-                    value={m.player?.id ?? ''}
-                    onChange={(e) => link(m, e.target.value ? Number(e.target.value) : null)}
-                    aria-label={`${m.nickname} 참가자 연결`}
-                  >
-                    <option value="">연결 안 함</option>
-                    {players.map((p) => {
-                      const taken = p.linked_user_id && p.linked_user_id !== m.user_id;
-                      return (
-                        <option key={p.id} value={p.id} disabled={taken}>
-                          {p.name}
-                          {taken ? ' (연결됨)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </label>
-              ) : (
-                m.player && (
-                  <span className="member-linked">
-                    <FaLink /> {m.player.name}
+          {members.map((m) => {
+            const title = m.player && titles.get(m.player.name);
+            return (
+              <li key={m.user_id} className={m.player ? '' : 'is-unlinked'}>
+                <div className="mem-top">
+                  <span className="mem-name">
+                    {m.is_ghost && <FaGhost className="member-ghost-icon" title="유령 멤버" />}
+                    {m.nickname}
+                    {m.user_id === myId && <em>(나)</em>}
                   </span>
-                )
-              )}
+                  <span className={`rooms-role role-${m.role}`}>
+                    {m.is_ghost ? '유령' : ROLE_LABEL[m.role]}
+                  </span>
+                  {title && (
+                    <span className={`title-badge tone-${title.tone}`}>
+                      {title.icon} {title.label}
+                    </span>
+                  )}
+                  <span className="mem-points">{m.points.toLocaleString()} 끼꼬</span>
+                </div>
 
-              {isAdmin && m.is_ghost && (
-                <span className="room-member-acts">
-                  <button className="ghost-btn" onClick={() => dropGhost(m)}>
-                    삭제
-                  </button>
-                </span>
-              )}
-              {isOwner && !m.is_ghost && m.user_id !== myId && (
-                <span className="room-member-acts">
-                  <button
-                    className="ghost-btn"
-                    onClick={() => changeRole(m, m.role === 'admin' ? 'member' : 'admin')}
-                  >
-                    {m.role === 'admin' ? '부방장 해제' : '부방장'}
-                  </button>
-                  <button className="ghost-btn" onClick={() => handOver(m)}>
-                    방장 넘기기
-                  </button>
-                  <button className="ghost-btn" onClick={() => kick(m)}>
-                    내보내기
-                  </button>
-                </span>
-              )}
-            </li>
-          ))}
+                <div className="mem-bottom">
+                  {/* 연결은 방장·부방장만 건드린다. 멤버에게는 결과만 보인다 */}
+                  {isAdmin ? (
+                    <label className="mem-link">
+                      <FaLink />
+                      <select
+                        value={m.player?.id ?? ''}
+                        onChange={(e) => link(m, e.target.value ? Number(e.target.value) : null)}
+                        aria-label={`${m.nickname} 참가자 연결`}
+                      >
+                        <option value="">참가자 안 이어짐</option>
+                        {players.map((p) => {
+                          const taken = p.linked_user_id && p.linked_user_id !== m.user_id;
+                          return (
+                            <option key={p.id} value={p.id} disabled={taken}>
+                              {p.name}
+                              {taken ? ' (이미 이어짐)' : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+                  ) : (
+                    <span className={`mem-linked ${m.player ? '' : 'is-none'}`}>
+                      <FaLink /> {m.player ? m.player.name : '참가자 안 이어짐'}
+                    </span>
+                  )}
+
+                  {isAdmin && m.is_ghost && (
+                    <span className="mem-acts">
+                      <button className="ghost-btn" onClick={() => dropGhost(m)}>
+                        삭제
+                      </button>
+                    </span>
+                  )}
+                  {isOwner && !m.is_ghost && m.user_id !== myId && (
+                    <span className="mem-acts">
+                      <button
+                        className="ghost-btn"
+                        onClick={() => changeRole(m, m.role === 'admin' ? 'member' : 'admin')}
+                      >
+                        {m.role === 'admin' ? '부방장 해제' : '부방장'}
+                      </button>
+                      <button className="ghost-btn" onClick={() => handOver(m)}>
+                        방장 넘기기
+                      </button>
+                      <button className="ghost-btn" onClick={() => kick(m)}>
+                        내보내기
+                      </button>
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
 
         {isAdmin && (
@@ -819,7 +828,6 @@ const Room = () => {
           players={players}
           members={members}
           activeScrim={activeScrim}
-          hofRows={hofRows}
           canEdit={editable}
           tabs={TABS.filter((t) => t.key !== 'home')}
           onGo={setTab}
@@ -846,6 +854,7 @@ const Room = () => {
         )}
         {tab === 'season' && (
           <>
+            <HallOfFame rows={hofRows} matches={matches} members={members} />
             <Season matches={matches} players={players} />
           </>
         )}
