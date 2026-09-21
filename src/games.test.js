@@ -33,9 +33,11 @@ test('게임마다 티어 사다리가 다르다', () => {
   expect(val).not.toContain('EMERALD');
 });
 
-test('디비전 칸 수가 게임마다 다르다 (롤 4칸 · 발로 3칸)', () => {
+/* 칸 수만 다른 게 아니라 방향도 반대다. 롤은 1이 제일 위,
+   발로란트는 3이 제일 위. 배열은 둘 다 '낮은 칸부터'로 적는다 */
+test('디비전 칸 수와 방향이 게임마다 다르다 (롤 4칸 · 발로 3칸)', () => {
   expect(getGame('lol').divisions).toEqual([4, 3, 2, 1]);
-  expect(getGame('valorant').divisions).toEqual([3, 2, 1]);
+  expect(getGame('valorant').divisions).toEqual([1, 2, 3]);
 });
 
 /* 평점이 뒤집히면 팀 짜기가 거꾸로 돈다. 게임마다 한 번씩 본다 */
@@ -43,7 +45,7 @@ GAMES.forEach((g) => {
   test(`${g.label}: 위 티어일수록 평점이 높다`, () => {
     const all = [];
     g.tiers.forEach((t) => {
-      /* divisions는 4→1 순서로 적혀 있고, 숫자가 클수록 아래 칸이다 */
+      /* divisions는 게임과 무관하게 '낮은 칸부터' 적혀 있다 */
       const divs = t.divisions ? g.divisions : [g.divisions[0]];
       divs.forEach((d) => all.push(ratingOf(g.key, { tier: t.key, division: d })));
     });
@@ -83,10 +85,10 @@ test('그 게임에 없는 티어는 기본값으로 갈아끼운다', () => {
   expect(fitTier('valorant', { tier: 'EMERALD', division: 2 })).toEqual(
     defaultTierOf('valorant')
   );
-  /* 디비전 4는 발로란트에 없다 */
+  /* 디비전 4는 발로란트에 없다. 제일 낮은 칸(골드1)으로 내려간다 */
   expect(fitTier('valorant', { tier: 'GOLD', division: 4 })).toEqual({
     tier: 'GOLD',
-    division: 3,
+    division: 1,
   });
   /* 멀쩡한 값은 그대로 둔다 */
   expect(fitTier('lol', { tier: 'DIAMOND', division: 1 })).toEqual({
@@ -193,4 +195,48 @@ test('발로란트 역할 아이콘은 색을 입힐 수 있게 표시돼 있다
   });
   /* 롤 아이콘은 이미 칠해진 그림이라 그대로 쓴다 */
   rolesOf('lol').forEach((r) => expect(r.mono).toBeUndefined());
+});
+
+/* 롤은 골드1이 골드4보다 위고, 발로란트는 브론즈3이 브론즈1보다 위다.
+   숫자만 보고 뒤집으면 한쪽이 통째로 거꾸로 매겨진다 */
+describe('디비전 방향은 게임마다 다르다', () => {
+  test('롤은 숫자가 작을수록 높다', () => {
+    const hi = ratingOf('lol', { tier: 'GOLD', division: 1 });
+    const lo = ratingOf('lol', { tier: 'GOLD', division: 4 });
+    expect(hi).toBeGreaterThan(lo);
+  });
+
+  test('발로란트는 숫자가 클수록 높다', () => {
+    const hi = ratingOf('valorant', { tier: 'BRONZE', division: 3 });
+    const lo = ratingOf('valorant', { tier: 'BRONZE', division: 1 });
+    expect(hi).toBeGreaterThan(lo);
+  });
+
+  test('두 게임 모두 divisions 배열이 낮은 칸부터다', () => {
+    ['lol', 'valorant'].forEach((key) => {
+      const g = getGame(key);
+      const ratings = g.divisions.map((d) => ratingOf(key, { tier: 'GOLD', division: d }));
+      const sorted = [...ratings].sort((a, b) => a - b);
+      expect(ratings).toEqual(sorted);
+    });
+  });
+
+  /* 새로 들어온 사람은 그 티어의 제일 아래 칸에서 시작한다 */
+  test('기본값은 제일 낮은 칸이다', () => {
+    ['lol', 'valorant'].forEach((key) => {
+      const d = defaultTierOf(key);
+      const mine = ratingOf(key, d);
+      getGame(key).divisions.forEach((div) => {
+        expect(mine).toBeLessThanOrEqual(ratingOf(key, { tier: d.tier, division: div }));
+      });
+    });
+  });
+
+  /* 그 게임에 없는 칸이 들어와도 화면이 깨지면 안 된다 */
+  test('발로란트에 디비전 4가 들어오면 제일 아래로 본다', () => {
+    expect(ratingOf('valorant', { tier: 'BRONZE', division: 4 })).toBe(
+      ratingOf('valorant', { tier: 'BRONZE', division: 1 })
+    );
+    expect(tierName('valorant', { tier: 'BRONZE', division: 4 })).toBe('브론즈 1');
+  });
 });

@@ -77,7 +77,8 @@ export const GAMES = [
     /* 로고 옆이나 배경으로 옅게 깔 때 쓰는 그 게임의 색 */
     color: '#c8aa6e',
     tiers: LOL_TIERS,
-    /* 숫자가 작을수록 상위 (골드1 > 골드4) */
+    /* 낮은 칸부터 적는다. 롤은 숫자가 작을수록 상위라 4가 제일 아래다
+       (골드4 → 골드1). 이 순서가 평점 계산과 화면 목록의 기준이 된다 */
     divisions: [4, 3, 2, 1],
     defaultTier: 'GOLD',
     teamSize: 5,
@@ -106,7 +107,9 @@ export const GAMES = [
     logo: '/logo/valorant-logo.png',
     color: '#ff4655',
     tiers: VALORANT_TIERS,
-    divisions: [3, 2, 1],
+    /* 발로란트는 롤과 반대로 숫자가 클수록 상위다 (브론즈1 → 브론즈3).
+       여기도 '낮은 칸부터'라는 규칙은 같아서 1이 먼저 온다 */
+    divisions: [1, 2, 3],
     defaultTier: 'GOLD',
     teamSize: 5,
     /* 역할이 넷인데 팀은 다섯이라 하나는 겹친다. 롤과 다른 점 */
@@ -207,12 +210,21 @@ export const defaultTierOf = (game) => {
   return { tier: g.defaultTier, division: g.divisions[0] };
 };
 
-/* 디비전은 숫자가 작을수록 상위. ratings는 낮은 칸부터라 뒤집어서 읽는다 */
+/* 디비전의 방향은 게임마다 다르다. 롤은 골드1이 골드4보다 위고,
+   발로란트는 브론즈3이 브론즈1보다 위다. 숫자만 보고 뒤집으면 한쪽이
+   통째로 거꾸로 매겨진다 - 실제로 발로란트가 그렇게 굴러가고 있었다.
+
+   그래서 숫자를 해석하지 않는다. divisions 배열이 '낮은 칸부터'라는
+   규칙 하나만 지키면, 그 안에서 몇 번째냐가 곧 높이다. ratings도
+   같은 순서라 자리끼리 맞물린다. */
 export const ratingOf = (game, { tier: key, division }) => {
   const t = getTier(game, key);
   if (t.divisions === 0) return t.ratings[0];
-  const idx = t.divisions - (Number(division) || t.divisions);
-  return t.ratings[Math.min(t.ratings.length - 1, Math.max(0, idx))];
+  const order = getGame(game).divisions;
+  const at = order.indexOf(Number(division));
+  /* 그 게임에 없는 칸(발로란트에 디비전 4)이 들어오면 제일 아래로 본다 */
+  const idx = at < 0 ? 0 : at;
+  return t.ratings[Math.min(t.ratings.length - 1, idx)];
 };
 
 export const tierName = (game, { tier: key, division }) => {
