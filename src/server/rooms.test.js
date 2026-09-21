@@ -964,7 +964,7 @@ test('참가자 삭제는 행을 지우지 않고 표시만 남긴다', () => {
 test('경기 이름표는 지운 참가자까지 보고 붙인다', () => {
   const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
   /* 명단(players)에는 안 보여도, 지난 경기의 이름은 붙어야 한다 */
-  expect(src).toContain('toMatches(room?.scrims, allPlayers)');
+  expect(src).toContain('toMatches(room?.scrims, allPlayers, room?.game)');
   expect(src).toMatch(/const players = allPlayers\.filter\(\(p\) => !p\.deleted_at\)/);
 });
 

@@ -130,7 +130,7 @@ const RoomHome = ({
       <div className="rh-row">
         {/* '지난 달 챔피언' 카드가 여기 있었는데, 아래 명예의 전당이 같은 말을
            승률·포인트까지 붙여서 더 잘 한다. 카드는 뺐다 */}
-        <button className="rh-card" onClick={() => onGo('season')}>
+        <button className="rh-card" onClick={() => onGo('stats')}>
           <span className="rh-card-label">
             <FaTrophy /> 내전 1위
           </span>

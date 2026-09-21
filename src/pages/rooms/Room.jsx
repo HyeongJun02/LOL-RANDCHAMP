@@ -53,6 +53,7 @@ import { titlesOf } from '../../rules/titles';
 import { MAX_ROOM_PLAYERS } from '../../server/limits';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
+import MatchHistory from './MatchHistory';
 import HallOfFame from './HallOfFame';
 import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
@@ -77,7 +78,11 @@ import './Rooms.css';
 const TABS = [
   { key: 'home', group: 0, label: '홈', icon: <FaHome />, desc: '이 방에서 할 수 있는 것들' },
   { key: 'record', group: 1, label: '게임 시작', icon: <FaPlay />, desc: '팀을 넣고 승패를 기록합니다' },
-  { key: 'season', group: 1, label: '내전 기록', icon: <FaChartBar />, desc: '전적·순위·시즌 정산' },
+  /* 팀을 넣는 화면과 지난 판을 훑는 화면은 하는 일이 다르다.
+     한 판 기록하려고 들어왔다가 목록을 지나쳐야 했고, 지난 판을 보려면
+     입력칸부터 스크롤해야 했다 */
+  { key: 'history', group: 1, label: '내전 기록', icon: <FaListUl />, desc: '지난 판과 또또 결과' },
+  { key: 'stats', group: 1, label: '통계', icon: <FaChartBar />, desc: '순위·시즌 정산·명예의 전당' },
   { key: 'bet', group: 2, label: '또또', icon: <FaDice />, desc: '끼꼬를 걸고 결과를 맞힙니다' },
   { key: 'kkiko', group: 2, label: '포인트', icon: <FaCoins />, desc: '끼꼬 잔액과 주고받기' },
   { key: 'feed', group: 3, label: '로그', icon: <FaListUl />, desc: '방에서 일어난 일들' },
@@ -861,7 +866,21 @@ const Room = () => {
             onOpenBetting={editable ? openBet : undefined}
           />
         )}
-        {tab === 'season' && (
+        {tab === 'history' && (
+          <MatchHistory
+            matches={matches}
+            scrims={scrims}
+            players={players}
+            members={members}
+            myId={user.id}
+            canEdit={editable}
+            isOwner={myRole === 'owner'}
+            version={room.version}
+            onRemove={unrecord}
+            onChanged={reload}
+          />
+        )}
+        {tab === 'stats' && (
           <>
             <HallOfFame rows={hofRows} matches={matches} members={members} />
             <Season matches={matches} players={players} />

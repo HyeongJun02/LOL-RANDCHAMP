@@ -39,6 +39,9 @@ const BetTab = ({
   isOwner,
   version,
   onChanged,
+  /* 한 판만 보여줄 때. 내전 기록 탭에서 판돈을 누르면 이 화면을 그대로
+     팝업에 띄운다 - 결과를 두 벌로 그리면 둘이 조금씩 달라진다 */
+  single = null,
 }) => {
   const gameKey = useGameKey();
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
@@ -47,12 +50,14 @@ const BetTab = ({
   const { confirm } = useDialog();
 
   /* 또또를 건 경기만. 결과가 나온 것들은 기록으로 남겨 계속 본다 */
-  const history = scrims
-    .filter((s) => s.status === 'settled' && s.bet_count > 0)
-    .sort((a, b) => new Date(b.played_at) - new Date(a.played_at))
-    .slice(0, 5);
+  const history = single
+    ? [single]
+    : scrims
+        .filter((s) => s.status === 'settled' && s.bet_count > 0)
+        .sort((a, b) => new Date(b.played_at) - new Date(a.played_at))
+        .slice(0, 5);
 
-  const shown = [activeScrim, ...history].filter(Boolean);
+  const shown = [single ? null : activeScrim, ...history].filter(Boolean);
   const ids = shown.map((s) => s.id);
   const idKey = ids.join(',');
 
@@ -526,7 +531,7 @@ const BetTab = ({
 
   return (
     <div className="room-settings">
-      {!activeScrim ? (
+      {single ? null : !activeScrim ? (
         <p className="rooms-blank">
           지금 열린 또또가 없어요.
           <br />

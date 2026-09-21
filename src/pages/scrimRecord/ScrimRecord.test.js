@@ -8,7 +8,11 @@ let React;
    '기록을 남기면 화면이 따라오는가'만 본다.
 
    lastSplit.js가 적재 시점에 localStorage를 읽으므로 시드를 심은 뒤 require한다 */
+/* 기록은 부모(방)가 맡는다. 여기서는 넘긴 값만 붙잡아 본다 */
+let added;
+
 const render = ({ initial = [], canEdit = true } = {}) => {
+  added = jest.fn();
   jest.resetModules();
   React = require('react');
   const { createRoot } = require('react-dom/client');
@@ -17,18 +21,13 @@ const render = ({ initial = [], canEdit = true } = {}) => {
   const { DialogProvider } = require('../../components/common/Dialog');
   ({ act } = React);
 
-  let seq = 0;
-  const Harness = () => {
-    const [matches, setMatches] = React.useState(initial);
-    return React.createElement(ScrimRecord, {
-      matches,
+  const Harness = () =>
+    React.createElement(ScrimRecord, {
+      matches: initial,
       players: [],
       canEdit,
-      onAdd: (m) =>
-        setMatches((prev) => [...prev, { ...m, id: `g${++seq}`, playedAt: Date.now() }]),
-      onRemove: (id) => setMatches((prev) => prev.filter((m) => m.id !== id)),
+      onAdd: added,
     });
-  };
 
   const Wrapped = () =>
     React.createElement(DialogProvider, null, React.createElement(Harness));
@@ -73,17 +72,12 @@ test('양 팀에 이름을 넣고 승리 팀을 고르면 기록이 남는다', 
 
   await click(byText(el, 'button', '1팀 승리'));
 
-  /* 순위표는 '내전 기록' 탭으로 옮겼다. 여기는 게임을 시작하는 화면이라
-     최근 기록만 남는다 */
-  expect(el.querySelector('.rank-blank')).toBeNull();
-  const rows = [...el.querySelectorAll('.history-list li')];
-  expect(rows).toHaveLength(1);
-  expect(rows[0].textContent).toContain('철수');
-  expect(rows[0].textContent).toContain('영희');
-
-  const history = el.querySelector('.history-list li');
-  expect(history.textContent).toContain('철수');
-  expect(history.textContent).toContain('영희');
+  expect(added).toHaveBeenCalledTimes(1);
+  expect(added.mock.calls[0][0]).toMatchObject({
+    teamA: ['철수'],
+    teamB: ['영희'],
+    winner: 'A',
+  });
 });
 
 test('양 팀에 같은 이름이 있으면 기록하지 않는다', async () => {
@@ -92,50 +86,11 @@ test('양 팀에 같은 이름이 있으면 기록하지 않는다', async () =>
 
   await click(byText(el, 'button', '1팀 승리'));
 
-  expect(el.querySelector('.rank-blank')).not.toBeNull();
+  expect(added).not.toHaveBeenCalled();
 });
 
-/* 모드를 나누지 않으므로 옛 칼바람 기록도 같은 리더보드에 함께 뜬다 */
-test('예전 칼바람 기록도 같은 전적에 함께 잡힌다', async () => {
-  const el = render({
-    initial: [
-      { id: 'g1', mode: 'aram', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
-    ],
-  });
 
-  expect(el.querySelector('.rank-blank')).toBeNull();
-  expect(el.textContent).toContain('철수');
-});
 
-test('기록 삭제 버튼을 누르면 전적에서 사라진다', async () => {
-  const el = render();
-  fill(el, '철수', '영희');
-  await click(byText(el, 'button', '1팀 승리'));
-
-  await click(el.querySelector('.history-list .row-del'));
-  /* 지우면 지갑까지 되돌아가는 일이라 확인창을 한 번 거친다.
-     모달은 body로 포탈되므로 document에서 찾는다 */
-  await click(document.querySelector('.dialog-ok'));
-
-  expect(el.querySelector('.rank-blank')).not.toBeNull();
-  expect(el.querySelector('.history-list')).toBeNull();
-});
-
-/* 입장 코드로 들어온 사람은 보기만 한다 */
-test('수정 권한이 없으면 입력과 삭제가 아예 안 보인다', async () => {
-  const el = render({
-    canEdit: false,
-    initial: [
-      { id: 'g1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
-    ],
-  });
-
-  expect(el.querySelector('.sr-team')).toBeNull();
-  expect(byText(el, 'button', '1팀 승리')).toBeUndefined();
-  expect(el.querySelector('.history-list .row-del')).toBeNull();
-  // 기록 자체는 보인다
-  expect(el.querySelector('.history-list li').textContent).toContain('철수');
-});
 
 test('짜둔 팀이 없으면 가져오기 버튼 자체를 안 보여준다', () => {
   /* 눌러봐야 '없어요' 소리만 듣는 버튼은 안 띄우는 편이 낫다 */
@@ -172,85 +127,6 @@ test('게임 시작 화면에는 순위표를 두지 않는다', () => {
 
   expect(el.querySelector('.sr-row .sr-winrate')).toBeNull();
   expect(el.querySelector('.rank-list')).toBeNull();
-  /* 대신 방금 뭘 했는지는 보인다 */
-  expect(el.querySelector('.history-list')).not.toBeNull();
-});
-
-test('확인창에서 취소하면 기록이 그대로 남는다', async () => {
-  const el = render();
-  fill(el, '철수', '영희');
-  await click(byText(el, 'button', '1팀 승리'));
-
-  await click(el.querySelector('.history-list .row-del'));
-  await click(byText(document, 'button', '취소'));
-
-  expect(el.querySelector('.history-list')).not.toBeNull();
-});
-
-/* ---------- 최근 기록 카드 ---------- */
-
-const facts = (el) =>
-  [...el.querySelectorAll('.hist-fact')].map((n) => n.textContent.trim());
-
-test('퍼블·총 킬·또또 판돈을 같이 보여준다', async () => {
-  const el = render({
-    initial: [
-      {
-        id: 'g1',
-        mode: 'normal',
-        teamA: ['철수'],
-        teamB: ['영희'],
-        winner: 'A',
-        playedAt: Date.now(),
-        totalKills: 47,
-        firstBlood: '영희',
-        betTotal: 3500,
-        betCount: 4,
-      },
-    ],
-  });
-
-  expect(facts(el).join(' ')).toContain('영희');
-  expect(facts(el).join(' ')).toContain('47킬');
-  expect(facts(el).join(' ')).toContain('3,500');
-});
-
-/* 없는 값을 '-'로 채우면 빈 칸이 정보인 척한다 */
-test('결과를 안 넣은 판은 그 칸을 아예 안 그린다', async () => {
-  const el = render({
-    initial: [
-      {
-        id: 'g1',
-        mode: 'normal',
-        teamA: ['철수'],
-        teamB: ['영희'],
-        winner: 'A',
-        playedAt: Date.now(),
-        totalKills: null,
-        firstBlood: null,
-        betTotal: 0,
-      },
-    ],
-  });
-  expect(facts(el)).toHaveLength(0);
-});
-
-test('이긴 팀이 위에 서고 표시가 붙는다', async () => {
-  const el = render({
-    initial: [
-      {
-        id: 'g1',
-        mode: 'normal',
-        teamA: ['철수'],
-        teamB: ['영희'],
-        winner: 'B',
-        playedAt: Date.now(),
-      },
-    ],
-  });
-
-  const sides = [...el.querySelectorAll('.hist-side')];
-  expect(sides[0].className).toContain('is-win');
-  expect(sides[0].textContent).toContain('영희');
-  expect(sides[1].className).toContain('is-lose');
+  /* 지난 판 목록도 여기 없다. '내전 기록' 탭이 맡는다 */
+  expect(el.querySelector('.history-list')).toBeNull();
 });

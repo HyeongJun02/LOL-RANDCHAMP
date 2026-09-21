@@ -286,11 +286,23 @@
   opacity: 0.85;
 }
 
-/* 퍼블은 첫 피라 붉게, 또또 판돈은 돈이라 금색. 총 킬만 무채색으로
-   두면 셋이 나란히 있어도 무엇이 무엇인지 색으로 갈린다 */
-.hist-fact.is-fb {
+/* 기준선과 결과. 숫자 뒤에 한 톤 낮춰 붙인다 */
+.hist-fact em {
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+/* 오버는 위로 넘친 것이라 붉게, 언더는 모자란 것이라 푸르게.
+   같은 '총 킬'이라도 어느 쪽이었는지가 색으로 먼저 들어온다 */
+.hist-fact.is-over {
   background: rgba(249, 115, 98, 0.12);
   color: #ffb3a8;
+}
+
+.hist-fact.is-under {
+  background: rgba(56, 189, 248, 0.12);
+  color: #a5dcf7;
 }
 
 .hist-fact.is-bet {
@@ -298,14 +310,24 @@
   color: var(--gg-gold-light);
 }
 
+/* 1팀은 늘 왼쪽, 2팀은 늘 오른쪽. 이긴 쪽을 위로 올리면 카드마다
+   자리가 바뀌어 여러 판을 훑을 때 매번 다시 읽어야 한다 */
+.hist-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
 .hist-side {
   display: flex;
-  align-items: baseline;
-  gap: 0.45rem;
+  flex-direction: column;
+  gap: 0.15rem;
   min-width: 0;
-  padding: 0.28rem 0.5rem;
+  padding: 0.35rem 0.5rem;
   border-radius: 8px;
   font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* 이긴 쪽만 색과 왼쪽 띠를 준다. 굵기만으로는 훑을 때 안 걸린다 */
@@ -315,13 +337,14 @@
 }
 
 .hist-side.is-lose {
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .hist-tag {
   flex: none;
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   font-weight: 800;
+  letter-spacing: 0.02em;
   color: #5b6b85;
 }
 
@@ -330,17 +353,47 @@
 }
 
 .hist-names {
-  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.3rem;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: #7d8ba3;
 }
 
 .is-win .hist-names {
   color: #e6ecf7;
   font-weight: 600;
+}
+
+.hist-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  white-space: nowrap;
+}
+
+/* 퍼블을 딴 사람. 위에 따로 적는 것보다 이름에 붙는 편이 바로 읽힌다 */
+.hist-name.is-fb {
+  color: #ffb3a8;
+  font-weight: 700;
+}
+
+.hist-name.is-fb svg {
+  font-size: 0.66rem;
+}
+
+/* 쉼표는 이름 사이를 떼어줄 뿐이라 한 톤 죽인다 */
+.hist-comma {
+  font-style: normal;
+  opacity: 0.4;
+}
+
+/* 좁아도 순서는 그대로. 1팀이 위, 2팀이 아래로 쌓일 뿐이다 */
+@media (max-width: 480px) {
+  .hist-teams {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- 반응형 ---------- */
@@ -434,4 +487,45 @@
 .sr-mode.active em {
   color: inherit;
   opacity: 0.75;
+}
+
+/* ---------- 또또 결과 팝업 ---------- */
+/* 목록에 다 펼쳐두면 판마다 길이가 달라져 훑을 수가 없다.
+   판돈 칩을 눌러 그 판만 연다 */
+
+.history-list li.has-bets .hist-fact.is-bet {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.hist-fact.is-bet:hover {
+  background: rgba(200, 170, 110, 0.24);
+}
+
+.hist-more {
+  font-size: 0.55rem;
+  opacity: 0.7;
+}
+
+.betres {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.betres h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+/* 무엇에 걸었나. 이름과 금액 사이에서 한 톤 죽인다 */
+.betres-pick {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #8b98ae;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
 }

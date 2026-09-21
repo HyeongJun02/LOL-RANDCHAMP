@@ -477,7 +477,7 @@ export const openBettingByNames = async ({
    한 줄도 안 고치고 그대로 쓴다.
 
    명단에서 지워진 참가자의 id는 남아 있을 수 있다. 그 자리는 버린다 */
-export const toMatches = (scrims = [], players = []) => {
+export const toMatches = (scrims = [], players = [], game) => {
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
   const names = (ids) => (ids || []).map((id) => nameOf.get(id)).filter(Boolean);
   return scrims
@@ -495,6 +495,10 @@ export const toMatches = (scrims = [], players = []) => {
       /* 결과를 넣은 판에만 있다. 또또 없이 남긴 기록은 비어 있다 */
       totalKills: s.total_kills ?? null,
       firstBlood: nameOf.get(s.first_blood_player_id) || null,
+      /* 총 킬만 보여주면 그게 많은 건지 적은 건지 알 수가 없다.
+         그 판의 기준선을 같이 줘야 오버였는지 언더였는지 읽힌다.
+         방장이 직접 정했으면 그 값, 아니면 인원으로 계산한 값 */
+      killLine: s.total_kills == null ? null : killLineOfScrim(s, game),
     }))
     .sort((a, b) => a.playedAt - b.playedAt);
 };
@@ -717,7 +721,7 @@ export const useRoom = (roomId, userId) => {
     /* 아직 안 끝난 배팅 경기는 방에 하나뿐이다 (open_betting이 막는다) */
     activeScrim: scrims.find((s) => s.status === 'betting' || s.status === 'locked') || null,
     players: [...players].sort((a, b) => a.name.localeCompare(b.name, 'ko')),
-    matches: toMatches(room?.scrims, allPlayers),
+    matches: toMatches(room?.scrims, allPlayers, room?.game),
     members: members
       .map((m) => ({
         ...m,

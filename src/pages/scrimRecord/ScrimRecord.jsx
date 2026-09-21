@@ -9,9 +9,6 @@ import {
   FaUsers,
   FaRedo,
   FaExternalLinkAlt,
-  FaTint,
-  FaCrosshairs,
-  FaCoins,
 } from 'react-icons/fa';
 import { loadLastSplit } from '../../lib/lastSplit';
 import Modal from '../../components/common/Modal';
@@ -19,7 +16,6 @@ import TeamBalance from '../teamBalance/TeamBalance';
 import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
 import ClearInput from '../../components/common/ClearInput';
-import { useDialog } from '../../components/common/Dialog';
 import { timeAgo } from '../../lib/timeAgo';
 import { defaultModeOf, getMode, hasModeChoice } from '../../rules/games';
 import { useGame, useGameKey } from '../../lib/GameContext';
@@ -77,12 +73,11 @@ const TeamPanel = ({ label, team, otherTeam, players, onChangeAt, onRemoveAt, on
    matches: rooms.js가 이름을 붙여 넘겨준 경기 목록
    players: 방 참가자 명단 (티어 배지와 이름 고르기에 쓴다)
    canEdit: 방장·부방장만 true. 나머지는 보기만 한다 */
-const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRemove, onOpenBetting }) => {
+const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onOpenBetting }) => {
   const game = useGame();
   const gameKey = useGameKey();
   const [mode, setMode] = useState(() => defaultModeOf(gameKey));
   const modeInfo = getMode(gameKey, mode);
-  const { confirm } = useDialog();
   const [teamA, setTeamA] = useState(() => blankTeam(modeInfo.teamSize));
   const [teamB, setTeamB] = useState(() => blankTeam(modeInfo.teamSize));
   /* 더블클릭으로 같은 경기가 두 번 들어가는 걸 막는다.
@@ -213,27 +208,6 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
     }
   };
 
-  /* 지우면 그 경기가 지갑에 한 일까지 전부 되돌아간다.
-     또또가 걸렸던 판이면 남의 돈이 오가므로 무슨 일이 일어나는지 적어준다 */
-  const deleteMatch = async (m) => {
-    const had = m.betCount > 0;
-    const ok = await confirm({
-      title: had ? '또또까지 되돌리기' : '기록 삭제',
-      message: had ? '이 경기를 없던 걸로 할까요?' : '이 기록을 지울까요?',
-      detail: had
-        ? `${m.betCount}명이 건 ${m.betTotal.toLocaleString()} 끼꼬가 전부 돌아가고, 지급도 취소됩니다. 되돌릴 수 없어요.`
-        : '전적에서 빠지고, 참여 포인트도 함께 되돌아갑니다.',
-      confirmText: had ? '되돌리고 삭제' : '삭제',
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      await onRemove(m.id);
-    } catch (e) {
-      toast.error(e.message);
-    }
-  };
-
   return (
     <>
       {canEdit && (
@@ -354,71 +328,6 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
         </>
       )}
 
-      <section className="sr-history">
-        <h2>
-          최근 기록<span className="panel-count">{history.length}경기</span>
-        </h2>
-        {history.length === 0 ? (
-          <p className="rank-blank">아직 기록된 경기가 없어요.</p>
-        ) : (
-          <ul className="history-list">
-            {history.map((m) => (
-              <li key={m.id}>
-                <div className="hist-head">
-                  <span className="hist-time">{timeAgo(m.playedAt)}</span>
-                  {/* 한 판에서 알아둘 만한 것들. 없는 건 아예 안 그린다 -
-                      '-'로 채우면 빈 칸이 정보인 척한다 */}
-                  <span className="hist-facts">
-                    {m.firstBlood && (
-                      <span className="hist-fact is-fb" title="퍼스트 블러드">
-                        <FaTint />
-                        {m.firstBlood}
-                      </span>
-                    )}
-                    {m.totalKills != null && (
-                      <span className="hist-fact" title="총 킬">
-                        <FaCrosshairs />
-                        {m.totalKills}킬
-                      </span>
-                    )}
-                    {m.betTotal > 0 && (
-                      <span className="hist-fact is-bet" title="또또 판돈">
-                        <FaCoins />
-                        {m.betTotal.toLocaleString()}
-                      </span>
-                    )}
-                  </span>
-                  {canEdit && (
-                    <button
-                      className="row-del"
-                      onClick={() => deleteMatch(m)}
-                      aria-label="기록 삭제"
-                    >
-                      <FaTimes />
-                    </button>
-                  )}
-                </div>
-
-                {/* 이긴 팀이 위. 훑을 때 위 줄만 읽어도 결과가 들어온다 */}
-                {[
-                  { side: 'A', names: m.teamA },
-                  { side: 'B', names: m.teamB },
-                ]
-                  .sort((x) => (x.side === m.winner ? -1 : 1))
-                  .map(({ side, names }) => (
-                    <div
-                      key={side}
-                      className={`hist-side ${side === m.winner ? 'is-win' : 'is-lose'}`}
-                    >
-                      <span className="hist-tag">{side === 'A' ? '1팀' : '2팀'}</span>
-                      <span className="hist-names">{names.join(', ')}</span>
-                    </div>
-                  ))}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </>
   );
 };
