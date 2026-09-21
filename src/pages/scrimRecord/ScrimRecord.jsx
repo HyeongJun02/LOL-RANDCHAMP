@@ -9,6 +9,9 @@ import {
   FaUsers,
   FaRedo,
   FaExternalLinkAlt,
+  FaTint,
+  FaCrosshairs,
+  FaCoins,
 } from 'react-icons/fa';
 import { loadLastSplit } from '../../lib/lastSplit';
 import Modal from '../../components/common/Modal';
@@ -361,25 +364,56 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onRem
           <ul className="history-list">
             {history.map((m) => (
               <li key={m.id}>
-                <span className="hist-time">{timeAgo(m.playedAt)}</span>
-                <span className="hist-teams">
-                  <span className={m.winner === 'A' ? 'hist-winner' : ''}>
-                    {m.teamA.join(', ')}
+                <div className="hist-head">
+                  <span className="hist-time">{timeAgo(m.playedAt)}</span>
+                  {/* 한 판에서 알아둘 만한 것들. 없는 건 아예 안 그린다 -
+                      '-'로 채우면 빈 칸이 정보인 척한다 */}
+                  <span className="hist-facts">
+                    {m.firstBlood && (
+                      <span className="hist-fact is-fb" title="퍼스트 블러드">
+                        <FaTint />
+                        {m.firstBlood}
+                      </span>
+                    )}
+                    {m.totalKills != null && (
+                      <span className="hist-fact" title="총 킬">
+                        <FaCrosshairs />
+                        {m.totalKills}킬
+                      </span>
+                    )}
+                    {m.betTotal > 0 && (
+                      <span className="hist-fact is-bet" title="또또 판돈">
+                        <FaCoins />
+                        {m.betTotal.toLocaleString()}
+                      </span>
+                    )}
                   </span>
-                  <span className="hist-vs">vs</span>
-                  <span className={m.winner === 'B' ? 'hist-winner' : ''}>
-                    {m.teamB.join(', ')}
-                  </span>
-                </span>
-                {canEdit && (
-                  <button
-                    className="row-del"
-                    onClick={() => deleteMatch(m)}
-                    aria-label="기록 삭제"
-                  >
-                    <FaTimes />
-                  </button>
-                )}
+                  {canEdit && (
+                    <button
+                      className="row-del"
+                      onClick={() => deleteMatch(m)}
+                      aria-label="기록 삭제"
+                    >
+                      <FaTimes />
+                    </button>
+                  )}
+                </div>
+
+                {/* 이긴 팀이 위. 훑을 때 위 줄만 읽어도 결과가 들어온다 */}
+                {[
+                  { side: 'A', names: m.teamA },
+                  { side: 'B', names: m.teamB },
+                ]
+                  .sort((x) => (x.side === m.winner ? -1 : 1))
+                  .map(({ side, names }) => (
+                    <div
+                      key={side}
+                      className={`hist-side ${side === m.winner ? 'is-win' : 'is-lose'}`}
+                    >
+                      <span className="hist-tag">{side === 'A' ? '1팀' : '2팀'}</span>
+                      <span className="hist-names">{names.join(', ')}</span>
+                    </div>
+                  ))}
               </li>
             ))}
           </ul>

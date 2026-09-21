@@ -93,6 +93,39 @@ const players = [
 ];
 
 describe('toMatches', () => {
+  /* 최근 기록 카드가 퍼블과 총 킬을 보여주려면 여기서 같이 넘어와야 한다.
+     퍼블은 참가자 id로 저장되니 이름으로 바꿔서 준다 */
+  test('퍼블과 총 킬을 이름까지 붙여 넘긴다', () => {
+    const [out] = toMatches(
+      [
+        {
+          id: 10,
+          mode: 'normal',
+          team_a: [1],
+          team_b: [2],
+          winner: 'A',
+          played_at: 0,
+          total_kills: 47,
+          first_blood_player_id: 2,
+        },
+      ],
+      players
+    );
+    expect(out.totalKills).toBe(47);
+    expect(out.firstBlood).toBe('영희');
+  });
+
+  /* 또또 없이 남긴 기록에는 결과가 없다. 0이나 빈 문자열로 채우면
+     화면이 '0킬'이라고 우긴다 */
+  test('결과를 안 넣은 판은 비어서 온다', () => {
+    const [out] = toMatches(
+      [{ id: 11, mode: 'normal', team_a: [1], team_b: [2], winner: 'B', played_at: 0 }],
+      players
+    );
+    expect(out.totalKills).toBeNull();
+    expect(out.firstBlood).toBeNull();
+  });
+
   test('참가자 id를 이름으로 바꿔서 집계가 그대로 먹게 만든다', () => {
     const out = toMatches(
       [

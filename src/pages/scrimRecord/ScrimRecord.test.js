@@ -186,3 +186,71 @@ test('확인창에서 취소하면 기록이 그대로 남는다', async () => {
 
   expect(el.querySelector('.history-list')).not.toBeNull();
 });
+
+/* ---------- 최근 기록 카드 ---------- */
+
+const facts = (el) =>
+  [...el.querySelectorAll('.hist-fact')].map((n) => n.textContent.trim());
+
+test('퍼블·총 킬·또또 판돈을 같이 보여준다', async () => {
+  const el = render({
+    initial: [
+      {
+        id: 'g1',
+        mode: 'normal',
+        teamA: ['철수'],
+        teamB: ['영희'],
+        winner: 'A',
+        playedAt: Date.now(),
+        totalKills: 47,
+        firstBlood: '영희',
+        betTotal: 3500,
+        betCount: 4,
+      },
+    ],
+  });
+
+  expect(facts(el).join(' ')).toContain('영희');
+  expect(facts(el).join(' ')).toContain('47킬');
+  expect(facts(el).join(' ')).toContain('3,500');
+});
+
+/* 없는 값을 '-'로 채우면 빈 칸이 정보인 척한다 */
+test('결과를 안 넣은 판은 그 칸을 아예 안 그린다', async () => {
+  const el = render({
+    initial: [
+      {
+        id: 'g1',
+        mode: 'normal',
+        teamA: ['철수'],
+        teamB: ['영희'],
+        winner: 'A',
+        playedAt: Date.now(),
+        totalKills: null,
+        firstBlood: null,
+        betTotal: 0,
+      },
+    ],
+  });
+  expect(facts(el)).toHaveLength(0);
+});
+
+test('이긴 팀이 위에 서고 표시가 붙는다', async () => {
+  const el = render({
+    initial: [
+      {
+        id: 'g1',
+        mode: 'normal',
+        teamA: ['철수'],
+        teamB: ['영희'],
+        winner: 'B',
+        playedAt: Date.now(),
+      },
+    ],
+  });
+
+  const sides = [...el.querySelectorAll('.hist-side')];
+  expect(sides[0].className).toContain('is-win');
+  expect(sides[0].textContent).toContain('영희');
+  expect(sides[1].className).toContain('is-lose');
+});

@@ -492,6 +492,9 @@ export const toMatches = (scrims = [], players = []) => {
       /* 지울 때 '또또까지 되돌아간다'고 알려주려면 필요하다 */
       betCount: s.bet_count || 0,
       betTotal: s.bet_total || 0,
+      /* 결과를 넣은 판에만 있다. 또또 없이 남긴 기록은 비어 있다 */
+      totalKills: s.total_kills ?? null,
+      firstBlood: nameOf.get(s.first_blood_player_id) || null,
     }))
     .sort((a, b) => a.playedAt - b.playedAt);
 };

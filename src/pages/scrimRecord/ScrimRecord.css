@@ -224,71 +224,123 @@
 }
 
 /* ---------- 최근 기록 ---------- */
+/* 한 줄에 팀 둘을 'vs'로 욱여넣으니 이름이 잘리고, 퍼블·총 킬을 붙일
+   자리도 없었다. 위는 '언제·무슨 일이 있었나', 아래는 '누가 이겼나'로
+   나눈 작은 카드로 바꾼다 */
 
 .history-list li {
   display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.035);
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--gg-panel-border);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.history-list li:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.hist-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .hist-time {
   flex: none;
   font-size: 0.72rem;
   color: #5b6b85;
-  width: 3.6rem;
 }
 
-.hist-teams {
-  flex: 1;
-  min-width: 0;
+/* 한 판에서 알아둘 만한 것들. 없는 건 아예 안 그린다 -
+   '-'로 채우면 빈 칸이 정보인 척한다 */
+.hist-facts {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.82rem;
-  color: #7d8ba3;
-  overflow: hidden;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
-.hist-teams span:not(.hist-vs) {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.hist-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #8b98ae;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* 이긴 쪽. 굵기만으로는 훑을 때 어느 쪽이 이겼는지 잘 안 걸린다.
-   앞에 작은 왕관을 붙여 눈이 먼저 그쪽으로 가게 한다 */
-.hist-winner {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
+.hist-fact svg {
+  font-size: 0.62rem;
+  opacity: 0.85;
+}
+
+/* 퍼블은 첫 피라 붉게, 또또 판돈은 돈이라 금색. 총 킬만 무채색으로
+   두면 셋이 나란히 있어도 무엇이 무엇인지 색으로 갈린다 */
+.hist-fact.is-fb {
+  background: rgba(249, 115, 98, 0.12);
+  color: #ffb3a8;
+}
+
+.hist-fact.is-bet {
+  background: rgba(200, 170, 110, 0.14);
   color: var(--gg-gold-light);
-  font-weight: 700;
 }
 
-.hist-winner::before {
-  content: '👑';
+.hist-side {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.28rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+/* 이긴 쪽만 색과 왼쪽 띠를 준다. 굵기만으로는 훑을 때 안 걸린다 */
+.hist-side.is-win {
+  background: rgba(200, 170, 110, 0.1);
+  box-shadow: inset 2px 0 0 var(--gg-gold);
+}
+
+.hist-side.is-lose {
+  opacity: 0.55;
+}
+
+.hist-tag {
   flex: none;
-  font-size: 0.68rem;
-  filter: saturate(0.9);
-}
-
-.history-list li {
-  transition: border-color 0.15s ease;
-}
-
-.history-list li:hover {
-  border-color: rgba(200, 170, 110, 0.3);
-}
-
-.hist-vs {
-  flex: none;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 800;
-  color: #4d5b73;
+  color: #5b6b85;
+}
+
+.is-win .hist-tag {
+  color: var(--gg-gold);
+}
+
+.hist-names {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #7d8ba3;
+}
+
+.is-win .hist-names {
+  color: #e6ecf7;
+  font-weight: 600;
 }
 
 /* ---------- 반응형 ---------- */
