@@ -123,3 +123,22 @@ export const TITLE_GHOST_DAYS = 14;
 export const SCRIM_REWARD = { win: 1500, lose: 1000 }; // award_participation
 export const MONTHLY_KKIKO = 10000; // roll_season
 export const ADJUST_CAP = 100000; // adjust_points, 한 번에 조정 가능한 폭
+
+/* ============================================================
+   명예의 전당 - 내전 1위 자격
+   ============================================================ */
+
+/* 두 판 뛰고 2승 한 사람이 그 달의 내전 왕이 되면 아무도 인정하지 않는다.
+   내전 포인트에는 이미 판수 보정(PRIOR_GAMES)이 들어 있지만, 그건 점수를
+   0쪽으로 당길 뿐이라 참가자가 적은 달에는 여전히 꼭대기에 설 수 있다.
+
+   그래서 왕관에는 따로 문턱을 둔다.
+     필요 판수 = max(HOF_MIN_GAMES, 올림(그 달 경기 수 × HOF_MIN_SHARE))
+
+   비율로 잡는 이유: 한 달에 6판 한 방과 60판 한 방에 같은 숫자를 들이대면
+   한쪽은 아무나 되고 한쪽은 아무도 못 된다.
+
+   아무도 문턱을 못 넘으면 HOF_MIN_GAMES만 적용해서 한 명은 세운다.
+   빈 왕좌보다는 낫다. */
+export const HOF_MIN_GAMES = 3;
+export const HOF_MIN_SHARE = 1 / 3;

@@ -361,7 +361,7 @@
   color: #e6ecf7;
 }
 
-.hof-king {
+.hof-king-legacy-unused {
   font-size: 0.72rem;
   color: #8b98ae;
 }
@@ -512,4 +512,87 @@
 .style-emblem.is-on {
   border-color: var(--accent, var(--gg-gold));
   background: color-mix(in srgb, var(--accent, #c8aa6e) 18%, transparent);
+}
+
+/* ---------- 두 왕좌 ---------- */
+/* 끼꼬와 내전을 같은 크기로 세운다. 한쪽만 크면 그쪽만 진짜처럼 보인다 */
+
+.hof-thrones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.hof-throne {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* 무엇의 왕인지는 색으로 먼저 읽힌다 - 끼꼬는 금색, 내전은 방 색 */
+.hof-throne.hof-kkiko {
+  border-color: rgba(200, 170, 110, 0.35);
+}
+
+.hof-throne.hof-scrim {
+  border-color: rgba(120, 170, 255, 0.3);
+}
+
+.hof-throne-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #8b98ae;
+}
+
+.hof-kkiko .hof-throne-label {
+  color: var(--gg-gold-light);
+}
+
+.hof-throne-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #eef3fb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hof-throne-value {
+  font-style: normal;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gg-gold-light);
+}
+
+.hof-scrim .hof-throne-value {
+  color: #9ec2ff;
+}
+
+/* 승패와 승률. 값보다 한 단계 조용하게 */
+.hof-throne-sub {
+  font-size: 0.72rem;
+  color: #8b98ae;
+  font-variant-numeric: tabular-nums;
+}
+
+.hof-throne-blank {
+  font-size: 0.78rem;
+  color: #6b7686;
+  padding: 0.25rem 0;
+}
+
+@media (max-width: 520px) {
+  .hof-thrones {
+    grid-template-columns: 1fr;
+  }
 }
