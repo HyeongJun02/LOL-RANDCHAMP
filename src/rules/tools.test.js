@@ -39,3 +39,21 @@ test('설명이 존댓말로 섞이지 않는다', () => {
     expect(t.desc).not.toMatch(/(습니다|합니다|하세요|예요|어요)/);
   });
 });
+
+/* 홈의 '곁들이 도구'는 내전 방 말고 나머지다. 도구를 하나 더해도
+   히어로와 겹치지 않게, 목록을 손으로 적지 않고 걸러 쓴다 */
+test('곁들이 도구에는 내전 방이 없다', () => {
+  const { SIDE_TOOLS, READY_TOOLS } = require('./tools');
+  expect(SIDE_TOOLS.length).toBe(READY_TOOLS.length - 1);
+  expect(SIDE_TOOLS.some((t) => t.primary)).toBe(false);
+  expect(SIDE_TOOLS.some((t) => t.to === '/rooms')).toBe(false);
+});
+
+/* 홈 카드가 작아져서 desc는 길다. 짧은 한 줄을 따로 둔다 */
+test('곁들이 도구에는 한 줄 설명이 있다', () => {
+  const { SIDE_TOOLS } = require('./tools');
+  SIDE_TOOLS.forEach((t) => {
+    expect(t.short).toBeTruthy();
+    expect(t.short.length).toBeLessThanOrEqual(24);
+  });
+});

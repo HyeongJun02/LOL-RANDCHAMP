@@ -11,6 +11,7 @@ export const TOOLS = [
     category: 'game',
     name: '챔피언 랜덤',
     title: '챔피언 랜덤 선택',
+    short: '역할군·라인으로 걸러서 하나 뽑기',
     desc: '뭐 할지 고민되면 주사위한테 맡긴다. 역할군이나 라인으로 걸러서 뽑을 수도 있다.',
     icon: <FaRandom />,
     accent: 'blue',
@@ -20,6 +21,7 @@ export const TOOLS = [
     category: 'game',
     name: '라인·역할 분배',
     title: '라인 랜덤 분배',
+    short: '가기 싫은 자리는 밴하고 나머지는 랜덤',
     desc: '롤 라인도, 발로란트 역할도. 가기 싫은 자리는 미리 밴하고 나머지는 랜덤으로.',
     icon: <GiPathDistance />,
     accent: 'gold',
@@ -29,6 +31,7 @@ export const TOOLS = [
     category: 'scrim',
     name: '내전 팀 짜기',
     title: '내전 팀 짜기',
+    short: '티어로 양 팀 평점을 맞춰 가르기',
     desc: '티어로 평점을 매겨 양 팀을 비슷하게 가른다. 10명 안 채워도 된다.',
     icon: <FaUsers />,
     accent: 'purple',
@@ -38,6 +41,7 @@ export const TOOLS = [
     category: 'game',
     name: '랜덤 뽑기',
     title: '랜덤 뽑기',
+    short: '동전 던지기부터 벌칙 당첨자까지',
     desc: '항목 넣고 하나 뽑는다. 2개만 넣으면 동전 던지기, 이름을 넣으면 벌칙 당첨자.',
     icon: <GiCardRandom />,
     accent: 'green',
@@ -78,6 +82,10 @@ export const TOOLS = [
 ];
 
 export const READY_TOOLS = TOOLS.filter((t) => t.to);
+
+/* 홈의 '곁들이 도구'. 내전 방 없이 혼자 써도 되는 것들이다.
+   내전 방은 히어로가 맡고, 팀 짜기는 방 안에도 있어서 여기 같이 둔다 */
+export const SIDE_TOOLS = READY_TOOLS.filter((t) => !t.primary);
 export const SOON_TOOLS = TOOLS.filter((t) => !t.to);
 
 /* 홈 화면 분류. 헤더 nav도 이 순서를 그대로 따른다.
