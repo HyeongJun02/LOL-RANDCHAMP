@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   FaArrowRight,
   FaUserFriends,
@@ -9,6 +10,7 @@ import {
   FaCoins,
   FaCrown,
   FaSearch,
+  FaGoogle,
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import { SOON_TOOLS, SIDE_TOOLS } from '../../rules/tools';
@@ -41,7 +43,25 @@ const ROOM_FEATURES = [
 
 const HomePage = () => {
   usePageMeta(PAGE_META.home);
-  const { user } = useAuth();
+  const { user, loading, configured, signInWithGoogle } = useAuth();
+  const [busy, setBusy] = useState(false);
+  /* busy는 렌더 클로저 값이라 같은 틱에 들어온 두 번째 클릭을 못 막는다.
+     구글 창이 두 번 열리던 일이 실제로 있었다 */
+  const going = useRef(false);
+
+  const signIn = async () => {
+    if (going.current) return;
+    going.current = true;
+    setBusy(true);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      toast.error(e.message);
+      going.current = false;
+      setBusy(false);
+    }
+    /* 성공하면 보통 구글로 넘어가 버리므로 되돌리지 않는다 */
+  };
 
   /* 히어로 5칸 + 섹션 제목·카드들. 숫자를 손으로 세면 카드를 하나
      더할 때마다 어긋난다 */
@@ -70,18 +90,29 @@ const HomePage = () => {
           방 하나에 팀 짜기, 전적, 또또까지.
         </p>
 
+        {/* 로그인 안 한 사람을 방 목록으로 보내면 '로그인이 필요해요'만
+            보고 되돌아온다. 여기서 바로 붙잡는다 */}
         <div className="hero-cta rise" style={step(3)}>
-          <Link to="/rooms" className="cta-main">
-            {user ? '내 방으로' : '내전 방 시작하기'}
-            <FaArrowRight />
-          </Link>
+          {user || !configured ? (
+            <Link to="/rooms" className="cta-main">
+              {user ? '내 방으로' : '내전 방 시작하기'}
+              <FaArrowRight />
+            </Link>
+          ) : (
+            <button className="cta-main" onClick={signIn} disabled={busy || loading}>
+              <FaGoogle />
+              {busy ? '구글로 이동 중…' : 'Google로 시작하기'}
+            </button>
+          )}
           <button className="cta-sub" onClick={openRosterModal}>
             <FaUserFriends /> 내 팀원 명단
           </button>
         </div>
 
         <p className="hero-note rise" style={step(4)}>
-          {user ? '입장 코드를 받았다면 방 목록에서 넣으세요.' : '구글 로그인만 하면 됩니다.'}
+          {user
+            ? '입장 코드를 받았다면 방 목록에서 넣으세요.'
+            : '로그인은 방을 만들고 들어갈 때만 씁니다. 나머지 도구는 그냥 쓰면 됩니다.'}
         </p>
       </section>
 

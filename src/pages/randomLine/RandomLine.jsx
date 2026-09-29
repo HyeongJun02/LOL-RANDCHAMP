@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useRoster } from '../../server/roster';
-import { FaThLarge, FaListUl } from 'react-icons/fa';
+import { FaThLarge, FaListUl, FaMinus, FaPlus } from 'react-icons/fa';
 import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
 import PageHeader from '../../components/common/PageHeader';
@@ -46,7 +46,8 @@ export default function RandomLinePage() {
   const [compact, setCompact] = useState(prefersCompact);
   const [showLoader, setShowLoader] = useState(false);
   /* 겹쳐도 되는 게임에서 '둘까지 받는 역할'. 롤은 쓰지 않는다 */
-  const [doubles, setDoubles] = useState(() => getGame(DEFAULT_GAME).defaultDoubles || []);
+  /* 역할마다 몇 명까지 받을지. 롤은 다 1이라 안 쓴다 */
+  const [caps, setCaps] = useState(() => ({ ...(getGame(DEFAULT_GAME).defaultCaps || {}) }));
   const roster = useRoster(gameKey);
   usePageMeta(PAGE_META.randomLine);
   const [subtitle] = useState(
@@ -113,13 +114,13 @@ export default function RandomLinePage() {
 
   /* 역할 하나가 받을 수 있는 사람 수.
      롤은 한 자리에 한 명이고, 발로란트는 체크한 역할만 둘까지 받는다 */
-  const capOf = (role) =>
-    !game.uniqueRoles && doubles.includes(role) ? 2 : 1;
+  const capOf = (role) => (game.uniqueRoles ? 1 : (caps[role] ?? 0));
 
-  const toggleDouble = (role) =>
-    setDoubles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
+  /* 0이면 그 역할은 아무도 안 맡는다. 인원보다 크게 둘 이유는 없다 */
+  const setCap = (role, n) =>
+    setCaps((prev) => ({ ...prev, [role]: Math.max(0, Math.min(players.length, n)) }));
+
+  const seats = ROLES.reduce((sum, l) => sum + capOf(l), 0);
 
   const checkCelebrate = (arr) => {
     if (arr.every(Boolean)) {
@@ -178,10 +179,9 @@ export default function RandomLinePage() {
 
     /* 자리가 사람보다 적으면 애초에 못 채운다. 배정을 돌려보고
        '안 된다'고 하는 것보다, 무엇을 고쳐야 하는지 먼저 말해준다 */
-    const seats = ROLES.reduce((sum, l) => sum + capOf(l), 0);
     if (seats < players.length) {
       toast.error(
-        `자리가 ${seats}개뿐이라 ${players.length}명을 못 넣어요. 둘까지 받는 역할을 늘려주세요.`
+        `자리가 ${seats}개뿐이라 ${players.length}명을 못 넣어요. 역할 정원을 늘려주세요.`
       );
       return;
     }
@@ -226,7 +226,7 @@ export default function RandomLinePage() {
   const pickGame = (next) => {
     if (next === gameKey) return;
     setGameKey(next);
-    setDoubles(getGame(next).defaultDoubles || []);
+    setCaps({ ...(getGame(next).defaultCaps || {}) });
     setPlayers((prev) => prev.map((p) => ({ ...p, disabled: [] })));
     setAssigned(Array(5).fill(null));
     setQuotes(Array(5).fill(''));
@@ -285,31 +285,57 @@ export default function RandomLinePage() {
       {/* 역할이 사람보다 적은 게임에서만. 롤은 다섯 자리 다섯 명이라
           고를 게 없다 */}
       {!game.uniqueRoles && (
-        <div className={styles.doubles}>
-          <span className={styles.doublesLabel}>둘까지 받는 역할</span>
-          <div className={styles.doublesList}>
+        <div className={styles.caps}>
+          <div className={styles.capsHead}>
+            <span className={styles.capsLabel}>역할 정원</span>
+            {/* 자리가 몇 개인지가 먼저 보여야 무엇을 고쳐야 할지 안다 */}
+            <span
+              className={`${styles.capsCount} ${
+                seats < players.length ? styles.capsShort : ''
+              }`}
+            >
+              자리 {seats} / {players.length}명
+            </span>
+          </div>
+
+          <div className={styles.capsList}>
             {ROLES.map((name) => {
               const role = getRole(gameKey, name);
-              const on = doubles.includes(name);
+              const n = capOf(name);
               return (
-                <button
+                <div
                   key={name}
-                  type="button"
-                  className={`${styles.doubleChip} ${on ? styles.doubleOn : ''}`}
-                  aria-pressed={on}
-                  onClick={() => toggleDouble(name)}
-                  style={on ? { borderColor: role?.color, color: role?.color } : undefined}
+                  className={`${styles.cap} ${n === 0 ? styles.capOff : ''}`}
+                  style={n > 0 ? { '--role': role?.color } : undefined}
                 >
-                  <RoleIcon role={role} style={on ? { color: role?.color } : undefined} />
-                  {name}
-                  {on && <em>2명</em>}
-                </button>
+                  <RoleIcon role={role} style={n > 0 ? { color: role?.color } : undefined} />
+                  <span className={styles.capName}>{name}</span>
+                  <div className={styles.capStep}>
+                    <button
+                      type="button"
+                      onClick={() => setCap(name, n - 1)}
+                      disabled={n <= 0}
+                      aria-label={`${name} 정원 줄이기`}
+                    >
+                      <FaMinus />
+                    </button>
+                    <b>{n}</b>
+                    <button
+                      type="button"
+                      onClick={() => setCap(name, n + 1)}
+                      disabled={n >= players.length}
+                      aria-label={`${name} 정원 늘리기`}
+                    >
+                      <FaPlus />
+                    </button>
+                  </div>
+                </div>
               );
             })}
           </div>
-          <p className={styles.doublesHint}>
-            역할 {ROLES.length}개에 {players.length}명이라 {players.length - ROLES.length}자리가
-            겹칩니다. 겹쳐도 되는 역할을 골라주세요.
+
+          <p className={styles.capsHint}>
+            0으로 두면 그 역할은 아무도 안 맡습니다. 자리가 인원보다 적으면 못 돌립니다.
           </p>
         </div>
       )}

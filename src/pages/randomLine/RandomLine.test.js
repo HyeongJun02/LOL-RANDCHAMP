@@ -222,31 +222,58 @@ const goValorant = (el) => click(byText(el, '발로란트'));
 /* 배정되면 각 줄에 .lineTag가 생긴다 (다른 테스트와 같은 기준) */
 const tagCount = (el) => el.querySelectorAll('.rowWrapper .lineTag').length;
 
-const chips = () => [...document.querySelectorAll('[class*="doubleChip"]')];
+/* 역할마다 정원 한 칸. 숫자는 가운데 <b> */
+const caps = () => [...document.querySelectorAll('[class*="cap"][class*="Off"], [class*="cap "]')];
+const capRows = (el) =>
+  [...el.querySelectorAll('[class*="capStep"]')].map((step) => ({
+    n: Number(step.querySelector('b').textContent),
+    minus: step.querySelectorAll('button')[0],
+    plus: step.querySelectorAll('button')[1],
+  }));
+const seatText = (el) => el.querySelector('[class*="capsCount"]')?.textContent || '';
 
-test('롤에는 둘까지 받는 역할을 고르는 칸이 없다', () => {
-  render();
-  expect(chips()).toHaveLength(0);
+test('롤에는 역할 정원을 고르는 칸이 없다', () => {
+  const el = render();
+  expect(capRows(el)).toHaveLength(0);
 });
 
-test('발로란트로 바꾸면 타격대가 기본으로 켜져 있다', () => {
+test('발로란트 기본은 타격 2에 나머지 1', () => {
   const el = render();
   goValorant(el);
 
-  const on = chips().filter((c) => c.getAttribute('aria-pressed') === 'true');
-  expect(on).toHaveLength(1);
-  expect(on[0].textContent).toContain('타격대');
+  expect(capRows(el).map((r) => r.n)).toEqual([2, 1, 1, 1]);
+  expect(seatText(el)).toContain('자리 5 / 5명');
 });
 
-test('체크를 다 끄면 자리가 모자라 배정하지 않는다', () => {
+/* 척후대 다섯에 나머지 0 같은 판도 있다 */
+test('한 역할에 다섯을 몰아줄 수 있다', () => {
   const el = render();
   goValorant(el);
   click(byText(el, '한눈에'));
 
-  /* 켜진 것 하나를 끈다 - 자리가 넷뿐이라 다섯 명을 못 넣는다 */
-  const on = chips().find((c) => c.getAttribute('aria-pressed') === 'true');
-  click(on);
-  expect(chips().every((c) => c.getAttribute('aria-pressed') === 'false')).toBe(true);
+  /* 척후대만 남기고 나머지를 0으로 */
+  click(capRows(el)[0].minus);
+  click(capRows(el)[0].minus);
+  click(capRows(el)[2].minus);
+  click(capRows(el)[3].minus);
+  for (let i = 0; i < 4; i += 1) click(capRows(el)[1].plus);
+
+  expect(capRows(el).map((r) => r.n)).toEqual([0, 5, 0, 0]);
+
+  click(el.querySelector('[class*="assignAll"]'));
+  const tags = [...el.querySelectorAll('.rowWrapper .lineTag')].map((n) => n.textContent.trim());
+  expect(tags).toHaveLength(5);
+  expect(tags.every((t) => t.includes('척후대'))).toBe(true);
+});
+
+test('자리가 인원보다 적으면 배정하지 않는다', () => {
+  const el = render();
+  goValorant(el);
+  click(byText(el, '한눈에'));
+
+  /* 타격대를 2 → 1로. 자리가 넷뿐이라 다섯 명을 못 넣는다 */
+  click(capRows(el)[0].minus);
+  expect(seatText(el)).toContain('자리 4 / 5명');
 
   click(el.querySelector('[class*="assignAll"]'));
   expect(tagCount(el)).toBe(0);

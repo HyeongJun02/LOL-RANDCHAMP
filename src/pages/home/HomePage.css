@@ -471,3 +471,16 @@
 @media (max-width: 640px) {
 }
 
+
+/* 로그인 버튼도 같은 자리, 같은 모양. <a>와 <button>이 섞여도 한 덩어리로 보이게 */
+button.cta-main {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.cta-main:disabled {
+  opacity: 0.65;
+  cursor: default;
+  transform: none;
+}
