@@ -81,188 +81,7 @@
 
 /* ---------- 만들기 / 입장 ---------- */
 
-/* 목록 아래로 내려간 만들기·입장. 자주 쓰는 물건이 아니라
-   한 겹 눌러 담아두고, 필요할 때만 눈에 들어오면 된다 */
-.rooms-forms {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--gg-panel-border);
-  border-radius: 14px;
-  background: rgba(15, 23, 42, 0.35);
-}
-
-.rooms-form label {
-  display: block;
-  margin-bottom: 0.45rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #cbd5e1;
-}
-
-.rooms-form-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  /* 좁은 화면에서 한 줄에 다 못 들어가면 넘치지 말고 접힌다.
-     넉넉할 때는 아무 영향이 없다 */
-  flex-wrap: wrap;
-}
-
-/* 결과 입력 줄은 '총 킬 수 + 퍼스트 블러드 + 정산'이라 폭이 제일 빡빡하다.
-   select는 옵션 글자만큼 최소 폭을 갖고 있어 0까지 줄지 않는다.
-   기준 폭을 줘서 좁아지면 줄바꿈이 먼저 일어나게 한다 */
-.bet-result .rooms-form-row > .rooms-input {
-  flex: 1 1 7.5rem;
-}
-
 /* ---------- 방 목록 ---------- */
-
-/* 한 줄짜리 목록이던 걸 카드로 바꿨다. 방 이름·권한·인원·내 끼꼬가
-   한 줄에 다닥다닥 붙어 있으면 어느 게 어느 방 것인지 눈이 헤맨다 */
-.rooms-grid {
-  list-style: none;
-  margin: 0 0 1.6rem;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 0.7rem;
-}
-
-/* li가 그리드 칸이라 여기서 늘려줘야 카드 높이가 서로 맞는다.
-   안 그러면 '또또 중' 배지가 붙은 카드만 혼자 길어진다 */
-.rooms-grid li {
-  display: flex;
-}
-
-.room-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  height: 100%;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--gg-panel-border);
-  border-radius: 14px;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
-  color: inherit;
-  text-decoration: none;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.room-card:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--accent, #c8aa6e) 50%, transparent);
-  box-shadow: 0 14px 30px -20px color-mix(in srgb, var(--accent, #c8aa6e) 85%, transparent);
-}
-
-.room-card-head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.room-card-emblem {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--accent, #c8aa6e) 18%, transparent);
-  font-size: 0.95rem;
-}
-
-.room-card-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.98rem;
-  font-weight: 800;
-  color: #f1f5f9;
-}
-
-/* 지금 뭔가 돌고 있는 방. 목록에서 이것만 보고 들어오는 일이 많다 */
-.room-card-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  align-self: flex-start;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: rgba(74, 222, 128, 0.14);
-  color: #4ade80;
-  font-size: 0.7rem;
-  font-weight: 800;
-}
-
-.room-card-live i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 0 0 7px currentColor;
-  animation: bet-live-blink 1.5s ease-in-out infinite;
-}
-
-.room-card.is-live {
-  border-color: rgba(74, 222, 128, 0.35);
-}
-
-.room-card-foot {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-top: auto;
-  padding-top: 0.15rem;
-  font-size: 0.78rem;
-  color: #8b98ae;
-}
-
-.room-card-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.room-card-stat.is-kkiko {
-  margin-left: auto;
-  font-weight: 800;
-  color: var(--gg-gold-light);
-}
-
-/* 처음 온 사람이 여기서 막히면 안 된다. 뭘 해야 하는지 적어둔다 */
-.rooms-empty {
-  display: grid;
-  justify-items: center;
-  gap: 0.4rem;
-  margin-bottom: 1.6rem;
-  padding: 2rem 1.2rem;
-  border: 1px dashed rgba(148, 163, 184, 0.25);
-  border-radius: 14px;
-  text-align: center;
-}
-
-.rooms-empty > svg {
-  font-size: 1.6rem;
-  color: var(--gg-gold);
-  opacity: 0.85;
-}
-
-.rooms-empty strong {
-  font-size: 0.95rem;
-  color: #e6ecf7;
-}
-
-.rooms-empty span {
-  font-size: 0.8rem;
-  line-height: 1.7;
-  color: var(--gg-text-muted);
-}
 
 .rooms-me-label {
   font-size: 0.72rem;
@@ -742,10 +561,6 @@
 }
 
 @media (max-width: 640px) {
-  .rooms-forms {
-    grid-template-columns: 1fr;
-  }
-
   .room-player {
     flex-wrap: wrap;
   }
@@ -2131,32 +1946,6 @@
 
 /* 로고와 글자가 붙어 보이지 않게 */
 .seg-tab .game-logo,
-.room-card-stat .game-logo,
-.room-game .game-logo {
-  margin-right: 0.28rem;
-}
-
-/* 방 이름 위의 게임 줄. 통계 줄(인원·끼꼬)에 끼워 넣으면
-   '리그 오브 레전드'가 길어서 줄을 넘긴다 */
-.room-card-game {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #6b7a94;
-}
-
-.room-card-game .game-logo {
-  margin-right: 0;
-}
-
-/* 게임 줄이 생기면서 이름 줄은 위 여백이 필요 없다 */
-.room-card-game + .room-card-head {
-  margin-top: -0.15rem;
-}
-
 /* 목록만 다시 읽는 버튼. 페이지를 통째로 새로고침하지 않아도 되게 */
 .rooms-refresh {
   margin-top: 0.6rem;
@@ -2356,4 +2145,163 @@
   padding: 0.7rem 0.55rem;
   font-size: 0.78rem;
   color: #6b7a94;
+}
+
+/* ---------- 방 목록 ---------- */
+/* 한 줄에 한 방. 네 줄짜리 카드로 두니 방 셋만 있어도 화면이 꽉 차서,
+   정작 어느 방에 들어갈지가 안 보였다 */
+
+.rooms-grid {
+  list-style: none;
+  margin: 0 0 1.1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.room-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.room-card:hover {
+  border-color: color-mix(in srgb, var(--accent, #8b98ae) 45%, transparent);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 또또가 돌고 있는 방. 왼쪽 띠 하나면 목록에서 바로 걸린다 */
+.room-card.is-live {
+  box-shadow: inset 2px 0 0 var(--gg-red);
+}
+
+.room-card-emblem {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent, #8b98ae) 16%, transparent);
+  font-size: 1rem;
+}
+
+.room-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.room-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.room-card-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #e6ecf7;
+}
+
+.room-card-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: #6b7a94;
+}
+
+.room-card-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(249, 115, 98, 0.14);
+  color: var(--gg-red);
+  font-size: 0.66rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.room-card-live i {
+  width: 0.34rem;
+  height: 0.34rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.room-card-kkiko {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--gg-gold);
+}
+
+/* ---------- 만들기 · 참가 ---------- */
+/* 늘 펼쳐두면 설명까지 합쳐 화면 절반을 먹는다. 쓰는 건 방을 처음
+   만들 때 한 번뿐이라 접어둔다 */
+
+.rooms-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.rooms-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 999px;
+  background: transparent;
+  color: #9fb0c8;
+  font-family: inherit;
+  font-size: 0.79rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.rooms-action:hover {
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.rooms-action.is-on {
+  color: var(--gg-gold);
+  border-color: color-mix(in srgb, var(--gg-gold) 45%, transparent);
+  background: rgba(200, 170, 110, 0.08);
+}
+
+.rooms-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.6rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
 }

@@ -1,13 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FaPlus, FaSignInAlt, FaUsers, FaPen, FaCoins, FaDoorOpen, FaSyncAlt } from 'react-icons/fa';
+import { FaPlus, FaSignInAlt, FaPen, FaCoins, FaDoorOpen, FaSyncAlt } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../server/rooms';
 import { MAX_ROOMS } from '../../server/limits';
 import { accentVars } from '../../lib/roomStyle';
 import { GAMES, DEFAULT_GAME, getGame } from '../../rules/games';
 import PageHeader from '../../components/common/PageHeader';
+import Empty from '../../components/common/Empty';
 import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelRows } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../lib/seo';
@@ -27,6 +28,8 @@ const RoomList = () => {
     reload();
   };
 
+  /* 한 번에 하나만 펼친다. 둘 다 열어두면 무엇을 하려던 건지 흐려진다 */
+  const [form, setForm] = useState(null);
   const [name, setName] = useState('');
   const [game, setGame] = useState(DEFAULT_GAME);
   const [code, setCode] = useState('');
@@ -155,66 +158,62 @@ const RoomList = () => {
       {loading ? (
         <SkelRows count={3} h={92} />
       ) : error ? (
-        <div className="rooms-empty">
-          <FaDoorOpen />
-          <strong>방 목록을 불러오지 못했어요</strong>
-          <span>{error}</span>
-          <button className="ghost-btn" style={{ marginTop: '0.5rem' }} onClick={reload}>
-            다시 시도
-          </button>
-        </div>
+        <Empty
+          icon={<FaDoorOpen />}
+          title="방 목록을 불러오지 못했어요"
+          desc={error}
+          action={
+            <button className="ghost-btn" onClick={reload}>
+              다시 시도
+            </button>
+          }
+        />
       ) : rooms.length === 0 ? (
-        <div className="rooms-empty">
-          <FaDoorOpen />
-          <strong>아직 들어간 방이 없어요</strong>
-          <span>
-            같이 하는 사람 중 한 명이 방을 만들고 입장 코드를 나눠주면 됩니다.
-            <br />
-            아래에서 방을 만들거나 코드를 넣어보세요.
-          </span>
-          {/* 분명히 방이 있는데 비어 보이는 경우를 위한 출구 */}
-          <button className="ghost-btn" style={{ marginTop: '0.5rem' }} onClick={refreshAll}>
-            <FaSyncAlt /> 다시 읽기
-          </button>
-        </div>
+        <Empty
+          icon={<FaDoorOpen />}
+          title="아직 들어간 방이 없어요"
+          desc="아래에서 방을 만들거나, 받은 입장 코드를 넣어보세요."
+          action={
+            /* 분명히 방이 있는데 비어 보이는 경우를 위한 출구 */
+            <button className="ghost-btn" onClick={refreshAll}>
+              <FaSyncAlt /> 다시 읽기
+            </button>
+          }
+        />
       ) : (
         <ul className="rooms-grid">
           {rooms.map((r) => (
             <li key={r.id}>
-              {/* 방마다 고른 색과 엠블럼. 목록에서도 우리 방이 바로 눈에 띈다 */}
+              {/* 한 줄에 한 방. 네 줄짜리 카드로 두니 방 셋만 있어도
+                  화면이 꽉 차서, 정작 어느 방에 들어갈지가 안 보였다 */}
               <Link
                 className={`room-card ${r.live ? 'is-live' : ''}`}
                 style={accentVars(r.accent)}
                 to={`/rooms/${r.id}`}
               >
-                {/* 게임 이름은 방 이름 위에 한 줄로. 아래 통계 줄에 끼워 넣으면
-                    '리그 오브 레전드'가 길어서 인원·끼꼬가 줄을 넘긴다 */}
-                <span className="room-card-game">
-                  <img className="game-logo is-tiny" src={getGame(r.game).logo} alt="" />
-                  {getGame(r.game).label}
-                </span>
+                <span className="room-card-emblem">{r.emblem}</span>
 
-                <span className="room-card-head">
-                  <span className="room-card-emblem">{r.emblem}</span>
-                  <strong className="room-card-name">{r.name}</strong>
-                  <span className={`rooms-role role-${r.myRole}`}>{ROLE_LABEL[r.myRole]}</span>
+                <span className="room-card-main">
+                  <span className="room-card-top">
+                    <strong className="room-card-name">{r.name}</strong>
+                    <span className={`rooms-role role-${r.myRole}`}>{ROLE_LABEL[r.myRole]}</span>
+                  </span>
+                  <span className="room-card-sub">
+                    <img className="game-logo is-tiny" src={getGame(r.game).logo} alt="" />
+                    {getGame(r.game).label} · {r.memberCount}명
+                  </span>
                 </span>
 
                 {/* 지금 걸 수 있는 판이 돌고 있으면 그게 제일 급한 정보다 */}
                 {r.live && (
                   <span className="room-card-live">
                     <i />
-                    {r.live === 'betting' ? '또또 배팅 중' : '경기 진행 중'}
+                    {r.live === 'betting' ? '배팅 중' : '경기 중'}
                   </span>
                 )}
 
-                <span className="room-card-foot">
-                  <span className="room-card-stat">
-                    <FaUsers /> {r.memberCount}명
-                  </span>
-                  <span className="room-card-stat is-kkiko">
-                    <FaCoins /> {(r.myPoints ?? 0).toLocaleString()}
-                  </span>
+                <span className="room-card-kkiko">
+                  <FaCoins /> {(r.myPoints ?? 0).toLocaleString()}
                 </span>
               </Link>
             </li>
@@ -222,10 +221,25 @@ const RoomList = () => {
         </ul>
       )}
 
-      <div className="rooms-forms">
-        <div className="rooms-form">
-          <label htmlFor="room-name">새 방 만들기</label>
+      {/* 만들기·참가 폼을 늘 펼쳐두면 설명까지 합쳐 화면 절반을 먹는다.
+          쓰는 건 방을 처음 만들 때 한 번뿐이라 접어둔다 */}
+      <div className="rooms-actions">
+        <button
+          className={`rooms-action ${form === 'make' ? 'is-on' : ''}`}
+          onClick={() => setForm(form === 'make' ? null : 'make')}
+        >
+          <FaPlus /> 방 만들기
+        </button>
+        <button
+          className={`rooms-action ${form === 'join' ? 'is-on' : ''}`}
+          onClick={() => setForm(form === 'join' ? null : 'join')}
+        >
+          <FaSignInAlt /> 코드로 참가
+        </button>
+      </div>
 
+      {form === 'make' && (
+        <div className="rooms-form">
           {/* 게임은 만들 때 정하면 끝이다. 티어 체계와 전적이 게임에 묶여
               있어서 나중에 바꾸면 쌓인 게 전부 의미를 잃는다 */}
           <div className="game-pick">
@@ -244,44 +258,44 @@ const RoomList = () => {
 
           <div className="rooms-form-row">
             <input
-              id="room-name"
               className="rooms-input"
               value={name}
               maxLength={20}
-              placeholder="예) 목요일 내전"
+              placeholder="방 이름 (예: 목요일 내전)"
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && make()}
+              autoFocus
             />
             <button className="primary-btn" onClick={make}>
-              <FaPlus /> 만들기
+              만들기
             </button>
           </div>
           <p className="rooms-hint">
-            방은 최대 {MAX_ROOMS}개까지. 만든 사람이 방장이 되고, 입장 코드는 설정 탭에 있어요.
-            <br />
-            <b>게임은 나중에 못 바꿉니다.</b> 티어와 전적이 게임에 묶여 있어요.
+            최대 {MAX_ROOMS}개. 만든 사람이 방장이 됩니다. <b>게임은 나중에 못 바꿉니다.</b>
           </p>
         </div>
+      )}
 
+      {form === 'join' && (
         <div className="rooms-form">
-          <label htmlFor="room-code">입장 코드로 들어가기</label>
           <div className="rooms-form-row">
             <input
-              id="room-code"
               className="rooms-input rooms-code-input"
               value={code}
               maxLength={6}
               placeholder="ABC234"
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && enter()}
+              autoFocus
             />
             <button className="primary-btn" onClick={enter}>
-              <FaSignInAlt /> 입장
+              입장
             </button>
           </div>
           <p className="rooms-hint">한 번 들어오면 다음부터는 코드가 필요 없어요.</p>
         </div>
-      </div>
+      )}
+
     </div>
   );
 };
