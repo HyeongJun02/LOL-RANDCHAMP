@@ -263,7 +263,7 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
               ) : (
                 <p>받는 사람과 금액을 고르면 여기에 요약이 뜹니다. (내 잔액 {num(myPoints)})</p>
               )}
-              <button className="ghost-btn" onClick={send} disabled={!sendReady}>
+              <button className="primary-btn" onClick={send} disabled={!sendReady}>
                 보내기
               </button>
             </div>

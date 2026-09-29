@@ -644,7 +644,7 @@ const BetTab = ({
                   총 <strong>{num(cartTotal)}</strong> 끼꼬 · 잔액 {num(me?.points)}
                 </span>
                 <button
-                  className="ghost-btn"
+                  className="primary-btn"
                   onClick={() => submit(activeScrim)}
                   disabled={overBalance}
                 >
@@ -664,7 +664,7 @@ const BetTab = ({
           )}
 
           {canEdit && activeScrim.status === 'betting' && (
-            <button className="ghost-btn bet-action" onClick={() => lock(activeScrim)}>
+            <button className="primary-btn bet-action" onClick={() => lock(activeScrim)}>
               <FaLock /> 게임 시작 (배팅 마감)
             </button>
           )}
@@ -715,7 +715,7 @@ const BetTab = ({
                     </option>
                   ))}
                 </select>
-                <button className="ghost-btn" onClick={() => settle(activeScrim)}>
+                <button className="primary-btn" onClick={() => settle(activeScrim)}>
                   정산
                 </button>
               </div>

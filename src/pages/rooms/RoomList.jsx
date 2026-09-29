@@ -252,7 +252,7 @@ const RoomList = () => {
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && make()}
             />
-            <button className="ghost-btn" onClick={make}>
+            <button className="primary-btn" onClick={make}>
               <FaPlus /> 만들기
             </button>
           </div>
@@ -275,7 +275,7 @@ const RoomList = () => {
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && enter()}
             />
-            <button className="ghost-btn" onClick={enter}>
+            <button className="primary-btn" onClick={enter}>
               <FaSignInAlt /> 입장
             </button>
           </div>

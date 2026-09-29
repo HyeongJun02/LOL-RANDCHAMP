@@ -54,6 +54,7 @@ import { MAX_ROOM_PLAYERS } from '../../server/limits';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
 import MatchHistory from './MatchHistory';
+import RoomSwitch from './RoomSwitch';
 import HallOfFame from './HallOfFame';
 import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
@@ -783,22 +784,21 @@ const Room = () => {
       {!myNickname && <NicknameGate onSaved={reload} />}
 
       <header className="room-hero">
-        <div className="room-hero-left">
-          <Link className="room-back" to="/rooms" title="방 목록으로">
-            <FaArrowLeft />
-          </Link>
+        {/* 방 이름을 눌러 다른 방으로 바로 넘어간다. 전에는 뒤로 →
+            방 목록 → 다른 방, 세 번을 거쳐야 했다 */}
+        <RoomSwitch room={room} userId={user.id}>
           <span className="room-emblem">{room.emblem}</span>
-          <div>
-            <h1 className="room-name">{room.name}</h1>
-            <p className="room-meta">
+          <span className="room-hero-text">
+            <span className="room-name">{room.name}</span>
+            <span className="room-meta">
               <span className="room-game" title={getGame(room.game).label}>
                 <img className="game-logo is-tiny" src={getGame(room.game).logo} alt="" />
                 {getGame(room.game).label}
               </span>
               {members.length}명 · {ROLE_LABEL[myRole]}
-            </p>
-          </div>
-        </div>
+            </span>
+          </span>
+        </RoomSwitch>
 
         {/* 내 끼꼬는 어느 탭에 있든 보여야 한다. 배팅하다 잔액 보러
             탭을 옮겨다니게 만들면 안 된다 */}
