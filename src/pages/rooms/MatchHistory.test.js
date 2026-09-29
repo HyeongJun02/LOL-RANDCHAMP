@@ -65,10 +65,12 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-test('기록이 없으면 안내만 보여준다', () => {
+test('기록이 없으면 무엇을 하면 되는지까지 알려준다', () => {
   const el = render();
   expect(el.querySelector('.history-list')).toBeNull();
-  expect(el.querySelector('.rooms-blank')).not.toBeNull();
+  /* '없다'만 적고 끝내면 처음 들어온 사람은 거기서 멈춘다 */
+  expect(el.querySelector('.empty-title')).not.toBeNull();
+  expect(el.querySelector('.empty-desc').textContent).toContain('게임 시작');
 });
 
 test('양 팀과 이긴 쪽을 보여준다', () => {

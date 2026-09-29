@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaLock, FaCheck, FaUndo, FaChevronRight, FaTrash } from 'react-icons/fa';
+import { FaLock, FaCheck, FaUndo, FaChevronRight, FaTrash, FaDice } from 'react-icons/fa';
 import {
   killLineOfScrim,
   killMarket,
@@ -16,6 +16,7 @@ import {
   fetchBetting,
 } from '../../server/rooms';
 import { useDialog } from '../../components/common/Dialog';
+import Empty from '../../components/common/Empty';
 import BetTimer from './BetTimer';
 import { timeAgo } from '../../lib/timeAgo';
 import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS } from '../../rules/tuning';
@@ -532,11 +533,11 @@ const BetTab = ({
   return (
     <div className="room-settings">
       {single ? null : !activeScrim ? (
-        <p className="rooms-blank">
-          지금 열린 또또가 없어요.
-          <br />
-          기록 탭에서 팀을 채우고 &lsquo;또또 열기&rsquo;를 누르면 여기에 올라옵니다.
-        </p>
+        <Empty
+          icon={<FaDice />}
+          title="지금 열린 또또가 없어요"
+          desc="게임 시작 탭에서 팀을 채우고 '또또 열기'를 누르면 여기에 올라옵니다."
+        />
       ) : (
         /* 진행 중인 판은 빛나게 둔다. 지난 기록과 같은 카드로 그려두면
            스크롤하다가 '지금 걸 수 있는 판'을 그냥 지나친다 */

@@ -1,4 +1,6 @@
 import React from 'react';
+import { FaTrophy } from 'react-icons/fa';
+import Empty from './Empty';
 import './RankList.css';
 
 /* 순위 목록.
@@ -11,7 +13,7 @@ import './RankList.css';
    줄 밑에 얇은 막대를 깔아 크기를 눈으로 보게 한다. */
 
 const RankList = ({ rows = [], empty = '아직 기록이 없어요.' }) => {
-  if (rows.length === 0) return <p className="rank-blank">{empty}</p>;
+  if (rows.length === 0) return <Empty icon={<FaTrophy />} title={empty} />;
 
   return (
     <ol className="rank-list">

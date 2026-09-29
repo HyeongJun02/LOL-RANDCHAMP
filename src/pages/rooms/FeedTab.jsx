@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaListUl } from 'react-icons/fa';
 import { fetchLogs, feedParts, FEED_PAGE } from '../../server/rooms';
 import { SkelRows } from '../../components/common/Skeleton';
+import Empty from '../../components/common/Empty';
 
 const when = (iso) => {
   const d = new Date(iso);
@@ -71,7 +72,13 @@ const FeedTab = ({ roomId, version }) => {
   if (loading) return <SkelRows count={6} h={40} />;
 
   if (items.length === 0) {
-    return <p className="rooms-blank">아직 남은 기록이 없어요.</p>;
+    return (
+      <Empty
+        icon={<FaListUl />}
+        title="아직 남은 기록이 없어요"
+        desc="경기·또또·끼꼬가 오갈 때마다 여기에 한 줄씩 쌓입니다."
+      />
+    );
   }
 
   return (

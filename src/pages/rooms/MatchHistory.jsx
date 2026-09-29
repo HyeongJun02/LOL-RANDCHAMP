@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaTimes, FaCrosshairs, FaCoins, FaTint, FaChevronRight } from 'react-icons/fa';
+import {
+  FaTimes,
+  FaCrosshairs,
+  FaCoins,
+  FaTint,
+  FaChevronRight,
+  FaClipboardList,
+} from 'react-icons/fa';
 import { useDialog } from '../../components/common/Dialog';
 import Modal from '../../components/common/Modal';
+import Empty from '../../components/common/Empty';
 import BetTab from './BetTab';
 import { timeAgo } from '../../lib/timeAgo';
 import '../scrimRecord/ScrimRecord.css';
@@ -81,7 +89,13 @@ const MatchHistory = ({
   };
 
   if (history.length === 0) {
-    return <p className="rooms-blank">아직 기록된 경기가 없어요.</p>;
+    return (
+      <Empty
+        icon={<FaClipboardList />}
+        title="아직 남긴 판이 없어요"
+        desc="게임 시작 탭에서 팀을 채우고 이긴 팀을 고르면 여기에 쌓입니다."
+      />
+    );
   }
 
   const card = (m) => {

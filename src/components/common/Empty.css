@@ -1,0 +1,46 @@
+/* 빈 화면. 넓게 쓰고 가운데로 모은다 - 좁게 두면 '오류난 줄' 알고 나간다 */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3.4rem 1.2rem;
+  text-align: center;
+}
+
+/* 그림은 크되 조용하게. 여기서 색을 쓰면 '뭔가 잘못됐나' 싶어진다 */
+.empty-icon {
+  display: grid;
+  place-items: center;
+  font-size: 2.1rem;
+  color: #2f3a4e;
+  margin-bottom: 0.3rem;
+}
+
+.empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #c3ccdb;
+}
+
+.empty-desc {
+  margin: 0;
+  max-width: 30rem;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: #6b7a94;
+}
+
+.empty-action {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.7rem;
+}
+
+/* 패널 안에 들어갈 때는 위아래를 줄인다. 패널이 이미 여백을 쥐고 있다 */
+.room-panel > .empty {
+  padding: 1.8rem 0.5rem;
+}
