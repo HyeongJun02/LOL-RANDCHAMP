@@ -1944,14 +1944,16 @@
   opacity: 0.7;
 }
 
-/* 로고와 글자가 붙어 보이지 않게 */
-.seg-tab .game-logo,
-/* 목록만 다시 읽는 버튼. 페이지를 통째로 새로고침하지 않아도 되게 */
-.rooms-refresh {
-  margin-top: 0.6rem;
+/* 앞선 정리에서 규칙 하나를 지우면서 쉼표 목록이 끊겨, 세그 탭 안의
+   로고가 '새로고침 버튼'의 margin-top을 물려받고 있었다.
+   로고는 글자 옆에 앉는 물건이라 위 여백이 붙으면 혼자 내려간다 */
+.seg-tab .game-logo {
+  margin-right: 0.3rem;
 }
 
-.rooms-refresh .spin {
+/* 다시 읽는 동안 도는 표시. 아이콘만 있는 버튼이라 그것 말고는
+   무슨 일이 일어나는지 알 길이 없다 */
+.icon-btn .spin {
   animation: rooms-spin 0.9s linear infinite;
 }
 
@@ -1962,7 +1964,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rooms-refresh .spin {
+  .icon-btn .spin {
     animation: none;
   }
 }

@@ -116,10 +116,25 @@ const RoomList = () => {
   if (!user) {
     return (
       <div className="page">
-        {/* 할 일은 제목과 같은 줄에. 목록 아래에 두면 방이 많을수록
+        {/* 로그인 전에는 할 수 있는 게 없다. 버튼을 띄워봐야 눌렀을 때
+            '로그인이 필요해요'만 나온다 */}
+        <PageHeader title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다." />
+        <p className="rooms-blank">
+          내전 방은 여러 명이 같이 보는 공간이라 로그인이 필요합니다.
+          <br />
+          오른쪽 위에서 구글 계정으로 들어와 주세요.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      {/* 할 일은 제목과 같은 줄에. 목록 아래에 두면 방이 많을수록
           아래로 밀려서, 방을 만들려고 스크롤을 내려야 했다 */}
       <PageHeader bar title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다.">
         <div className="page-head-actions">
+          {/* 목록만 다시 읽는다. 페이지를 통째로 새로고침하지 않아도 되게 */}
           <button
             className="icon-btn"
             onClick={refreshAll}
@@ -136,23 +151,6 @@ const RoomList = () => {
             <FaPlus /> 방 만들기
           </button>
         </div>
-      </PageHeader>
-        <p className="rooms-blank">
-          내전 방은 여러 명이 같이 보는 공간이라 로그인이 필요합니다.
-          <br />
-          오른쪽 위에서 구글 계정으로 들어와 주세요.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="page">
-      <PageHeader title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다.">
-        {/* 목록만 다시 읽는다. 페이지를 통째로 새로고침하지 않아도 되게 */}
-        <button className="ghost-btn rooms-refresh" onClick={refreshAll} disabled={loading}>
-          <FaSyncAlt className={loading ? 'spin' : ''} /> 새로고침
-        </button>
       </PageHeader>
 
       {/* 이름을 안 정했으면 여기서 막는다 */}
