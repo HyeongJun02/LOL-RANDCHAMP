@@ -18,31 +18,28 @@
   text-align: center;
 }
 
+/* 금색 테두리 알약이었다. 바로 아래 제목도 금색, 버튼도 금색이라
+   히어로 세 줄이 전부 금색으로 겹쳐 있었다. 여기선 물러난다 */
 .home-kicker {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.72rem;
+  font-size: 0.71rem;
   font-weight: 500;
-  letter-spacing: 1.5px;
-  color: var(--gg-gold);
-  background: rgba(200, 170, 110, 0.1);
-  border: 1px solid rgba(200, 170, 110, 0.3);
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  margin-bottom: 0.9rem;
+  letter-spacing: 2px;
+  color: #55617a;
+  margin-bottom: 0.7rem;
 }
 
+/* 금색 그라디언트에 빛번짐까지 얹혀 있었다. 제목은 제일 먼저 읽히는
+   자리라 장식이 없어도 충분하다 - 오히려 장식이 읽기를 늦춘다 */
 .hero-title {
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: clamp(1.7rem, 4.6vw, 2.4rem);
+  font-size: clamp(1.9rem, 5vw, 2.7rem);
   letter-spacing: 0.5px;
-  margin: 0 0 0.6rem;
-  background: linear-gradient(180deg, #fff7e0, #e7c98a 60%, var(--gg-gold));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 30px rgba(200, 170, 110, 0.35));
+  margin: 0 0 0.5rem;
+  color: #f4f7fc;
 }
 
 .hero-subtitle {
@@ -118,118 +115,118 @@
 /* 도구 목록이 아니라 '방을 만들면 뭐가 되는지'라 링크가 아니다.
    누를 수 없으니 카드처럼 띄우지 않고 조용히 눕힌다 */
 
-/* ---------- 어디로 갈까요 ---------- */
-/* 전에는 '무엇이 되는지' 설명이 제일 큰 자리를 먹고, 정작 누를 수 있는
-   건 아래 작은 카드였다. 처음 온 사람이 알아야 하는 건 '어디로 가면
-   되는가'라서 갈 곳을 앞으로 뺐다 */
-
-.dest-list {
+/* 상자 여섯 개를 세워두니 화면이 통째로 격자가 됐다. 누를 수 없는
+   설명인데 카드처럼 생겨서 눌러보게도 된다. 선 하나로 나눈 줄 목록이면
+   읽히기도 빠르고 자리도 덜 먹는다 */
+.room-feats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 0.45rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0 1.6rem;
+  border-top: 1px solid var(--gg-panel-border);
 }
 
-.dest {
+.feat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  padding: 0.7rem 0.1rem;
+  border-bottom: 1px solid var(--gg-panel-border);
+}
+
+.feat-icon {
+  flex: none;
+  display: inline-flex;
+  width: 1rem;
+  font-size: 0.78rem;
+  color: var(--gg-gold);
+  opacity: 0.75;
+}
+
+.feat h3 {
+  flex: none;
+  margin: 0;
+  min-width: 5.2rem;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #e6ecf7;
+}
+
+.feat p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #6b7a94;
+}
+
+/* ---------- 곁들이 도구 ---------- */
+/* 내전 없이 혼자 써도 되는 것들. 히어로와 겨루지 않게 한 줄씩 눕힌다 */
+
+.side-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.4rem;
+}
+
+.side-tool {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.75rem 0.9rem;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
   border: 1px solid var(--gg-panel-border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.025);
   color: inherit;
   text-decoration: none;
   transition: border-color 0.18s ease, background 0.18s ease;
 }
 
-.dest:hover {
-  border-color: color-mix(in srgb, var(--accent, #8b98ae) 50%, transparent);
+.side-tool:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* 이 사이트의 본체. 한 줄을 통째로 쓰고 금색을 두른다 */
-.dest.is-main {
-  grid-column: 1 / -1;
-  --accent: var(--gg-gold);
-  border-color: rgba(200, 170, 110, 0.35);
-  background: linear-gradient(
-    100deg,
-    rgba(200, 170, 110, 0.1),
-    rgba(200, 170, 110, 0.02) 60%
-  );
-}
-
-.dest-icon {
+.side-icon {
   display: grid;
   place-items: center;
   flex: none;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--accent, #8b98ae) 15%, transparent);
-  color: var(--accent, #9fb0c8);
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
   font-size: 0.9rem;
 }
 
-.dest.is-main .dest-icon {
-  width: 2.4rem;
-  height: 2.4rem;
-  font-size: 1.05rem;
-}
-
-.dest-text {
+.side-text {
   display: flex;
   flex-direction: column;
-  gap: 0.12rem;
+  gap: 0.1rem;
   min-width: 0;
 }
 
-.dest-text strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.88rem;
+.side-text strong {
+  font-size: 0.85rem;
   font-weight: 600;
   color: #e6ecf7;
 }
 
-.dest-text span {
-  font-size: 0.76rem;
-  line-height: 1.5;
+.side-text em {
+  font-style: normal;
+  font-size: 0.74rem;
   color: #7d8ba3;
 }
 
-.dest-tag {
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: rgba(200, 170, 110, 0.16);
-  color: var(--gg-gold);
-  font-style: normal;
-  font-size: 0.64rem;
-  font-weight: 700;
-}
-
-.dest-go {
+.side-go {
   margin-left: auto;
   flex: none;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: #3f4c63;
   transition: color 0.18s ease, transform 0.18s ease;
 }
 
-.dest:hover .dest-go {
-  color: var(--accent, #9fb0c8);
+.side-tool:hover .side-go {
+  color: var(--accent);
   transform: translateX(2px);
-}
-
-/* 방 안에 뭐가 들었는지는 한 줄이면 족하다. 여섯 칸으로 펼치면
-   갈 곳 목록보다 커져서 무엇이 중요한지가 뒤집힌다 */
-.room-feats-line {
-  margin: 0.9rem 0 0;
-  text-align: center;
-  font-size: 0.75rem;
-  line-height: 1.7;
-  color: #55617a;
 }
 
 /* 아직 없는 걸 카드로 세워두면 자리만 먹는다 */

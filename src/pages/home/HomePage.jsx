@@ -1,7 +1,17 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FaArrowRight, FaUserFriends, FaGoogle, FaClipboardList } from 'react-icons/fa';
+import {
+  FaArrowRight,
+  FaUserFriends,
+  FaUsers,
+  FaChartLine,
+  FaDice,
+  FaCoins,
+  FaCrown,
+  FaSearch,
+  FaGoogle,
+} from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import { SOON_TOOLS, SIDE_TOOLS } from '../../rules/tools';
 import { openRosterModal } from '../../lib/rosterModal';
@@ -20,14 +30,15 @@ import './HomePage.css';
    --i 순서대로 올라온다. 섹션이 늘어도 이어지도록 번호를 계산해 넘긴다 */
 const step = (i) => ({ '--i': i });
 
-/* 방 하나에 들어 있는 것들. 갈 곳이 아니라 설명이라 한 줄로 흘린다 */
+/* 방 하나에 들어 있는 것들. 도구 목록이 아니라 '방을 만들면 뭐가 되는지'다.
+   그래서 tools.jsx가 아니라 여기 있다 - 링크가 아니라 설명이다 */
 const ROOM_FEATURES = [
-  '팀 짜기',
-  '전적·순위',
-  '또또',
-  '끼꼬 포인트',
-  '명예의 전당',
-  '숨은 기록',
+  { icon: <FaUsers />, title: '팀 짜기', desc: '티어로 평점 맞춰 가르기' },
+  { icon: <FaChartLine />, title: '전적·순위', desc: '이긴 팀만 고르면 점수가 쌓임' },
+  { icon: <FaDice />, title: '또또', desc: '승리팀·퍼블·총 킬에 걸기' },
+  { icon: <FaCoins />, title: '끼꼬', desc: '방마다 따로 도는 포인트' },
+  { icon: <FaCrown />, title: '명예의 전당', desc: '매달 1등 박제' },
+  { icon: <FaSearch />, title: '숨은 기록', desc: '궁합·천적·연승 저격' },
 ];
 
 const HomePage = () => {
@@ -60,8 +71,8 @@ const HomePage = () => {
     at += n;
     return start;
   };
-  const featAt = next(2 + SIDE_TOOLS.length);
-  const sideAt = next();
+  const featAt = next(1 + ROOM_FEATURES.length);
+  const sideAt = next(1 + SIDE_TOOLS.length);
   const tailAt = next();
 
   return (
@@ -99,56 +110,48 @@ const HomePage = () => {
         </div>
 
         <p className="hero-note rise" style={step(4)}>
-          {user
-            ? '입장 코드를 받았다면 방 목록에서 넣으세요.'
-            : '로그인은 방을 만들고 들어갈 때만 씁니다. 나머지 도구는 그냥 쓰면 됩니다.'}
+          {user ? '입장 코드를 받았다면 방 목록에서 넣으세요.' : '나머지 도구는 로그인 없이 씁니다.'}
         </p>
       </section>
 
-      {/* 설명이 아니라 갈 곳을 세운다. 전에는 '무엇이 되는지' 여섯 줄이
-          제일 큰 자리를 먹고, 정작 누를 수 있는 건 아래 작은 카드였다.
-          처음 온 사람이 알아야 하는 건 '어디로 가면 되는가'다 */}
+      {/* 도구를 나열하는 대신, 방 하나에 뭐가 들어 있는지를 보여준다 */}
       <section className="tool-section">
         <h2 className="section-title rise" style={step(featAt)}>
-          어디로 갈까요
+          방 안에 있는 것들
         </h2>
+        <div className="room-feats">
+          {ROOM_FEATURES.map((f, i) => (
+            <div className="feat rise" key={f.title} style={step(featAt + 1 + i)}>
+              <span className="feat-icon">{f.icon}</span>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        <div className="dest-list">
-          <Link to="/rooms" className="dest is-main rise" style={step(featAt + 1)}>
-            <span className="dest-icon">
-              <FaClipboardList />
-            </span>
-            <span className="dest-text">
-              <strong>
-                내전 방<em className="dest-tag">여기가 본체</em>
-              </strong>
-              <span>방 만들고 코드 나눠주면 기록·순위·또또가 다 여기서</span>
-            </span>
-            <FaArrowRight className="dest-go" />
-          </Link>
-
+      {/* 내전이랑 상관없이 혼자 써도 되는 것들. 작게 둔다 */}
+      <section className="tool-section">
+        <h2 className="section-title rise" style={step(sideAt)}>
+          곁들이 도구
+        </h2>
+        <div className="side-tools">
           {SIDE_TOOLS.map((t, i) => (
             <Link
               to={t.to}
               key={t.to}
-              className={`dest rise accent-${t.accent}`}
-              style={step(featAt + 2 + i)}
+              className={`side-tool rise accent-${t.accent}`}
+              style={step(sideAt + 1 + i)}
             >
-              <span className="dest-icon">{t.icon}</span>
-              <span className="dest-text">
+              <span className="side-icon">{t.icon}</span>
+              <span className="side-text">
                 <strong>{t.name}</strong>
-                <span>{t.short || t.desc}</span>
+                <em>{t.short || t.desc}</em>
               </span>
-              <FaArrowRight className="dest-go" />
+              <FaArrowRight className="side-go" />
             </Link>
           ))}
         </div>
-
-        {/* 방 안에 뭐가 들었는지는 한 줄이면 족하다. 여섯 칸으로 펼치면
-            갈 곳 목록보다 커져서 무엇이 중요한지가 뒤집힌다 */}
-        <p className="room-feats-line rise" style={step(sideAt)}>
-          방 안에 있는 것들 · {ROOM_FEATURES.join(' · ')}
-        </p>
       </section>
 
       {/* 아직 없는 걸 카드로 세워두면 자리만 먹는다. 한 줄이면 족하다 */}

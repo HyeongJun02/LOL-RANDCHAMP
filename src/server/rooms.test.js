@@ -742,12 +742,49 @@ test('방 탭은 주소에 남는다 (새로고침해도 보던 탭)', () => {
 
 /* ---------- 방 목록 ---------- */
 
-test('또또가 돌고 있는 방이 목록 맨 위로 온다', () => {
+test('방 목록은 필요한 만큼만 읽는다', () => {
   const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
   const body = src.slice(src.indexOf('export const useMyRooms'), src.indexOf('export const useRoom'));
   /* 끝난 경기까지 다 읽어오면 방 목록 한 번 여는 데 수백 줄이 딸려온다 */
   expect(body).toMatch(/\.in\('status', \['betting', 'locked'\]\)/);
-  expect(body).toContain('a.live ? -1 : 1');
+  /* '최근 플레이순'에 쓸 마지막 판도 방마다 묻지 않고 한 묶음만 */
+  expect(body).toContain('.limit(200)');
+  expect(body).toContain('lastPlayed');
+});
+
+/* 핀·진행 중·고른 순서가 섞이는 자리라 한 곳에서만 정한다 */
+describe('방 목록 순서', () => {
+  const { sortRooms } = require('../lib/roomPrefs');
+  const room = (over) => ({
+    id: 1, name: '가', memberCount: 1, myPoints: 0, live: null, lastPlayed: 0, ...over,
+  });
+
+  test('핀이 제일 위, 그 다음이 또또 진행 중', () => {
+    const rows = [
+      room({ id: 1, name: '가' }),
+      room({ id: 2, name: '나', live: 'betting' }),
+      room({ id: 3, name: '다' }),
+    ];
+    expect(sortRooms(rows, 'name', [3]).map((r) => r.id)).toEqual([3, 2, 1]);
+  });
+
+  test('고른 기준으로 센다', () => {
+    const rows = [
+      room({ id: 1, name: '가', myPoints: 100, memberCount: 9, lastPlayed: 10 }),
+      room({ id: 2, name: '나', myPoints: 900, memberCount: 2, lastPlayed: 30 }),
+      room({ id: 3, name: '다', myPoints: 500, memberCount: 5, lastPlayed: 20 }),
+    ];
+    expect(sortRooms(rows, 'kkiko', []).map((r) => r.id)).toEqual([2, 3, 1]);
+    expect(sortRooms(rows, 'members', []).map((r) => r.id)).toEqual([1, 3, 2]);
+    expect(sortRooms(rows, 'played', []).map((r) => r.id)).toEqual([2, 3, 1]);
+    expect(sortRooms(rows, 'name', []).map((r) => r.id)).toEqual([1, 2, 3]);
+  });
+
+  /* 한 판도 안 한 방은 맨 뒤로. 0으로 두면 이름순에 섞인다 */
+  test('모르는 기준이 오면 기본 순서로 센다', () => {
+    const rows = [room({ id: 1, lastPlayed: 5 }), room({ id: 2, name: '나', lastPlayed: 9 })];
+    expect(sortRooms(rows, '없는기준', []).map((r) => r.id)).toEqual([2, 1]);
+  });
 });
 
 /* ---------- 끼꼬 내역 ---------- */

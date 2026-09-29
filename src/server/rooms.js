@@ -608,6 +608,21 @@ export const useMyRooms = (userId, ready = true) => {
     const live = unwrap(
       await neon.from('scrims').select('room_id,status').in('status', ['betting', 'locked'])
     );
+    /* '최근 플레이순'으로 세우려면 방마다 마지막 판이 언제였는지가 필요하다.
+       방마다 한 번씩 묻지 않고, 최근 것부터 한 묶음만 받아 훑는다.
+       먼저 나오는 게 그 방의 마지막 판이다 (내림차순이므로).
+       그보다 오래 안 한 방은 아예 안 걸리는데, 어차피 맨 뒤로 간다 */
+    const recent = unwrap(
+      await neon
+        .from('scrims')
+        .select('room_id,played_at')
+        .order('played_at', { ascending: false })
+        .limit(200)
+    );
+    const lastPlayed = new Map();
+    (recent || []).forEach((sc) => {
+      if (!lastPlayed.has(sc.room_id)) lastPlayed.set(sc.room_id, new Date(sc.played_at).getTime());
+    });
     const liveOf = new Map((live || []).map((sc) => [sc.room_id, sc.status]));
     const myPoints = new Map(
       (wallets || []).filter((w) => w.user_id === userId).map((w) => [w.room_id, w.points])
@@ -624,12 +639,11 @@ export const useMyRooms = (userId, ready = true) => {
         myRole: roleOf.get(r.id),
         myPoints: myPoints.get(r.id) ?? 0,
         live: liveOf.get(r.id) || null,
+        lastPlayed: lastPlayed.get(r.id) ?? 0,
       }))
-      /* 또또가 돌고 있는 방을 맨 위로. 그 다음은 이름순 */
-      .sort((a, b) => {
-        if (Boolean(a.live) !== Boolean(b.live)) return a.live ? -1 : 1;
-        return a.name.localeCompare(b.name, 'ko');
-      });
+      /* 순서는 화면이 정한다(lib/roomPrefs). 핀과 고른 정렬이 여기
+         없으니 여기서 세워봐야 한 번 더 세워야 한다 */
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   }, [userId]);
 
   const { data, loading, error, reload } = useFetch(

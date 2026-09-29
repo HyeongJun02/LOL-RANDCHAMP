@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FaPlus, FaSignInAlt, FaPen, FaCoins, FaDoorOpen, FaSyncAlt } from 'react-icons/fa';
+import { FaPlus, FaSignInAlt, FaPen, FaCoins, FaDoorOpen, FaSyncAlt, FaThumbtack } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import { useMe, useMyRooms, createRoom, joinRoom, setNickname, ROLE_LABEL } from '../../server/rooms';
 import { MAX_ROOMS } from '../../server/limits';
@@ -10,6 +10,14 @@ import { GAMES, DEFAULT_GAME, getGame } from '../../rules/games';
 import PageHeader from '../../components/common/PageHeader';
 import Empty from '../../components/common/Empty';
 import Modal from '../../components/common/Modal';
+import {
+  SORTS,
+  getSort,
+  setSort,
+  getPinned,
+  togglePin,
+  sortRooms,
+} from '../../lib/roomPrefs';
 import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelList } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../lib/seo';
@@ -31,6 +39,24 @@ const RoomList = () => {
 
   /* 한 번에 하나만 펼친다. 둘 다 열어두면 무엇을 하려던 건지 흐려진다 */
   const [form, setForm] = useState(null);
+  /* 한 번 고른 순서는 다음에 와도 그대로다. 매번 다시 고르게 하면
+     '정렬이 있다'는 사실 자체가 짐이 된다 */
+  const [sort, setSortState] = useState(getSort);
+  const [pinned, setPinned] = useState(getPinned);
+
+  const pickSort = (key) => {
+    setSortState(key);
+    setSort(key);
+  };
+
+  const pin = (e, id) => {
+    /* 카드 전체가 링크라 핀만 눌러도 방으로 들어가 버린다 */
+    e.preventDefault();
+    e.stopPropagation();
+    setPinned(togglePin(id));
+  };
+
+  const shown = sortRooms(rooms, sort, pinned);
   const [name, setName] = useState('');
   const [game, setGame] = useState(DEFAULT_GAME);
   const [code, setCode] = useState('');
@@ -90,11 +116,26 @@ const RoomList = () => {
   if (!user) {
     return (
       <div className="page">
-        <PageHeader title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다.">
-        {/* 목록만 다시 읽는다. 페이지를 통째로 새로고침하지 않아도 되게 */}
-        <button className="ghost-btn rooms-refresh" onClick={refreshAll} disabled={loading}>
-          <FaSyncAlt className={loading ? 'spin' : ''} /> 새로고침
-        </button>
+        {/* 할 일은 제목과 같은 줄에. 목록 아래에 두면 방이 많을수록
+          아래로 밀려서, 방을 만들려고 스크롤을 내려야 했다 */}
+      <PageHeader bar title="내전 방" sub="같이 하는 사람들과 기록을 한곳에 모읍니다.">
+        <div className="page-head-actions">
+          <button
+            className="icon-btn"
+            onClick={refreshAll}
+            disabled={loading}
+            title="목록 다시 읽기"
+            aria-label="목록 다시 읽기"
+          >
+            <FaSyncAlt className={loading ? 'spin' : ''} />
+          </button>
+          <button className="ghost-btn" onClick={() => setForm('join')}>
+            <FaSignInAlt /> 코드로 참가
+          </button>
+          <button className="primary-btn" onClick={() => setForm('make')}>
+            <FaPlus /> 방 만들기
+          </button>
+        </div>
       </PageHeader>
         <p className="rooms-blank">
           내전 방은 여러 명이 같이 보는 공간이라 로그인이 필요합니다.
@@ -184,8 +225,24 @@ const RoomList = () => {
           }
         />
       ) : (
+        <>
+        {/* 방이 둘뿐이면 고를 일이 없다. 셋부터 보여준다 */}
+        {rooms.length > 2 && (
+          <div className="rooms-sort">
+            {SORTS.map((o) => (
+              <button
+                key={o.key}
+                className={`rooms-sort-opt ${sort === o.key ? 'is-on' : ''}`}
+                onClick={() => pickSort(o.key)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <ul className="rooms-grid">
-          {rooms.map((r) => (
+          {shown.map((r) => (
             <li key={r.id}>
               {/* 한 줄에 한 방. 네 줄짜리 카드로 두니 방 셋만 있어도
                   화면이 꽉 차서, 정작 어느 방에 들어갈지가 안 보였다 */}
@@ -194,6 +251,16 @@ const RoomList = () => {
                 style={accentVars(r.accent)}
                 to={`/rooms/${r.id}`}
               >
+                {/* 자주 가는 방은 위로. 핀은 이 기기에만 남는다 */}
+                <button
+                  className={`room-pin ${pinned.includes(Number(r.id)) ? 'is-on' : ''}`}
+                  onClick={(e) => pin(e, r.id)}
+                  title={pinned.includes(Number(r.id)) ? '고정 풀기' : '위로 고정'}
+                  aria-label={pinned.includes(Number(r.id)) ? '고정 풀기' : '위로 고정'}
+                >
+                  <FaThumbtack />
+                </button>
+
                 <span className="room-card-emblem">{r.emblem}</span>
 
                 <span className="room-card-main">
@@ -222,18 +289,8 @@ const RoomList = () => {
             </li>
           ))}
         </ul>
+        </>
       )}
-
-      {/* 만들기·참가는 방을 처음 만들 때 한 번 쓰는 일이다. 목록 아래에
-          펼쳐두면 그 한 번을 위해 늘 자리를 내주게 된다 */}
-      <div className="rooms-actions">
-        <button className="rooms-action" onClick={() => setForm('make')}>
-          <FaPlus /> 방 만들기
-        </button>
-        <button className="rooms-action" onClick={() => setForm('join')}>
-          <FaSignInAlt /> 코드로 참가
-        </button>
-      </div>
 
       {form === 'make' && (
         <Modal
