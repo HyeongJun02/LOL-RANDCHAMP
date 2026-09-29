@@ -85,3 +85,14 @@ test('새로고침해도 404가 나지 않게 SPA 폴백이 있다', () => {
   const vercel = JSON.parse(read('../../vercel.json'));
   expect(vercel.rewrites[0].destination).toBe('/index.html');
 });
+
+/* 이름으로 찾아오는 사이트다. 홈을 고치다 h1이 '롤랜챔'에서 바뀌고
+   이름이 푸터에만 남은 적이 있었다. meta에만 있으면 부족하다 */
+test('홈 본문에 사이트 이름이 남아 있다', () => {
+  const home = read('../pages/home/HomePage.jsx');
+  const brand = (home.match(/롤랜챔/g) || []).length;
+  expect(brand).toBeGreaterThan(1);
+  /* 푸터 말고도 있어야 한다 */
+  const above = home.slice(0, home.indexOf('footer'));
+  expect(above).toContain('롤랜챔');
+});

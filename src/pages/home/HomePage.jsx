@@ -80,14 +80,17 @@ const HomePage = () => {
       {/* 이 사이트가 뭘 하는 곳인지 한 문장. 아래로 내려야 알 수 있으면
           이미 늦었다 */}
       <section className="hero">
+        {/* 이름이 본문에 한 번은 나와야 한다. 홈을 고치면서 h1이
+            '롤랜챔'에서 바뀌고 이름은 푸터에만 남았는데, 검색에서
+            이름으로 찾아오는 사이트라 그러면 곤란하다 */}
         <span className="home-kicker rise" style={step(0)}>
-          롤 · 발로란트
+          롤랜챔
         </span>
         <h1 className="hero-title rise" style={step(1)}>
           내전 기록지
         </h1>
         <p className="hero-subtitle rise" style={step(2)}>
-          방 하나에 팀 짜기, 전적, 또또까지.
+          롤 · 발로란트 내전을 방 하나에. 팀 짜기, 전적, 또또까지.
         </p>
 
         {/* 로그인 안 한 사람을 방 목록으로 보내면 '로그인이 필요해요'만
