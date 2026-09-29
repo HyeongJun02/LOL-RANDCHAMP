@@ -314,7 +314,7 @@ const AdminPage = () => {
       {error && <p className="rooms-blank">{error}</p>}
 
       {loading ? (
-        <SkelRows count={6} h={54} />
+        <SkelRows count={6} h={44} />
       ) : (
         <>
           {tab === 'overview' && (

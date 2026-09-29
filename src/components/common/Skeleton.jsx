@@ -20,4 +20,21 @@ export const SkelRows = ({ count = 4, h = 44 }) => (
   </div>
 );
 
+/* 왼쪽에 네모 하나, 오른쪽에 두 줄. 방 목록·멤버 목록처럼 '아이콘 +
+   이름 + 부제' 모양인 자리에 쓴다. 민민한 막대만 깔면 내용이 들어오는
+   순간 줄 높이가 튄다 */
+export const SkelList = ({ count = 3, h = 56 }) => (
+  <div className="skel-list">
+    {Array.from({ length: count }, (_, i) => (
+      <div key={i} className="skel-row" style={{ height: h }}>
+        <span className="skel skel-row-box" />
+        <span className="skel-row-lines">
+          <span className="skel" style={{ width: '38%', height: 11 }} />
+          <span className="skel" style={{ width: '22%', height: 9 }} />
+        </span>
+      </div>
+    ))}
+  </div>
+);
+
 export default SkelRows;

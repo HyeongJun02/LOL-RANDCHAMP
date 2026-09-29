@@ -2289,19 +2289,16 @@
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.rooms-action.is-on {
-  color: var(--gg-gold);
-  border-color: color-mix(in srgb, var(--gg-gold) 45%, transparent);
-  background: rgba(200, 170, 110, 0.08);
+/* 팝업 안에서 홀로 서는 입력칸. 옆에 버튼이 없으니 폭을 다 쓴다 */
+.rooms-solo {
+  width: 100%;
+  margin-top: 0.7rem;
 }
 
-.rooms-form {
+/* 팝업 아래 단추 줄. 취소는 왼쪽, 하는 일은 오른쪽 끝 */
+.modal-actions {
   display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  margin-top: 0.6rem;
-  padding: 0.85rem 0.9rem;
-  border: 1px solid var(--gg-panel-border);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.025);
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 1.1rem;
 }

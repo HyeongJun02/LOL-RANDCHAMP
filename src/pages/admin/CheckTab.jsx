@@ -83,7 +83,7 @@ const CheckTab = ({ onChanged }) => {
         </p>
 
         {stuck === null ? (
-          <SkelRows count={2} h={44} />
+          <SkelRows count={2} h={36} />
         ) : stuck.length === 0 ? (
           <p className="adm-ok">
             <FaCheckCircle /> 멈춘 판이 없습니다.

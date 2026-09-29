@@ -54,7 +54,7 @@ const UserDetail = ({ userId, name, onClose }) => {
     <Modal title={name || '이름 없음'} desc={userId} onClose={onClose}>
       {error && <p className="rooms-blank">{error}</p>}
 
-      {!data && !error && <SkelRows count={5} h={38} />}
+      {!data && !error && <SkelRows count={5} h={32} />}
 
       {data && (
         <div className="adm-detail">

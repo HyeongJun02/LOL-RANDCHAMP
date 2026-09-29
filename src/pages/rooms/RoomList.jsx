@@ -9,8 +9,9 @@ import { accentVars } from '../../lib/roomStyle';
 import { GAMES, DEFAULT_GAME, getGame } from '../../rules/games';
 import PageHeader from '../../components/common/PageHeader';
 import Empty from '../../components/common/Empty';
+import Modal from '../../components/common/Modal';
 import NicknameGate from '../../components/rooms/NicknameGate';
-import { SkelRows } from '../../components/common/Skeleton';
+import { SkelList } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './Rooms.css';
 
@@ -58,6 +59,7 @@ const RoomList = () => {
       }
       await createRoom(name, game);
       setName('');
+      setForm(null);
       toast.success(`${getGame(game).label} 내전 방을 만들었어요.`);
       reload();
     });
@@ -70,6 +72,7 @@ const RoomList = () => {
       }
       await joinRoom(code);
       setCode('');
+      setForm(null);
       toast.success('방에 들어왔어요. 이제 코드 없이 다시 올 수 있어요.');
       reload();
     });
@@ -156,7 +159,7 @@ const RoomList = () => {
           '못 읽었음'과 '방이 없음'은 다른 이야기다. 둘을 같이 두면
           잠깐 끊겼을 뿐인데 방을 다 잃은 것처럼 보인다 */}
       {loading ? (
-        <SkelRows count={3} h={92} />
+        <SkelList count={3} h={56} />
       ) : error ? (
         <Empty
           icon={<FaDoorOpen />}
@@ -221,25 +224,24 @@ const RoomList = () => {
         </ul>
       )}
 
-      {/* 만들기·참가 폼을 늘 펼쳐두면 설명까지 합쳐 화면 절반을 먹는다.
-          쓰는 건 방을 처음 만들 때 한 번뿐이라 접어둔다 */}
+      {/* 만들기·참가는 방을 처음 만들 때 한 번 쓰는 일이다. 목록 아래에
+          펼쳐두면 그 한 번을 위해 늘 자리를 내주게 된다 */}
       <div className="rooms-actions">
-        <button
-          className={`rooms-action ${form === 'make' ? 'is-on' : ''}`}
-          onClick={() => setForm(form === 'make' ? null : 'make')}
-        >
+        <button className="rooms-action" onClick={() => setForm('make')}>
           <FaPlus /> 방 만들기
         </button>
-        <button
-          className={`rooms-action ${form === 'join' ? 'is-on' : ''}`}
-          onClick={() => setForm(form === 'join' ? null : 'join')}
-        >
+        <button className="rooms-action" onClick={() => setForm('join')}>
           <FaSignInAlt /> 코드로 참가
         </button>
       </div>
 
       {form === 'make' && (
-        <div className="rooms-form">
+        <Modal
+          title="새 방 만들기"
+          desc="만든 사람이 방장이 됩니다"
+          size="modal-sm"
+          onClose={() => setForm(null)}
+        >
           {/* 게임은 만들 때 정하면 끝이다. 티어 체계와 전적이 게임에 묶여
               있어서 나중에 바꾸면 쌓인 게 전부 의미를 잃는다 */}
           <div className="game-pick">
@@ -256,44 +258,58 @@ const RoomList = () => {
             ))}
           </div>
 
-          <div className="rooms-form-row">
-            <input
-              className="rooms-input"
-              value={name}
-              maxLength={20}
-              placeholder="방 이름 (예: 목요일 내전)"
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && make()}
-              autoFocus
-            />
+          <input
+            className="rooms-input rooms-solo"
+            value={name}
+            maxLength={20}
+            placeholder="방 이름 (예: 목요일 내전)"
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && make()}
+            autoFocus
+          />
+          <p className="rooms-hint">
+            최대 {MAX_ROOMS}개. <b>게임은 나중에 못 바꿉니다.</b> 티어와 전적이 게임에
+            묶여 있어요.
+          </p>
+
+          <div className="modal-actions">
+            <button className="ghost-btn" onClick={() => setForm(null)}>
+              취소
+            </button>
             <button className="primary-btn" onClick={make}>
               만들기
             </button>
           </div>
-          <p className="rooms-hint">
-            최대 {MAX_ROOMS}개. 만든 사람이 방장이 됩니다. <b>게임은 나중에 못 바꿉니다.</b>
-          </p>
-        </div>
+        </Modal>
       )}
 
       {form === 'join' && (
-        <div className="rooms-form">
-          <div className="rooms-form-row">
-            <input
-              className="rooms-input rooms-code-input"
-              value={code}
-              maxLength={6}
-              placeholder="ABC234"
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === 'Enter' && enter()}
-              autoFocus
-            />
+        <Modal
+          title="코드로 참가"
+          desc="방장이 알려준 여섯 자리를 넣으세요"
+          size="modal-sm"
+          onClose={() => setForm(null)}
+        >
+          <input
+            className="rooms-input rooms-code-input rooms-solo"
+            value={code}
+            maxLength={6}
+            placeholder="ABC234"
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === 'Enter' && enter()}
+            autoFocus
+          />
+          <p className="rooms-hint">한 번 들어오면 다음부터는 코드가 필요 없어요.</p>
+
+          <div className="modal-actions">
+            <button className="ghost-btn" onClick={() => setForm(null)}>
+              취소
+            </button>
             <button className="primary-btn" onClick={enter}>
               입장
             </button>
           </div>
-          <p className="rooms-hint">한 번 들어오면 다음부터는 코드가 필요 없어요.</p>
-        </div>
+        </Modal>
       )}
 
     </div>
