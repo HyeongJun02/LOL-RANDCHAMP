@@ -171,23 +171,6 @@ const dayText = (ts) => {
   return `${y}${d.getMonth() + 1}/${d.getDate()}`;
 };
 
-/* 권한이 없어도 보이긴 한다. 아예 감춰두면 이 방에서 무엇을 할 수 있는
-   방인지 알 수가 없고, 방장에게 무엇을 부탁해야 하는지도 모른다.
-   fieldset 하나면 안쪽 입력칸·단추를 브라우저가 전부 잠가준다 */
-const Panel = ({ head, locked, children }) => (
-  <section className={`room-panel ${locked ? 'is-locked' : ''}`}>
-    <h3>
-      {head}
-      {locked && (
-        <span className="panel-lock">
-          <FaLock /> 방장만
-        </span>
-      )}
-    </h3>
-    <fieldset disabled={locked}>{children}</fieldset>
-  </section>
-);
-
 /* 설정 묶음. 권한이 없으면 잠긴 채로 보인다 */
 const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, reload, onGone }) => {
   const gameKey = useGameKey();
@@ -533,98 +516,117 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
 
   return (
     <div className="room-settings">
-      {/* 짧은 칸들은 좌우로 나눈다. 세로로만 쌓으니 오른쪽이 텅 비고
-          아래 참가자·멤버까지 한참 내려가야 했다 */}
-      <div className="settings-cols">
-      <section className="room-panel">
-          <h3>
-            <FaKey /> 입장 코드
-          </h3>
-          <p className="rooms-hint">
-            코드를 아는 사람은 방에 들어와 기록을 볼 수 있어요. 기록을 남기는 건 방장과 부방장만
-            할 수 있습니다.
-          </p>
-          <div className="room-code-row">
-            <span className="room-code">{code || '••••••'}</span>
-            <button className="ghost-btn" onClick={showCode}>
-              코드 보기
-            </button>
-            <button className="ghost-btn" onClick={copyCode}>
-              <FaRegCopy /> 복사
-            </button>
-            {can('code_reset') && (
-              <button className="ghost-btn" onClick={rerollCode}>
-                <FaSync /> 새로 뽑기
+      {/* 이름·입장 코드·색·엠블럼은 전부 '이 방' 이야기다. 칸을 넷으로
+          쪼개 두었더니 할 말은 같은데 높이만 안 맞았다. 한 칸에 담고
+          안에서 좌우로 나눈다 - 왼쪽은 적는 것, 오른쪽은 고르는 것 */}
+      <section className={`room-panel ${!can('style') ? 'is-locked' : ''}`}>
+        <h3>
+          <FaPalette /> 방
+          {!can('style') && (
+            <span className="panel-lock">
+              <FaLock /> 보기만
+            </span>
+          )}
+        </h3>
+
+        <div className="room-basics">
+          <div className="basics-col">
+            <fieldset disabled={!can('style')}>
+              <span className="style-label">이름</span>
+              <div className="rooms-form-row">
+                <input
+                  className="rooms-input"
+                  value={name}
+                  maxLength={20}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <button
+                  className="ghost-btn"
+                  onClick={saveName}
+                  disabled={name.trim() === room.name}
+                >
+                  저장
+                </button>
+              </div>
+            </fieldset>
+
+            {/* 코드는 멤버면 누구나 본다. 꾸미기 권한과 상관없는 자리라
+                위 fieldset 밖에 둔다 */}
+            <span className="style-label">
+              <FaKey /> 입장 코드
+            </span>
+            <p className="rooms-hint">
+              코드를 아는 사람은 방에 들어와 기록을 볼 수 있어요. 기록을 남기는 건 권한을
+              받은 사람만 할 수 있습니다.
+            </p>
+            <div className="room-code-row">
+              <span className="room-code">{code || '••••••'}</span>
+              <button className="ghost-btn" onClick={showCode}>
+                코드 보기
               </button>
-            )}
-          </div>
-      </section>
-
-      {/* 이름·색·엠블럼은 전부 '이 방을 어떻게 보이게 할까'다. 칸을 셋으로
-          나눠 두었더니 짧은 칸들이 높이만 안 맞고 할 말은 같았다 */}
-      <Panel locked={!can('style')} head={<><FaPalette /> 방 이름·꾸미기</>}>
-          <span className="style-label">이름</span>
-          <div className="rooms-form-row">
-            <input
-              className="rooms-input"
-              value={name}
-              maxLength={20}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <button className="ghost-btn" onClick={saveName} disabled={name.trim() === room.name}>
-              저장
-            </button>
+              <button className="ghost-btn" onClick={copyCode}>
+                <FaRegCopy /> 복사
+              </button>
+              {can('code_reset') && (
+                <button className="ghost-btn" onClick={rerollCode}>
+                  <FaSync /> 새로 뽑기
+                </button>
+              )}
+            </div>
           </div>
 
-          <span className="style-label">색</span>
-          <p className="rooms-hint">
-            고른 색이 이 방 전체에 돕니다. 방 목록에서도 이 색으로 보여요.
-          </p>
-          <div className="style-row">
-            {ACCENTS.map((a) => (
-              <button
-                key={a.key}
-                className={`style-swatch ${room.accent === a.key ? 'is-on' : ''}`}
-                style={{ '--sw': a.main }}
-                onClick={() => saveStyle({ accent: a.key })}
-                aria-label={a.label}
-                title={a.label}
+          <fieldset className="basics-col" disabled={!can('style')}>
+            <span className="style-label">색</span>
+            <p className="rooms-hint">
+              고른 색이 이 방 전체에 돕니다. 방 목록에서도 이 색으로 보여요.
+            </p>
+            <div className="style-row">
+              {ACCENTS.map((a) => (
+                <button
+                  key={a.key}
+                  className={`style-swatch ${room.accent === a.key ? 'is-on' : ''}`}
+                  style={{ '--sw': a.main }}
+                  onClick={() => saveStyle({ accent: a.key })}
+                  aria-label={a.label}
+                  title={a.label}
+                />
+              ))}
+            </div>
+
+            <span className="style-label">엠블럼</span>
+            <div className="style-row style-emblems">
+              {EMBLEMS.map((e) => (
+                <button
+                  key={e}
+                  className={`style-emblem ${room.emblem === e ? 'is-on' : ''}`}
+                  onClick={() => saveStyle({ emblem: e })}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+
+            {/* 목록에 없는 걸 쓰고 싶은 방이 있다. 팀 이니셜이든 한 글자든 */}
+            <div className="rooms-form-row emblem-own">
+              <Emblem className="emblem-preview" value={badge || room.emblem} />
+              <input
+                className="rooms-input"
+                value={badge}
+                placeholder={`직접 넣기 — ${EMBLEM_MAX}글자까지`}
+                onChange={(e) => setBadge(clipEmblem(e.target.value))}
+                onKeyDown={(e) => e.key === 'Enter' && badge && saveStyle({ emblem: badge })}
               />
-            ))}
-          </div>
-          <span className="style-label">엠블럼</span>
-          <div className="style-row style-emblems">
-            {EMBLEMS.map((e) => (
               <button
-                key={e}
-                className={`style-emblem ${room.emblem === e ? 'is-on' : ''}`}
-                onClick={() => saveStyle({ emblem: e })}
+                className="ghost-btn"
+                onClick={() => saveStyle({ emblem: badge })}
+                disabled={!badge || badge === room.emblem}
               >
-                {e}
+                적용
               </button>
-            ))}
-          </div>
-
-          {/* 목록에 없는 걸 쓰고 싶은 방이 있다. 팀 이니셜이든 한 글자든 */}
-          <div className="rooms-form-row emblem-own">
-            <Emblem className="emblem-preview" value={badge || room.emblem} />
-            <input
-              className="rooms-input"
-              value={badge}
-              placeholder={`직접 넣기 (예: GG, 롤, ★) — ${EMBLEM_MAX}글자까지`}
-              onChange={(e) => setBadge(clipEmblem(e.target.value))}
-              onKeyDown={(e) => e.key === 'Enter' && badge && saveStyle({ emblem: badge })}
-            />
-            <button
-              className="ghost-btn"
-              onClick={() => saveStyle({ emblem: badge })}
-              disabled={!badge || badge === room.emblem}
-            >
-              적용
-            </button>
-          </div>
-      </Panel>
-      </div>
+            </div>
+          </fieldset>
+        </div>
+      </section>
 
       <section className={`room-panel ${!can('roster') ? 'is-locked' : ''}`}>
           <div className="room-panel-head">

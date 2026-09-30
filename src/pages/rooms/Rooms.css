@@ -1727,12 +1727,19 @@ li.day-sep em {
 /* 설정 탭의 짧은 칸들(입장 코드·방 꾸미기·방 이름)을 좌우로 나눈다.
    세로로만 쌓으니 넓은 화면에서 오른쪽이 텅 비고, 아래 참가자·멤버까지
    한참 내려가야 했다. 좁아지면 알아서 한 줄로 돌아온다 */
-/* align-items를 start로 두었더니 짧은 칸만 위에 붕 떠서 둘이 한 줄이라는
-   게 안 읽혔다. 격자는 그냥 두면 칸 끝을 맞춰준다(stretch) */
-.settings-cols {
+/* '이 방' 한 칸 안을 좌우로 나눈다. 왼쪽은 적는 것(이름·입장 코드),
+   오른쪽은 고르는 것(색·엠블럼).
+   칸을 넷으로 쪼개 두었을 때는 할 말은 같은데 높이만 안 맞았다 */
+.room-basics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 0.2rem 1.4rem;
+}
+
+/* fieldset이 칸 하나 노릇을 한다. 기본 최소 너비 때문에 안 줄어드는 걸
+   막아둔다 (.room-panel fieldset이 이미 하고 있지만 여기선 격자 칸이다) */
+.basics-col {
+  min-width: 0;
 }
 
 /* 한 칸 안에 이름·색·엠블럼이 같이 있다. 무엇을 고르는 자리인지
