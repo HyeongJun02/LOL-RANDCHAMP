@@ -14,6 +14,7 @@ import {
   unsettleScrim,
   removeScrim,
   fetchBetting,
+  fetchFbOdds,
   firstBloodRates,
 } from '../../server/rooms';
 import { useDialog } from '../../components/common/Dialog';
@@ -68,6 +69,8 @@ const BetTab = ({
   /* 진행 중인 판에 이미 건 사람들. 이름만 온다 (RLS가 남의 배팅 줄은 막는다) */
   const [bettors, setBettors] = useState([]);
   const [cart, setCart] = useState({});
+  /* 진행 중인 판의 퍼블 배당. 고정 배당이라 마감 전에도 보여준다 */
+  const [fbOdds, setFbOdds] = useState(new Map());
   const busy = useRef(false);
 
   const liveId = activeScrim?.id || null;
@@ -87,6 +90,23 @@ const BetTab = ({
   useEffect(() => {
     load();
   }, [load, version]);
+
+  /* 경기가 열려 있는 동안 퍼블 배당은 안 변한다 (지난 판과 명단으로만
+     정해진다). version이 아니라 경기 id로만 다시 받는다 - 누가 걸 때마다
+     부르면 배팅 한 번에 요청이 하나씩 더 붙는다 */
+  useEffect(() => {
+    let alive = true;
+    if (!liveId) {
+      setFbOdds(new Map());
+      return undefined;
+    }
+    fetchFbOdds(liveId).then((m) => {
+      if (alive) setFbOdds(m);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [liveId]);
 
   const guard = async (fn) => {
     if (busy.current) return;
@@ -319,6 +339,15 @@ const BetTab = ({
     const open = scrim.status === 'betting';
     const settled = scrim.status === 'settled';
 
+    /* 마감 전에는 bet_pools가 RLS로 막혀 있어 p가 없다. 퍼블만은 고정
+       배당이라 미리 받아둔 값을 보여준다 */
+    const odds =
+      p?.odds != null
+        ? Number(p.odds)
+        : market === 'first_blood' && scrim.id === liveId
+          ? fbOdds.get(Number(selection))
+          : null;
+
     const answer = winningSelection(scrim, market);
     const won = settled && answer === selection;
     const lost = settled && answer != null && answer !== selection;
@@ -348,7 +377,7 @@ const BetTab = ({
           </span>
           {/* 숫자는 한 덩어리로 묶는다. 퍼블 칸에서는 이 덩어리가 통째로
               이름 아래 줄로 내려가고, 나머지 마켓에서는 오른쪽에 붙는다 */}
-          {(fbShown || p?.odds != null) && (
+          {(fbShown || odds != null) && (
             <span className="bet-opt-meta">
               {/* 이름만 보고 고르면 찍기다. 지난 판에서 얼마나 땄는지를 붙인다.
                   판수가 적으면 보정된 값이라 실제 횟수는 title로 둔다 */}
@@ -359,7 +388,7 @@ const BetTab = ({
               )}
               {/* 마감 뒤에는 내가 고른 것만이 아니라 전부 보여준다.
                   다른 쪽이 얼마였는지 모르면 내 배당이 좋은 건지도 모른다 */}
-              {p?.odds != null && <em className="bet-odds">{Number(p.odds).toFixed(2)}배</em>}
+              {odds != null && <em className="bet-odds">{odds.toFixed(2)}배</em>}
             </span>
           )}
         </button>
@@ -403,8 +432,8 @@ const BetTab = ({
             <em>기본 {fixedFb}배</em>
           </h4>
           <p className="rooms-hint">
-            티어가 낮을수록 배당이 조금 높습니다 (한 티어당 2%). 마감 때 사람별 배당이
-            공개됩니다.
+            티어가 낮을수록, 지금까지 퍼블을 적게 땄을수록 배당이 조금 높습니다. 고정
+            배당이라 마감 전에도 그대로입니다.
           </p>
           <div className="bet-opts bet-opts-grid">
             {roster.map((id) =>

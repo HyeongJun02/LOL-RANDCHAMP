@@ -353,7 +353,62 @@ test('승리팀 배당은 패리뮤추얼이다', () => {
 });
 
 test('퍼블은 인원 × 0.85', () => {
+  expect(fnBody('fb_odds')).toContain('n * 0.85');
+  /* 명단에서 지워진 참가자는 fb_odds가 못 찾는다. 배당이 비지 않게 채운다 */
   expect(fnBody('lock_betting')).toContain('round(n * 0.85, 2)');
+});
+
+/* 화면과 정산이 따로 계산하면 '걸 때 본 배당'과 '받은 배당'이 조용히
+   달라진다. 퍼블은 고정 배당이라 마감 전에 보여줘도 눈치싸움이 안 생기고,
+   그래서 같은 함수를 양쪽이 쓴다 */
+test('퍼블 배당은 화면과 정산이 같은 함수를 쓴다', () => {
+  expect(fnBody('lock_betting')).toContain('from public.fb_odds(p_scrim) f');
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  expect(src).toContain("rpc('fb_odds'");
+  /* 남의 방 명단을 배당으로 떠볼 수 없어야 한다 */
+  expect(fnBody('fb_odds')).toContain('if not public.is_room_member(s.room_id) then');
+});
+
+/* 퍼블은 한 판에 한 번뿐이라 표본이 아주 느리게 쌓인다. 몇 판 안 한
+   사람의 비율은 사실상 우연이라, 보정이 세면 엉뚱한 사람에게 돈이 몰린다 */
+test('퍼블 비율 보정은 아주 작고, 위아래로 묶여 있다', () => {
+  const tuning = require('../rules/tuning');
+  const body = fnBody('fb_odds');
+  expect(body).toContain(`1 - ${tuning.FIRST_BLOOD_RATE_TILT} * (`);
+  expect(body).toContain(
+    `greatest(${tuning.FIRST_BLOOD_TILT_CLAMP.min}, least(${tuning.FIRST_BLOOD_TILT_CLAMP.max},`
+  );
+  /* 판수 보정을 먼저 건다 (순위표와 같은 PRIOR_GAMES) */
+  expect(body).toContain(`st.got + ${tuning.PRIOR_GAMES} * (st.expected / st.games)`);
+  expect(body).toContain(`/ (st.games + ${tuning.PRIOR_GAMES})`);
+  /* 한 판도 안 뛴 사람은 보정 없이 기본값 */
+  expect(body).toContain('when st.games = 0 then 1.0');
+
+  /* 티어 보정(칸당 2%)보다 크면 '조금'이 아니다 */
+  expect(tuning.FIRST_BLOOD_RATE_TILT).toBeLessThanOrEqual(0.05);
+  expect(tuning.FIRST_BLOOD_TILT_CLAMP.max - 1).toBeLessThanOrEqual(0.06);
+});
+
+/* 굴려보면 이렇게 나온다. 수식을 고치면 여기가 먼저 깨진다 */
+test('평균대로 따면 그대로, 많이 따면 아주 조금만 낮아진다', () => {
+  const t = require('../rules/tuning');
+  /* fb_odds의 보정 항과 같은 식 */
+  const tilt = (rate, n) =>
+    Math.min(
+      t.FIRST_BLOOD_TILT_CLAMP.max,
+      Math.max(t.FIRST_BLOOD_TILT_CLAMP.min, 1 - t.FIRST_BLOOD_RATE_TILT * (rate * n - 1))
+    );
+
+  /* 6명 방. 평균은 1/6 */
+  expect(tilt(1 / 6, 6)).toBeCloseTo(1, 5);
+  /* 평균의 2배 → 3%만 내려간다 */
+  expect(tilt(2 / 6, 6)).toBeCloseTo(1 - t.FIRST_BLOOD_RATE_TILT, 5);
+  /* 아무리 많이 따도 하한 아래로는 안 간다 (6명 방에서 전부 다 딴 사람) */
+  expect(tilt(1, 6)).toBe(t.FIRST_BLOOD_TILT_CLAMP.min);
+  /* 반대쪽은 상한에 닿지도 않는다. 평균보다 적게 따 봐야 0까지라,
+     한 번도 못 딴 사람이어야 겨우 +3%다 */
+  expect(tilt(0, 6)).toBeCloseTo(1 + t.FIRST_BLOOD_RATE_TILT, 5);
+  expect(tilt(0, 6)).toBeLessThan(t.FIRST_BLOOD_TILT_CLAMP.max);
 });
 
 /* 기준·지수·상하한이 tuning.js와 어긋나면 화면은 '1.98배쯤'이라고 적고
@@ -541,7 +596,7 @@ test('인자를 늘린 open_betting은 옛 4인자 버전을 먼저 지운다 (�
 });
 
 test('퍼블 배당은 티어가 낮을수록 높다 (전원 같으면 낮은 티어에 걸 이유가 없다)', () => {
-  const body = sql.slice(sql.indexOf('function public.lock_betting'));
+  const body = fnBody('fb_odds') + fnBody('lock_betting');
   /* 골드(인덱스 3)를 1.00으로 두고 한 칸당 2% */
   expect(body).toContain('(3 - coalesce(t.idx, 3)) * 0.02');
   /* 조인에서 빠진 선택지도 배당이 비지 않게 채운다 */
@@ -976,9 +1031,9 @@ test('상한 없는 마켓은 capOf가 null을 준다', () => {
 
 test('배당이 tuning.js와 DB에서 같다', () => {
   const tuning = require('../rules/tuning');
+  expect(fnBody('fb_odds')).toContain(`n * ${tuning.FIRST_BLOOD_RATE}`);
+  expect(fnBody('fb_odds')).toContain(`* ${tuning.FIRST_BLOOD_TIER_BONUS}`);
   const body = fnBody('lock_betting');
-  expect(body).toContain(`n * ${tuning.FIRST_BLOOD_RATE}`);
-  expect(body).toContain(`* ${tuning.FIRST_BLOOD_TIER_BONUS}`);
   /* 언더오버 쪽은 바로 위 '몰린 만큼만 움직인다' 테스트가 대조한다 */
   expect(body).toContain(`then ${tuning.KILLS_ODDS}`);
 });
@@ -1145,9 +1200,10 @@ test('게임을 읽을 수 있게 컬럼이 열려 있다', () => {
 /* 퍼블 배당 보정은 '골드보다 몇 칸 아래인가'를 센다.
    두 게임의 티어 이름이 달라서 사다리도 갈라야 한다 */
 test('퍼블 배당 보정이 게임별 티어 사다리를 본다', () => {
+  expect(fnBody('fb_odds')).toContain('public.tier_ladder(rm.game)');
   expect(fnBody('tier_ladder')).toContain('ASCENDANT');
   expect(fnBody('tier_ladder')).toContain('EMERALD');
-  expect(fnBody('lock_betting')).toContain('public.tier_ladder(r.game)');
+  /* 사다리를 보는 건 이제 fb_odds 하나뿐이다 */
 });
 
 test('두 사다리 모두 골드가 네 번째다 (보정식이 공용이라)', () => {

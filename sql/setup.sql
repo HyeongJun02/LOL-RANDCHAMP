@@ -1364,6 +1364,92 @@ end; $fn$;
 
 
 -- 게임 시작. 여기서 배당이 확정되고 공개된다.
+-- 퍼블 배당. 세 가지를 곱한다.
+--
+--   1) 기본값 = 인원 n × 0.85
+--      공정값(n배)보다 낮게 잡아서 이 자체가 끼꼬 소각 장치가 된다.
+--   2) 티어 보정 = 한 칸당 2%, 골드를 1.00으로 두고 아래로 갈수록 높인다.
+--      전원 같은 배당이면 아무도 낮은 티어에 걸 이유가 없다.
+--   3) 퍼블 비율 보정 = 실제로 많이 따는 사람은 배당을 조금 낮춘다.
+--      '조금'이 중요하다. 퍼블은 한 판에 한 번뿐이라 표본이 아주 느리게
+--      쌓이고, 몇 판 안 한 사람의 비율은 거의 우연이다. 그래서
+--        - 순위표와 같은 베이지안 스무딩으로 평균 쪽으로 당긴 뒤
+--        - 평균의 2배를 따는 사람이어야 3% 내려가고
+--        - 아무리 치우쳐도 ±5%를 못 넘게 묶는다.
+--      티어 보정(칸당 2%)과 비슷하거나 작은 크기다.
+--
+-- 이 함수 하나가 화면과 정산 양쪽에 쓰인다. 퍼블은 고정 배당이라 누가
+-- 얼마를 걸었는지와 무관해서, 마감 전에 보여줘도 눈치싸움이 안 생긴다.
+--
+-- src/rules/tuning.js의 FIRST_BLOOD_* 와 같은 숫자여야 한다 (테스트가 대조).
+--
+-- 방의 지난 판 전부를 훑는다. 방마다 경기는 1000개로 묶여 있고 이 함수는
+-- 경기를 열 때 한 번, 마감할 때 한 번만 불린다.
+create or replace function public.fb_odds(p_scrim bigint)
+returns table (player_id bigint, odds numeric)
+language plpgsql security definer set search_path = public as $fn$
+declare s scrims; n int;
+begin
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
+  if not public.is_room_member(s.room_id) then
+    raise exception '이 방의 멤버가 아니에요.';
+  end if;
+
+  n := jsonb_array_length(s.team_a) + jsonb_array_length(s.team_b);
+
+  return query
+  with roster as (
+    select e::bigint as pid
+      from jsonb_array_elements_text(s.team_a || s.team_b) e
+  ),
+  -- 퍼블을 적은 판만 센다. 안 적은 판을 분모에 넣으면 전부 실제보다 낮다
+  past as (
+    select p.id,
+           p.first_blood_player_id as fb,
+           p.team_a || p.team_b as ids,
+           (jsonb_array_length(p.team_a) + jsonb_array_length(p.team_b))::numeric as size
+      from scrims p
+     where p.room_id = s.room_id
+       and p.status = 'settled'
+       and p.first_blood_player_id is not null
+  ),
+  stat as (
+    select r.pid,
+           count(g.id)                                        as games,
+           count(g.id) filter (where g.fb = r.pid)             as got,
+           coalesce(sum(1.0 / nullif(g.size, 0)), 0)           as expected
+      from roster r
+      left join past g on public.has_player(g.ids, r.pid)
+     group by r.pid
+  )
+  select
+    st.pid,
+    round(
+      n * 0.85
+      -- 티어. 명단에서 지워진 참가자는 조회가 비므로 골드(3)로 본다
+      * (1 + (3 - coalesce(t.idx, 3)) * 0.02)
+      -- 퍼블 비율. 평균(1/n)을 1.0으로 두고 그 배수만큼만 기울인다
+      * case
+          when st.games = 0 then 1.0
+          else greatest(0.95, least(1.05,
+                 1 - 0.03 * (
+                   ((st.got + 3 * (st.expected / st.games)) / (st.games + 3)) * n - 1
+                 )))
+        end,
+      2)
+    from stat st
+    left join lateral (
+      select array_position(public.tier_ladder(rm.game), rp.tier) - 1 as idx
+        from room_players rp
+        join rooms rm on rm.id = rp.room_id
+       where rp.id = st.pid
+    ) t on true;
+end; $fn$;
+
+grant execute on function public.fb_odds(bigint) to authenticated;
+
+
 create or replace function public.lock_betting(p_scrim bigint)
 returns void language plpgsql security definer set search_path = public as $fn$
 declare s scrims; pool bigint; n int; expired boolean;
@@ -1394,29 +1480,17 @@ begin
                      else round(pool::numeric / total_amount, 2) end
    where scrim_id = p_scrim and market = 'winner';
 
-  -- 퍼블은 고정 배당. 공정값(인원 n배)보다 낮게 잡아서 이 자체가
-  -- 끼꼬 소각 장치가 된다.
-  --
-  -- 여기에 티어 보정을 얹는다. 퍼블은 잘하는 사람이 딸 확률이 높은데
-  -- 배당이 전원 같으면 아무도 낮은 티어에 걸 이유가 없다. 티어 한 칸당
-  -- 2%씩, 골드를 1.00으로 두고 아래로 갈수록 조금 높인다.
-  -- 명단에서 지워진 참가자(조회 실패)는 보정 없이 기본값을 쓴다.
-  n := jsonb_array_length(s.team_a) + jsonb_array_length(s.team_b);
+  -- 퍼블 배당은 fb_odds()가 정한다. 화면도 같은 함수를 부른다 - 두 군데서
+  -- 따로 계산하면 '걸 때 본 배당'과 '받은 배당'이 조용히 달라진다.
   update bet_pools bp
-     set odds = round(
-           n * 0.85 * (1 + (3 - coalesce(t.idx, 3)) * 0.02),
-           2)
-    from (
-      select rp.id,
-             array_position(public.tier_ladder(r.game), rp.tier) - 1 as idx
-        from room_players rp
-        join rooms r on r.id = rp.room_id
-    ) t
+     set odds = f.odds
+    from public.fb_odds(p_scrim) f
    where bp.scrim_id = p_scrim
      and bp.market = 'first_blood'
-     and t.id = bp.selection::bigint;
+     and bp.selection::bigint = f.player_id;
 
-  -- 위 조인에서 빠진 선택지(명단에서 지워진 참가자)는 기본값으로 채운다
+  -- 명단에서 지워진 참가자는 fb_odds가 못 찾는다. 기본값으로 채운다
+  n := jsonb_array_length(s.team_a) + jsonb_array_length(s.team_b);
   update bet_pools set odds = round(n * 0.85, 2)
    where scrim_id = p_scrim and market = 'first_blood' and odds is null;
 

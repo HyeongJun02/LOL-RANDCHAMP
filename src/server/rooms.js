@@ -904,6 +904,21 @@ export const openBetting = (roomId, mode, teamA, teamB, closeSeconds = null, kil
     p_kill_line: killLine,
   });
 
+/* 퍼블 배당. 고정 배당이라 누가 얼마를 걸었는지와 무관해서 마감 전에
+   보여줘도 눈치싸움이 안 생긴다 - 오히려 배당을 모르고 걸게 두는 쪽이
+   이상했다.
+
+   정산 때 쓰는 값과 같은 함수에서 나온다. 화면에서 따로 계산하면
+   '걸 때 본 배당'과 '받은 배당'이 조용히 달라진다.
+
+   경기가 열려 있는 동안에는 값이 안 변하므로 (지난 판과 명단으로만
+   정해진다) 폴링마다 부르지 않는다 - 경기가 바뀔 때만 한 번 */
+export const fetchFbOdds = async (scrimId) => {
+  if (!isNeonConfigured || !scrimId) return new Map();
+  const rows = await rpc('fb_odds', { p_scrim: scrimId }).catch(() => []);
+  return new Map((rows || []).map((r) => [Number(r.player_id), Number(r.odds)]));
+};
+
 export const placeBets = (scrimId, bets) =>
   rpc('place_bets', { p_scrim: scrimId, p_bets: bets });
 
