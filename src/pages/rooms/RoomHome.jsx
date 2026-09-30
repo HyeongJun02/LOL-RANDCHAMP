@@ -4,6 +4,7 @@ import { statsFor, streaksOf } from '../../rules/matches';
 import { titlesOf } from '../../rules/titles';
 import { timeAgo } from '../../lib/timeAgo';
 import './RoomHome.css';
+import Emblem from '../../components/common/Emblem';
 
 /* 방의 대문.
 
@@ -111,7 +112,7 @@ const RoomHome = ({
       )}
 
       <section className="rh-hero">
-        <span className="rh-emblem">{room.emblem}</span>
+        <Emblem className="rh-emblem" value={room.emblem} />
         <div className="rh-hero-text">
           <h2>{room.name}</h2>
           <p>

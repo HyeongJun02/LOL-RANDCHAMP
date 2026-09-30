@@ -15,13 +15,52 @@ export const ACCENTS = [
 
 export const DEFAULT_ACCENT = 'gold';
 
-/* 고를 수 있는 엠블럼. 직접 입력을 열어두면 아무 글자나 들어와서
-   줄이 밀린다. 눌러서 고르는 편이 빠르기도 하다 */
+/* 눌러서 고르는 엠블럼. 직접 적을 수도 있다 (아래 EMBLEM_MAX) */
 export const EMBLEMS = [
   '⚔️', '🛡️', '👑', '🔥', '⚡', '🐉',
   '🦁', '🐺', '🦈', '🍺', '🎯', '💀',
   '🌙', '⭐', '🍀', '🎮',
 ];
+
+export const DEFAULT_EMBLEM = '⚔️';
+
+/* 직접 적을 때 몇 글자까지. 자리가 정사각형이라 네 글자부터는 읽을 수
+   없을 만큼 작아진다 */
+export const EMBLEM_MAX = 3;
+
+/* 사람이 세는 '글자 수'. '⚔️'는 코드로는 둘이고 '👨‍👩‍👧'는 다섯이라,
+   문자열 길이로 세면 이모지 하나가 세 글자 취급을 받는다 */
+export const glyphsOf = (text) => {
+  const s = String(text || '');
+  try {
+    return [...new Intl.Segmenter().segment(s)].length;
+  } catch {
+    /* Segmenter가 없는 브라우저. 코드 포인트로라도 센다 */
+    return [...s].length;
+  }
+};
+
+/* DB의 rooms_emblem_chk가 코드 여덟 개까지만 받는다. 이모지 하나가
+   코드 다섯을 먹기도 해서, 글자 수와 따로 이쪽도 지켜야 한다 */
+const CODE_MAX = 8;
+
+/* 앞에서부터 EMBLEM_MAX 글자만 남긴다. maxLength로는 이모지가 중간에
+   잘려서 깨진 글자가 된다.
+   길이 제한에 걸리면 뒤에서부터 한 글자씩 뺀다 - 화면에서 통과시킨 값이
+   서버에서 거절당하면 사람은 왜 안 되는지 모른다 */
+export const clipEmblem = (text) => {
+  const clean = String(text || '').replace(/\s+/g, '');
+  let parts;
+  try {
+    parts = [...new Intl.Segmenter().segment(clean)].map((x) => x.segment);
+  } catch {
+    parts = [...clean];
+  }
+  parts = parts.slice(0, EMBLEM_MAX);
+  while (parts.length > 1 && [...parts.join('')].length > CODE_MAX) parts.pop();
+  const out = parts.join('');
+  return [...out].length > CODE_MAX ? '' : out;
+};
 
 export const accentOf = (key) =>
   ACCENTS.find((a) => a.key === key) || ACCENTS.find((a) => a.key === DEFAULT_ACCENT);

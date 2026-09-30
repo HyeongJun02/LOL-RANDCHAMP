@@ -22,6 +22,7 @@ import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelList } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './Rooms.css';
+import Emblem from '../../components/common/Emblem';
 
 const RoomList = () => {
   const { user, loading: authLoading } = useAuth();
@@ -259,7 +260,7 @@ const RoomList = () => {
                   <FaThumbtack />
                 </button>
 
-                <span className="room-card-emblem">{r.emblem}</span>
+                <Emblem className="room-card-emblem" value={r.emblem} />
 
                 <span className="room-card-main">
                   <span className="room-card-top">

@@ -56,7 +56,7 @@ import {
 } from '../../server/rooms';
 import { getGame, getTier } from '../../rules/games';
 import { GameProvider, useGame, useGameKey } from '../../lib/GameContext';
-import { ACCENTS, EMBLEMS, accentVars } from '../../lib/roomStyle';
+import { ACCENTS, EMBLEMS, EMBLEM_MAX, accentVars, clipEmblem } from '../../lib/roomStyle';
 import { titlesOf } from '../../rules/titles';
 import { MAX_ROOM_PLAYERS } from '../../server/limits';
 import { ROLES, CAPS, allows } from '../../rules/permissions';
@@ -79,6 +79,7 @@ import NicknameGate from '../../components/rooms/NicknameGate';
 import { SkelLine, SkelRows } from '../../components/common/Skeleton';
 import { usePageMeta, PAGE_META } from '../../lib/seo';
 import './Rooms.css';
+import Emblem from '../../components/common/Emblem';
 
 /* 탭 순서 = 실제로 쓰는 순서. 방에 들어와서 게임을 시작하고, 또또를 열고,
    끝나면 기록을 본다. 홈은 이 전부로 가는 갈림길이라 맨 앞이다.
@@ -204,6 +205,8 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
   /* 기록에만 남은 자리마다 '누구인가' 고른 값. id → 참가자 id */
   const [lostPick, setLostPick] = useState({});
   const [ghostName, setGhostName] = useState('');
+  /* 목록에 없는 엠블럼을 직접 적을 때 */
+  const [badge, setBadge] = useState('');
   const [showLoader, setShowLoader] = useState(false);
   /* 관리 팝업을 띄운 멤버의 user_id. 객체로 들고 있으면 폴링이 한 번 돌 때
      옛 값이 화면에 남아 끼꼬가 갱신되지 않는다 */
@@ -530,6 +533,9 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
 
   return (
     <div className="room-settings">
+      {/* 짧은 칸들은 좌우로 나눈다. 세로로만 쌓으니 오른쪽이 텅 비고
+          아래 참가자·멤버까지 한참 내려가야 했다 */}
+      <div className="settings-cols">
       <section className="room-panel">
           <h3>
             <FaKey /> 입장 코드
@@ -581,6 +587,25 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               </button>
             ))}
           </div>
+
+          {/* 목록에 없는 걸 쓰고 싶은 방이 있다. 팀 이니셜이든 한 글자든 */}
+          <div className="rooms-form-row emblem-own">
+            <Emblem className="emblem-preview" value={badge || room.emblem} />
+            <input
+              className="rooms-input"
+              value={badge}
+              placeholder={`직접 넣기 (예: GG, 롤, ★) — ${EMBLEM_MAX}글자까지`}
+              onChange={(e) => setBadge(clipEmblem(e.target.value))}
+              onKeyDown={(e) => e.key === 'Enter' && badge && saveStyle({ emblem: badge })}
+            />
+            <button
+              className="ghost-btn"
+              onClick={() => saveStyle({ emblem: badge })}
+              disabled={!badge || badge === room.emblem}
+            >
+              적용
+            </button>
+          </div>
       </Panel>
 
       <Panel locked={!can('style')} head={<>방 이름</>}>
@@ -596,6 +621,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
             </button>
           </div>
       </Panel>
+      </div>
 
       <section className={`room-panel ${!can('roster') ? 'is-locked' : ''}`}>
           <div className="room-panel-head">
@@ -1106,7 +1132,7 @@ const Room = () => {
         {/* 방 이름을 눌러 다른 방으로 바로 넘어간다. 전에는 뒤로 →
             방 목록 → 다른 방, 세 번을 거쳐야 했다 */}
         <RoomSwitch room={room} userId={user.id}>
-          <span className="room-emblem">{room.emblem}</span>
+          <Emblem className="room-emblem" value={room.emblem} />
           <span className="room-hero-text">
             <span className="room-name">{room.name}</span>
             <span className="room-meta">

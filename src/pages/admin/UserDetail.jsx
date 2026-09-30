@@ -4,6 +4,7 @@ import { fetchUserDetail } from '../../server/admin';
 import { marketLabel } from '../../server/rooms';
 import Modal from '../../components/common/Modal';
 import { SkelRows } from '../../components/common/Skeleton';
+import Emblem from '../../components/common/Emblem';
 
 const num = (n) => Number(n || 0).toLocaleString();
 
@@ -69,7 +70,7 @@ const UserDetail = ({ userId, name, onClose }) => {
                 {data.rooms.map((r) => (
                   <li key={r.id}>
                     <Link className="adm-name" to={`/rooms/${r.id}`} onClick={onClose}>
-                      <span className="adm-emblem">{r.emblem}</span>
+                      <Emblem className="adm-emblem" value={r.emblem} />
                       {r.name}
                     </Link>
                     <span className={`rooms-role role-${r.role}`}>

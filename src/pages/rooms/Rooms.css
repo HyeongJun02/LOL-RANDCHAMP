@@ -1724,6 +1724,31 @@ li.day-sep em {
 
 /* ---------- 참가자 명단 ---------- */
 
+/* 설정 탭의 짧은 칸들(입장 코드·방 꾸미기·방 이름)을 좌우로 나눈다.
+   세로로만 쌓으니 넓은 화면에서 오른쪽이 텅 비고, 아래 참가자·멤버까지
+   한참 내려가야 했다. 좁아지면 알아서 한 줄로 돌아온다 */
+.settings-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+  gap: 0.9rem;
+}
+
+/* 직접 적는 엠블럼. 왼쪽에 지금 모양을 띄워두면 적으면서 확인이 된다 */
+.emblem-own {
+  margin-top: 0.6rem;
+}
+
+.emblem-preview {
+  flex: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 9px;
+  border: 1px solid var(--gg-panel-border);
+  background: color-mix(in srgb, var(--accent, #c8aa6e) 14%, transparent);
+  font-size: 1.1rem;
+}
+
 .room-panel-head {
   display: flex;
   align-items: center;

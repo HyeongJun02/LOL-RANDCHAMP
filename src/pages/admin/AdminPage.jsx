@@ -29,6 +29,7 @@ import { SkelRows, SkelBox } from '../../components/common/Skeleton';
 import CheckTab from './CheckTab';
 import UserDetail from './UserDetail';
 import './Admin.css';
+import Emblem from '../../components/common/Emblem';
 
 const num = (n) => Number(n || 0).toLocaleString();
 
@@ -498,7 +499,7 @@ const AdminPage = () => {
                       <tr key={r.id}>
                         <td>
                           <Link className="adm-name" to={`/rooms/${r.id}`}>
-                            <span className="adm-emblem">{r.emblem}</span>
+                            <Emblem className="adm-emblem" value={r.emblem} />
                             {r.name}
                           </Link>
                         </td>

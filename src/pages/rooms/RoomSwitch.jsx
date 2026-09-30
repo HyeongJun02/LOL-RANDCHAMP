@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaChevronDown, FaPlus, FaCircle } from 'react-icons/fa';
 import { useMyRooms } from '../../server/rooms';
+import Emblem from '../../components/common/Emblem';
 
 /* 방 이름을 눌러 다른 방으로 바로 넘어간다.
 
@@ -59,7 +60,7 @@ const RoomSwitch = ({ room, userId, children }) => {
                 to={`/rooms/${r.id}`}
                 onClick={() => setOpen(false)}
               >
-                <span className="room-switch-emblem">{r.emblem}</span>
+                <Emblem className="room-switch-emblem" value={r.emblem} />
                 <span className="room-switch-name">{r.name}</span>
                 {/* 또또가 돌고 있는 방은 여기서 바로 보여야 옮겨갈 이유가 된다 */}
                 {r.live && <FaCircle className="room-switch-live" title="또또 진행 중" />}
