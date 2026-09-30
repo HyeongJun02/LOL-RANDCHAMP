@@ -1476,8 +1476,9 @@ test('브라우저가 그리는 것들도 어둡게 그린다', () => {
   expect(theme).toMatch(/:root\s*\{[^}]*color-scheme:\s*dark/);
 });
 
-/* select에 background 단축을 쓰면 theme.css가 그려준 화살표가 지워진다.
-   화면만 봐서는 '화살표가 왜 없지' 정도로만 보여서 한참 못 찾는다 */
+/* select.rooms-input에 화살표를 background-image로 그려뒀다. 그 칸 배경을
+   background 단축으로 덮으면 화살표가 지워진다. 화면만 봐서는 '화살표가
+   왜 없지' 정도로만 보여서 한참 못 찾는다 */
 test('select 배경은 background-color로만 준다', () => {
   const walk = (dir) =>
     fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -1497,4 +1498,22 @@ test('select 배경은 background-color로만 준다', () => {
     });
   });
   expect(bad).toEqual([]);
+});
+
+/* select 전체에 화살표 padding(1.7rem)을 걸었다가 화면이 깨졌다.
+   디비전 칸은 3rem(48px)뿐이어서 숫자 자리가 12px밖에 안 남고, 티어 칸은
+   6.6rem이어서 '그랜드마스터'가 잘렸다. padding을 직접 정해둔 칸은 전역
+   규칙이 져서 화살표 자리가 아예 안 생겨 글자 위에 겹쳤다.
+   폭이 넉넉한 칸(.rooms-input)에만 건다 */
+test('화살표는 폭이 넉넉한 칸에만 건다', () => {
+  const theme = fs.readFileSync(path.join(__dirname, '..', 'styles', 'theme.css'), 'utf8');
+  const rooms = fs.readFileSync(
+    path.join(__dirname, '..', 'pages', 'rooms', 'Rooms.css'),
+    'utf8'
+  );
+  /* 맨 select에 걸면 좁은 칸까지 다 따라온다 */
+  expect(theme).not.toMatch(/\nselect\s*\{/);
+  expect(theme).not.toMatch(/\nselect:hover/);
+  expect(rooms).toContain('select.rooms-input {');
+  expect(rooms).toMatch(/select\.rooms-input \{[^}]*padding-right/);
 });

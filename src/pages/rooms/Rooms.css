@@ -52,6 +52,36 @@
   flex: 1 1 7.5rem;
 }
 
+/* 화살표를 직접 그리는 건 폭이 넉넉한 칸에서만 한다.
+
+   전에 select 전체에 걸었다가 화면이 깨졌다. 화살표 자리로 오른쪽
+   padding을 1.7rem(27px) 잡아먹는데,
+     - 디비전 칸은 3rem(48px)뿐이라 숫자 자리가 12px밖에 안 남았고
+     - 티어 칸은 6.6rem이라 '그랜드마스터'가 잘렸고
+     - padding을 직접 정해둔 칸(.room-player select)은 전역 규칙이 져서
+       화살표 자리가 아예 안 생겨 글자 위에 화살표가 겹쳤다.
+   좁은 칸에 화살표를 넣을 이유가 없다 - 한 자리 숫자를 고르는 칸이다.
+
+   펼친 목록 자체는 브라우저 몫이라 CSS로 못 그린다.
+   :root의 color-scheme: dark가 그걸 어둡게 만들어준다. */
+select.rooms-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 1.7rem;
+  /* 배경을 background 단축으로 덮어쓰면 이 화살표가 사라진다.
+     칸 색은 background-color로 줄 것 (테스트가 대조한다) */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%238b98ae' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 0.62rem;
+  cursor: pointer;
+}
+
+select.rooms-input:hover:not(:disabled) {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23e2e8f0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+
 .rooms-code-input {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 0.18em;

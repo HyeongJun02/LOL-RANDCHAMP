@@ -181,33 +181,6 @@
 }
 
 /* ---------- 드롭다운 ---------- */
-/* OS가 그리는 삼각형은 플랫폼마다 다르게 생겼고 우리 테두리와 안 맞는다.
-   화살표를 직접 그리고 칸은 입력칸과 같은 모양으로 맞춘다.
-
-   펼친 목록 자체는 브라우저 몫이라 CSS로 못 그린다. :root의
-   color-scheme: dark가 그걸 어둡게 만들어준다.
-
-   배경을 background 단축으로 덮어쓰면 이 화살표가 사라진다.
-   칸마다 다른 색을 줄 때는 background-color를 쓸 것 */
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: 1.7rem;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%238b98ae' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 0.6rem center;
-  background-size: 0.62rem;
-  cursor: pointer;
-}
-
-select:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23e2e8f0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-}
-
-select:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
 
 /* 펼친 목록의 글자색은 항목이 스스로 정한다. select에 color를 주면
    (티어 색) 목록 전체가 그 색으로 물든다 - 마스터를 고르면 모든 줄이
