@@ -1584,3 +1584,29 @@ test('내전 기록은 한 판을 한 줄로 읽는다', () => {
   /* 금색 띠만으로는 '이겼다'가 아니라 '강조됐다'로만 읽힌다 */
   expect(jsx).toContain('<b>승</b>');
 });
+
+/* 시간·칩 칸을 auto로 뒀더니 칩이 없는 판과 둘 다 있는 판의 폭이 달라서
+   가운데 VS가 줄마다 들쭉날쭉 움직였다. 양쪽 끝 칸은 폭을 박아야 한다 */
+test('내전 기록의 VS가 줄마다 같은 자리에 선다', () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, '..', 'pages', 'rooms', 'Rooms.css'),
+    'utf8'
+  );
+  const rule = css.slice(css.indexOf('.history-list li.hist-row {'));
+  const cols = rule.slice(0, rule.indexOf('}')).match(/grid-template-columns:([^;]+)/)[1];
+  /* 두 팀 칸만 1fr */
+  expect((cols.match(/1fr/g) || [])).toHaveLength(2);
+  /* 시간과 칩 칸은 폭을 박아둔다. 여기가 auto면 줄마다 VS가 밀린다.
+     (모드 칸만 auto다 - 방 안에서 늘 붙거나 아예 없다) */
+  expect(cols.trim().split(/\s+(?![^(]*\))/)[0]).toMatch(/rem$/);
+  expect(cols).toMatch(/11\.5rem/);
+
+  /* 시간은 시계 시간이라 늘 다섯 글자. timeAgo는 '방금 전'~'12일 전'으로
+     길이가 줄마다 달라서 그 칸이 흔들린다 */
+  const jsx = fs.readFileSync(
+    path.join(__dirname, '..', 'pages', 'rooms', 'MatchHistory.jsx'),
+    'utf8'
+  );
+  expect(jsx).toContain('<span className="hist-time" title={timeAgo(m.playedAt)}>');
+  expect(jsx).toContain('{hhmm(m.playedAt)}');
+});

@@ -13,6 +13,8 @@ import Modal from '../../components/common/Modal';
 import Empty from '../../components/common/Empty';
 import BetTab from './BetTab';
 import { timeAgo } from '../../lib/timeAgo';
+import { getMode, hasModeChoice } from '../../rules/games';
+import { useGameKey } from '../../lib/GameContext';
 
 /* 방의 '내전 기록' 탭.
 
@@ -25,6 +27,14 @@ import { timeAgo } from '../../lib/timeAgo';
    같은 틀에 넣고, 날짜 구분선도 로그 탭과 같은 것(.day-sep)을 쓴다. */
 
 const num = (n) => Number(n || 0).toLocaleString();
+
+/* 몇 시에 한 판인지. timeAgo('3일 전')는 날짜 구분선이 이미 말해주는 데다
+   길이가 줄마다 달라서, 그 칸 폭이 흔들리면 오른쪽의 VS까지 같이 밀린다.
+   시계 시간은 늘 다섯 글자다 */
+const hhmm = (ts) => {
+  const d = new Date(ts);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 const dayKey = (ts) => {
@@ -56,6 +66,10 @@ const MatchHistory = ({
   onChanged,
 }) => {
   const { confirm } = useDialog();
+  const gameKey = useGameKey();
+  /* 롤은 모드가 하나뿐이라 줄마다 '일반'이 붙으면 그냥 소음이다.
+     발로란트는 일반·신속·난투가 팀 인원까지 다르니 꼭 보여야 한다 */
+  const showMode = hasModeChoice(gameKey);
   const [open, setOpen] = useState(null);
 
   const history = [...matches].sort((a, b) => b.playedAt - a.playedAt);
@@ -118,7 +132,10 @@ const MatchHistory = ({
      1팀은 늘 왼쪽, 2팀은 늘 오른쪽 - 이긴 쪽을 위로 올리지 않는다. */
   const card = (m) => (
     <li key={m.id} className={`hist-row ${m.betCount > 0 ? 'has-bets' : ''}`}>
-      <span className="hist-time">{timeAgo(m.playedAt)}</span>
+      <span className="hist-time" title={timeAgo(m.playedAt)}>
+        {hhmm(m.playedAt)}
+      </span>
+      {showMode && <span className="hist-mode">{getMode(gameKey, m.mode).label}</span>}
 
       {[
         { side: 'A', label: '1팀', names: m.teamA },
@@ -139,15 +156,14 @@ const MatchHistory = ({
           {/* 퍼블은 위에 따로 적는 것보다 그 사람 이름에 붙는 편이 바로
               읽힌다. '누가 땄나'를 이름에서 찾게 된다 */}
           <span className="hist-names">
-            {names.map((n, i) => (
+            {names.map((n) => (
               <span
                 key={n}
                 className={`hist-name ${n === m.firstBlood ? 'is-fb' : ''}`}
                 title={n === m.firstBlood ? '퍼스트 블러드' : undefined}
               >
-                {n === m.firstBlood && <FaTint />}
                 {n}
-                {i < names.length - 1 && <i className="hist-comma">,</i>}
+                {n === m.firstBlood && <FaTint />}
               </span>
             ))}
           </span>
