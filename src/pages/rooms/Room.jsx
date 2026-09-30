@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -1020,6 +1020,14 @@ const Room = () => {
     lostPlayers,
   } = useRoom(roomId, user?.id);
   const { hofRows } = useHallOfFame(roomId);
+  /* 별명은 방 여기저기서 같은 값을 써야 한다. 한 번만 계산해서 나눠 준다.
+     짝꿍·천적이 경기를 짝지어 훑어서 싸지 않다 - 폴링이 돌 때마다 다시
+     계산하면 그만큼 화면이 멈칫한다 */
+  const titles = useMemo(
+    () => titlesOf({ matches, scrims, players }),
+    [matches, scrims, players]
+  );
+
   /* 탭을 주소(#bet)에 둔다. useState에만 담아두면 새로고침하거나
      링크를 공유했을 때 항상 첫 탭으로 돌아간다.
      replace라 뒤로 가기는 탭을 되짚지 않고 방 목록으로 나간다.
@@ -1085,8 +1093,6 @@ const Room = () => {
 
   const myPoints = members.find((m) => m.user_id === user.id)?.points ?? 0;
 
-  /* 별명은 방 여기저기서 같은 값을 써야 한다. 한 번만 계산해서 나눠 준다 */
-  const titles = titlesOf({ matches, scrims, players });
 
   return (
     /* 방 색을 여기 한 번만 얹으면 안쪽 배지·버튼·테두리가 전부 따라온다.

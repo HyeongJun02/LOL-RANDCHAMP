@@ -185,22 +185,24 @@ const ScrimRecord = ({
   const forms = useMemo(() => recentFormOf(matches), [matches]);
   const infoOf = (name) => players.find((p) => p.name === name) || null;
 
-  /* 아직 어느 팀도 아닌 사람들 */
+  /* 아직 어느 팀도 아닌 사람들. 드래그 중에는 이 컴포넌트가 초당 몇 번씩
+     다시 그려지므로, 정렬을 렌더마다 돌리지 않는다 */
   const inTeams = new Set([...teamA, ...teamB]);
-  const pool = [...players.map((p) => p.name), ...extras]
-    .filter((n, i, all) => all.indexOf(n) === i && !inTeams.has(n))
-    .sort((a, b) => {
-      if (sort === 'name') return a.localeCompare(b, 'ko');
-      const tie = a.localeCompare(b, 'ko');
-      if (sort === 'tier') {
-        const r = (n) => {
-          const p = players.find((x) => x.name === n);
-          return p ? ratingOf(gameKey, p) : -1;
-        };
-        return r(b) - r(a) || tie;
-      }
-      return (statOf(stats, b)?.games || 0) - (statOf(stats, a)?.games || 0) || tie;
-    });
+  const pool = useMemo(() => {
+    const taken = new Set([...teamA, ...teamB]);
+    const rating = (n) => {
+      const p = players.find((x) => x.name === n);
+      return p ? ratingOf(gameKey, p) : -1;
+    };
+    return [...players.map((p) => p.name), ...extras]
+      .filter((n, i, all) => all.indexOf(n) === i && !taken.has(n))
+      .sort((a, b) => {
+        const tie = a.localeCompare(b, 'ko');
+        if (sort === 'name') return tie;
+        if (sort === 'tier') return rating(b) - rating(a) || tie;
+        return (statOf(stats, b)?.games || 0) - (statOf(stats, a)?.games || 0) || tie;
+      });
+  }, [players, extras, teamA, teamB, sort, stats, gameKey]);
 
   /* 한 사람은 한 자리에만. 넣기 전에 양쪽에서 빼고 넣는다 -
      안 그러면 끌어다 옮길 때 양 팀에 동시에 있게 된다 */
@@ -236,6 +238,14 @@ const ScrimRecord = ({
     if (over !== side) setOver(side);
   };
 
+  /* dragleave는 안쪽 카드를 지날 때마다 터진다. 그대로 두면 칸을 넘나드는
+     동안 상태가 초당 수십 번 뒤집히고, 그때마다 화면 전체가 다시 그려져서
+     드래그가 뚝뚝 끊긴다. 칸 밖으로 정말 나갔을 때만 끈다 */
+  const dragLeave = (e) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setOver(null);
+  };
+
   const addTyped = () => {
     const name = typed.trim();
     if (!name) return;
@@ -262,8 +272,9 @@ const ScrimRecord = ({
     setShowBalancer(false);
   };
 
-  /* 다른 기기/탭에서 짜둔 게 있으면 팝업을 열 때 이어서 보여준다 */
-  const lastSplit = loadLastSplit();
+  /* 다른 기기/탭에서 짜둔 게 있으면 팝업을 열 때 이어서 보여준다.
+     렌더마다 읽으면 드래그 중에 초당 수십 번 localStorage를 긁는다 */
+  const lastSplit = useMemo(() => loadLastSplit(), []);
 
   /* 직전 경기에 뛴 사람들. 내전은 같은 인원으로 연달아 하는 게 보통이라
      매번 열 명을 다시 골라 넣는 게 제일 번거롭다 */
@@ -387,7 +398,7 @@ const ScrimRecord = ({
       <div
         className={`sr-team ${accent} ${over === side ? 'is-over' : ''}`}
         onDragOver={dragOver(side)}
-        onDragLeave={() => setOver(null)}
+        onDragLeave={dragLeave}
         onDrop={dropOn(side)}
       >
         <div className="sr-team-head">
@@ -532,7 +543,7 @@ const ScrimRecord = ({
         <div
           className={`sr-pool ${over === 'pool' ? 'is-over' : ''}`}
           onDragOver={dragOver('pool')}
-          onDragLeave={() => setOver(null)}
+          onDragLeave={dragLeave}
           onDrop={dropOn(null)}
         >
           <div className="sr-pool-head">
