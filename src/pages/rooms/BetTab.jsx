@@ -380,10 +380,17 @@ const BetTab = ({
           {(fbShown || odds != null) && (
             <span className="bet-opt-meta">
               {/* 이름만 보고 고르면 찍기다. 지난 판에서 얼마나 땄는지를 붙인다.
-                  판수가 적으면 보정된 값이라 실제 횟수는 title로 둔다 */}
+                  실제 횟수를 title에만 숨겨뒀더니, 한 판도 못 딴 사람에게
+                  38%라고 적힌 꼴이 되어 버그로 읽혔다. 분모를 같이 적는다 */}
               {fbShown && (
-                <em className="bet-fb-rate" title={`${fbShown.games}판 중 ${fbShown.got}번`}>
+                <em
+                  className="bet-fb-rate"
+                  title={`지난 ${fbShown.games}판 중 ${fbShown.got}번. 판이 적으면 아무나 딸 확률 쪽으로 당겨서 봅니다`}
+                >
                   {Math.round(fbShown.rate * 100)}%
+                  <b>
+                    {fbShown.got}/{fbShown.games}
+                  </b>
                 </em>
               )}
               {/* 마감 뒤에는 내가 고른 것만이 아니라 전부 보여준다.
@@ -433,7 +440,9 @@ const BetTab = ({
           </h4>
           <p className="rooms-hint">
             티어가 낮을수록, 지금까지 첫 킬을 적게 땄을수록 배당이 조금 높습니다. 고정
-            배당이라 마감 전에도 그대로입니다.
+            배당이라 마감 전에도 그대로입니다. 이름 옆 확률은 <b>딴 횟수/판수</b>를
+            판수가 적을수록 '아무나 딸 확률' 쪽으로 당긴 값입니다 — 한 판 한 번을
+            100%로 쓰면 그 사람에게 돈이 몰려요.
           </p>
           <div className="bet-opts bet-opts-grid">
             {roster.map((id) =>

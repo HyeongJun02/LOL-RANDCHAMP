@@ -2031,6 +2031,14 @@ li.day-sep em {
   color: #94a3b8;
 }
 
+/* 딴 횟수/판수. 퍼센트만 적어두면 한 판도 못 딴 사람의 38%가 버그로 읽힌다 */
+.bet-fb-rate b {
+  margin-left: 0.22rem;
+  font-size: 0.88em;
+  font-weight: 600;
+  opacity: 0.5;
+}
+
 .bet-opt.mine .bet-fb-rate,
 .bet-opt.won .bet-fb-rate {
   color: inherit;
