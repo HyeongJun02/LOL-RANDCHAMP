@@ -167,9 +167,12 @@ const ScrimRecord = ({
   const [extras, setExtras] = useState([]);
   const [typed, setTyped] = useState('');
   const [sort, setSort] = useState('games');
-  /* 지금 끌고 있는 카드와, 그 카드가 올라온 자리 */
+  /* 지금 끌고 있는 카드와, 그 카드가 올라온 칸.
+     올라온 칸을 useState로 들고 있었더니 끄는 내내 화면이 다시 그려졌고,
+     그 사이에 끌던 카드가 새로 그려지면 브라우저가 드래그를 접어버린다.
+     강조는 DOM 클래스로만 켠다 - 리액트는 건드리지 않는다 */
   const dragging = useRef(null);
-  const [over, setOver] = useState(null);
+  const overBox = useRef(null);
   /* 더블클릭으로 같은 경기가 두 번 들어가는 걸 막는다.
      상태로 잡으면 렌더 클로저의 옛 값을 읽어서 두 번 통과한다 */
   const saving = useRef(false);
@@ -225,25 +228,32 @@ const ScrimRecord = ({
   /* 손가락으로는 못 끈다. 누르면 사람이 적은 쪽으로 */
   const tapIn = (name) => place(name, teamA.length <= teamB.length ? 'A' : 'B');
 
+  const mark = (box) => {
+    if (overBox.current === box) return;
+    overBox.current?.classList.remove('is-over');
+    box?.classList.add('is-over');
+    overBox.current = box;
+  };
+
   const dropOn = (side) => (e) => {
     e.preventDefault();
     const name = e.dataTransfer.getData('text/plain') || dragging.current;
-    place(name, side);
     dragging.current = null;
-    setOver(null);
-  };
-  const dragOver = (side) => (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (over !== side) setOver(side);
+    mark(null);
+    place(name, side);
   };
 
-  /* dragleave는 안쪽 카드를 지날 때마다 터진다. 그대로 두면 칸을 넘나드는
-     동안 상태가 초당 수십 번 뒤집히고, 그때마다 화면 전체가 다시 그려져서
-     드래그가 뚝뚝 끊긴다. 칸 밖으로 정말 나갔을 때만 끈다 */
+  const dragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    mark(e.currentTarget);
+  };
+
+  /* dragleave는 안쪽 카드를 지날 때마다 터진다. 칸 밖으로 정말 나갔을
+     때만 끈다 */
   const dragLeave = (e) => {
     if (e.currentTarget.contains(e.relatedTarget)) return;
-    setOver(null);
+    if (overBox.current === e.currentTarget) mark(null);
   };
 
   const addTyped = () => {
@@ -385,6 +395,7 @@ const ScrimRecord = ({
       form={forms.get(name)}
       onDrag={(n) => {
         dragging.current = n;
+        if (!n) mark(null);
       }}
       onTap={side ? undefined : () => tapIn(name)}
       onMove={side ? () => place(name, side === 'A' ? 'B' : 'A') : undefined}
@@ -396,8 +407,8 @@ const ScrimRecord = ({
     const short = Math.max(0, modeInfo.teamSize - list.length);
     return (
       <div
-        className={`sr-team ${accent} ${over === side ? 'is-over' : ''}`}
-        onDragOver={dragOver(side)}
+        className={`sr-team ${accent}`}
+        onDragOver={dragOver}
         onDragLeave={dragLeave}
         onDrop={dropOn(side)}
       >
@@ -541,8 +552,8 @@ const ScrimRecord = ({
 
         {/* 아직 어느 팀도 아닌 사람들. 끌어다 넣거나 눌러서 넣는다 */}
         <div
-          className={`sr-pool ${over === 'pool' ? 'is-over' : ''}`}
-          onDragOver={dragOver('pool')}
+          className="sr-pool"
+          onDragOver={dragOver}
           onDragLeave={dragLeave}
           onDrop={dropOn(null)}
         >

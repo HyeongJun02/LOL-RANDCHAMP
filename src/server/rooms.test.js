@@ -1548,7 +1548,12 @@ test('select 배경은 background-color로만 준다', () => {
 
   const bad = [];
   walk(path.join(__dirname, '..')).forEach((file) => {
-    const text = fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    /* user-select에도 'select'가 들어 있어서, 그 선언이 있는 규칙이
+       전부 select 규칙으로 잡혔다 */
+    const text = fs
+      .readFileSync(file, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/[-\w]*user-select\s*:[^;}]*;?/g, '');
     /* select가 걸린 규칙 안에서 background 단축을 쓰는지 본다 */
     (text.match(/[^}]*select[^{]*\{[^}]*\}/g) || []).forEach((rule) => {
       if (/\n\s*background:\s/.test(rule)) {

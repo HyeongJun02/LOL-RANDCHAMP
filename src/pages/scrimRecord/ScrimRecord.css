@@ -81,6 +81,12 @@
    위는 이름과 티어, 아래는 칭호·전적·최근 폼 */
 
 .sr-card {
+  /* 사파리는 이게 없으면 div를 못 끈다. 그리고 글자 위에서 누르면
+     텍스트 선택이 드래그를 가로채는 일이 있어 선택을 막아둔다 */
+  -webkit-user-drag: element;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
   display: flex;
   align-items: center;
   gap: 0.4rem;
