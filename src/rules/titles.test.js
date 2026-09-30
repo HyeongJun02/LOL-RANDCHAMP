@@ -46,7 +46,7 @@ test('퍼블을 많이 딴 사람에게 사냥꾼이 붙는다', () => {
     { first_blood_player_id: 2 },
   ];
   const t = titlesOf({ matches, scrims, players });
-  expect(t.get('가')).toMatchObject({ label: '퍼블 2회', tone: 'fb' });
+  expect(t.get('가')).toMatchObject({ label: '첫 킬 2회', tone: 'fb' });
   expect(t.get('나')).toBeUndefined();
 });
 

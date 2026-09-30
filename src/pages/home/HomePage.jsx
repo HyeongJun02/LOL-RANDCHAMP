@@ -35,7 +35,7 @@ const step = (i) => ({ '--i': i });
 const ROOM_FEATURES = [
   { icon: <FaUsers />, title: '팀 짜기', desc: '티어로 평점 맞춰 가르기' },
   { icon: <FaChartLine />, title: '전적·순위', desc: '이긴 팀만 고르면 점수가 쌓임' },
-  { icon: <FaDice />, title: '또또', desc: '승리팀·퍼블·총 킬에 걸기' },
+  { icon: <FaDice />, title: '또또', desc: '승리팀·첫 킬·총 킬에 걸기' },
   { icon: <FaCoins />, title: '끼꼬', desc: '방마다 따로 도는 포인트' },
   { icon: <FaCrown />, title: '명예의 전당', desc: '매달 1등 박제' },
   { icon: <FaSearch />, title: '숨은 기록', desc: '궁합·천적·연승 저격' },

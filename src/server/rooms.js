@@ -956,7 +956,7 @@ export const capOf = (market) =>
 
 export const marketLabel = (market) => {
   if (market === 'winner') return '승리팀';
-  if (market === 'first_blood') return '퍼스트 블러드';
+  if (market === 'first_blood') return '첫 킬';
   if (isKillMarket(market)) return `총 킬 ${killLineOf(market)}`;
   return market;
 };

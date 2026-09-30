@@ -73,10 +73,10 @@ export const titlesOf = ({ matches = [], scrims = [], players = [] } = {}) => {
     give(duo.b, { icon: '🤝', label: `${duo.a}와 짝꿍`, tone: 'duo' });
   }
 
-  /* 퍼블 사냥꾼 - 첫 피를 제일 많이 본 사람 */
+  /* 사냥꾼 - 첫 킬을 제일 많이 딴 사람 */
   const fb = top(firstBloodsOf(scrims, players));
   if (fb && fb[1] >= 2) {
-    give(fb[0], { icon: '🎯', label: `퍼블 ${fb[1]}회`, tone: 'fb' });
+    give(fb[0], { icon: '🎯', label: `첫 킬 ${fb[1]}회`, tone: 'fb' });
   }
 
   /* 연승 저격수 - 남의 연승을 끊고 다니는 사람 */

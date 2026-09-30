@@ -4,7 +4,7 @@ import {
   FaTimes,
   FaCrosshairs,
   FaCoins,
-  FaTint,
+  FaBolt,
   FaChevronRight,
   FaClipboardList,
 } from 'react-icons/fa';
@@ -158,17 +158,18 @@ const MatchHistory = ({
                 말로 한 번 더 적어준다 */}
             {side === m.winner && <b>승</b>}
           </span>
-          {/* 퍼블은 위에 따로 적는 것보다 그 사람 이름에 붙는 편이 바로
-              읽힌다. '누가 땄나'를 이름에서 찾게 된다 */}
+          {/* 첫 킬은 위에 따로 적는 것보다 그 사람 이름에 붙는 편이 바로
+              읽힌다. '누가 땄나'를 이름에서 찾게 된다.
+              핏방울을 달았더니 딴 사람이 아니라 당한 사람처럼 보였다 */}
           <span className="hist-names">
             {names.map((n) => (
               <span
                 key={n}
                 className={`hist-name ${n === m.firstBlood ? 'is-fb' : ''}`}
-                title={n === m.firstBlood ? '퍼스트 블러드' : undefined}
+                title={n === m.firstBlood ? '첫 킬' : undefined}
               >
                 {n}
-                {n === m.firstBlood && <FaTint />}
+                {n === m.firstBlood && <FaBolt />}
               </span>
             ))}
           </span>

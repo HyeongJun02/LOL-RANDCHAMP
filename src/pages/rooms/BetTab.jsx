@@ -432,7 +432,7 @@ const BetTab = ({
             <em>기본 {fixedFb}배</em>
           </h4>
           <p className="rooms-hint">
-            티어가 낮을수록, 지금까지 퍼블을 적게 땄을수록 배당이 조금 높습니다. 고정
+            티어가 낮을수록, 지금까지 첫 킬을 적게 땄을수록 배당이 조금 높습니다. 고정
             배당이라 마감 전에도 그대로입니다.
           </p>
           <div className="bet-opts bet-opts-grid">
@@ -816,9 +816,9 @@ const BetTab = ({
                   className="rooms-input"
                   value={fb}
                   onChange={(e) => setFb(e.target.value)}
-                  aria-label="퍼스트 블러드"
+                  aria-label="첫 킬"
                 >
-                  <option value="">퍼스트 블러드</option>
+                  <option value="">첫 킬</option>
                   {[...(activeScrim.team_a || []), ...(activeScrim.team_b || [])].map((id) => (
                     <option key={id} value={id}>
                       {nameOf.get(id) || '?'}
@@ -864,7 +864,7 @@ const BetTab = ({
             {renderTeam({ ids: s.team_b || [], label: '2팀', hot: s.winner === 'B' })}
           </div>
           <p className="rooms-hint">
-            총 킬 {s.total_kills ?? '-'} · 퍼블{' '}
+            총 킬 {s.total_kills ?? '-'} · 첫 킬{' '}
             {s.first_blood_player_id ? nameOf.get(s.first_blood_player_id) || '?' : '-'} · 또또{' '}
             {num(s.bet_total)} 끼꼬
             {s.undo_count > 0 && ` · 정산 ${s.undo_count}번 되돌림`}
