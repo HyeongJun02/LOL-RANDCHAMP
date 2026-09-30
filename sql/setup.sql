@@ -143,11 +143,18 @@ create table if not exists public.room_wallets (
 create table if not exists public.room_members (
   room_id   bigint not null references public.rooms(id) on delete cascade,
   user_id   text   not null,
-  role      text   not null default 'member' check (role in ('owner','admin','member')),
+  role      text   not null default 'member' check (role in ('owner','admin','staff','member')),
   joined_at timestamptz not null default now(),
   primary key (room_id, user_id)
 );
 create index if not exists room_members_user on public.room_members (user_id);
+
+-- 부방장과 멤버 사이의 자리. 방 살림(명단·연결·꾸미기·계정)은 맡되
+-- 경기와 또또, 끼꼬에는 손을 못 댄다.
+-- create table if not exists 는 이미 있는 테이블을 안 고치므로 따로 건다.
+alter table public.room_members drop constraint if exists room_members_role_check;
+alter table public.room_members add constraint room_members_role_check
+  check (role in ('owner','admin','staff','member'));
 
 -- 이 방은 무슨 게임의 내전인가.
 --
@@ -238,12 +245,27 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $fn$;
 
--- 부방장이 무엇을 할 수 있는가. 기능 이름을 담아둔다.
--- 방장은 목록과 상관없이 전부 된다. 기본값은 예전 '부방장' 그대로다 -
--- 돈을 되돌리거나 사람을 내보내는 것만 방장 몫이었다.
+-- 역할마다 무엇을 할 수 있는가. 역할 이름 -> 기능 이름 목록.
+-- 방장은 목록과 상관없이 전부 된다. 부방장 기본값은 예전 그대로고 -
+-- 돈을 되돌리거나 사람을 내보내는 것만 방장 몫이었다 - 운영진은 방
+-- 살림(명단·연결·꾸미기·계정)만, 멤버는 없음으로 시작한다.
+-- 입장 코드 보기는 멤버면 누구나라 목록 밖이다.
 alter table public.rooms drop column if exists admin_scope;
-alter table public.rooms add column if not exists admin_caps text[] not null
-  default array['record','bet','roster','member','style','account'];
+alter table public.rooms add column if not exists role_caps jsonb not null
+  default '{"admin":["record","bet","roster","member","style","account"],"staff":["roster","member","style","account"],"member":[]}'::jsonb;
+
+-- 예전에는 부방장 몫(admin_caps) 하나뿐이었다. 역할이 셋이 되면서 칸을
+-- 셋으로 늘리는 대신 한 칸에 모은다 - 관문도 set_role_cap도 역할을 인자로
+-- 받는 한 벌로 끝난다. 이미 켜둔 부방장 설정은 그대로 옮긴다.
+do $mig$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'rooms'
+                and column_name = 'admin_caps') then
+    update public.rooms set role_caps = jsonb_set(role_caps, '{admin}', to_jsonb(admin_caps));
+    alter table public.rooms drop column admin_caps;
+  end if;
+end $mig$;
 
 -- 이 방에서 나에게 이 기능의 권한이 있는가.
 --
@@ -257,16 +279,23 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (
     select 1 from room_members m join rooms r on r.id = m.room_id
      where m.room_id = rid and m.user_id = auth.user_id()
-       and (m.role = 'owner' or (m.role = 'admin' and cap = any(r.admin_caps)))
+       and (m.role = 'owner' or jsonb_exists(r.role_caps -> m.role, cap))
   );
 $fn$;
 
--- 방장만 바꾼다. 화면이 보내는 기능 이름을 그대로 믿지 않고 목록을 본다
-create or replace function public.set_admin_cap(p_room bigint, p_cap text, p_on boolean)
+-- 방장만 바꾼다. 화면이 보내는 역할·기능 이름을 그대로 믿지 않고 목록을 본다
+drop function if exists public.set_admin_cap(bigint, text, boolean);
+create or replace function public.set_role_cap(
+  p_room bigint, p_role text, p_cap text, p_on boolean)
 returns void language plpgsql security definer set search_path = public as $fn$
 begin
   if not public.is_room_owner(p_room) then
     raise exception '방장만 권한을 바꿀 수 있어요.';
+  end if;
+  -- 방장은 목록과 상관없이 전부 된다. 여기 넣으면 방장에게서 권한을
+  -- 뺄 수 있게 되고, 그러면 아무도 되돌릴 수 없는 방이 생긴다
+  if p_role not in ('admin','staff','member') then
+    raise exception '없는 역할이에요.';
   end if;
   -- 방장 자리를 흔드는 것들은 넘길 수 없다. 부방장이 방을 지우거나
   -- 방장을 끌어내릴 수 있으면 방장이라는 자리가 뜻이 없어진다
@@ -274,10 +303,12 @@ begin
                    'code_reset','adjust','undo') then
     raise exception '넘길 수 없는 권한이에요.';
   end if;
+  -- 켤 때도 먼저 빼고 넣는다. 두 번 누르면 같은 이름이 두 개 쌓인다
   update rooms
-     set admin_caps = case when p_on
-           then (select array(select distinct unnest(admin_caps || p_cap)))
-           else array_remove(admin_caps, p_cap) end,
+     set role_caps = jsonb_set(role_caps, array[p_role],
+           case when p_on
+             then (coalesce(role_caps -> p_role, '[]'::jsonb) - p_cap) || to_jsonb(p_cap)
+             else coalesce(role_caps -> p_role, '[]'::jsonb) - p_cap end),
          version = version + 1
    where id = p_room;
 end; $fn$;
@@ -388,7 +419,7 @@ alter table public.hall_of_fame  enable row level security;
 
 -- 입장 코드는 컬럼 단위로 뺀다. 멤버 전원이 코드를 볼 수 있으면
 -- 재발급이 아무 의미가 없다. 방장·부방장은 get_join_code()로 본다.
-grant select (id, name, owner_id, version, created_at, accent, emblem, game, admin_caps) on public.rooms to authenticated;
+grant select (id, name, owner_id, version, created_at, accent, emblem, game, role_caps) on public.rooms to authenticated;
 grant update (name, accent, emblem) on public.rooms to authenticated;
 grant select on public.room_members to authenticated;
 -- 잔액은 같은 방 사람끼리 서로 본다 (포인트 탭의 순위가 그것이다).
@@ -623,8 +654,8 @@ begin
   if not public.is_room_owner(p_room) then
     raise exception '방장만 권한을 바꿀 수 있어요.';
   end if;
-  if p_role not in ('admin', 'member') then
-    raise exception '부방장 또는 멤버로만 바꿀 수 있어요.';
+  if p_role not in ('admin', 'staff', 'member') then
+    raise exception '부방장·운영진·멤버로만 바꿀 수 있어요.';
   end if;
   -- 방장이 스스로를 강등하면 그 방에 방장이 없어진다.
   -- 방장 자리를 넘기는 건 transfer_room으로 한다.
@@ -1116,7 +1147,7 @@ grant execute on function
   public.transfer_room(bigint, text),
   public.kick_member(bigint, text, text),
   public.transfer_account(bigint, text, text),
-  public.set_admin_cap(bigint, text, boolean),
+  public.set_role_cap(bigint, text, text, boolean),
   public.link_room_player(bigint, text, bigint),
   public.add_ghost_member(bigint, text),
   public.remove_ghost_member(bigint, text),

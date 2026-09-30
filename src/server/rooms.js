@@ -84,10 +84,10 @@ export const kickMember = (roomId, userId, toUserId = null) =>
 export const transferAccount = (roomId, fromUserId, toUserId) =>
   rpc('transfer_account', { p_room: roomId, p_from: fromUserId, p_to: toUserId });
 
-/* 부방장에게 이 기능을 줄지 뺄지. 이름은 rules/permissions.js의 CAPS와,
+/* 이 역할에게 이 기능을 줄지 뺄지. 이름은 rules/permissions.js의 ROLES·CAPS와,
    막는 쪽은 setup.sql의 room_can과 같아야 한다 */
-export const setAdminCap = (roomId, cap, on) =>
-  rpc('set_admin_cap', { p_room: roomId, p_cap: cap, p_on: on });
+export const setRoleCap = (roomId, role, cap, on) =>
+  rpc('set_role_cap', { p_room: roomId, p_role: role, p_cap: cap, p_on: on });
 
 /* 멤버 ↔ 참가자 묶기. playerId가 null이면 연결을 끊는다.
    묶어두면 경기 참여 포인트가 이 계정으로 간다 */
@@ -733,7 +733,7 @@ export const useMyRooms = (userId, ready = true) => {
    PostgREST가 FK를 따라 한 번에 묶어주므로 방+멤버+참가자+경기는 한 요청이다.
    프로필만 FK가 없어 따로 받는다 (RLS가 같은 방 사람으로 이미 좁혀준다) */
 const ROOM_SELECT =
-  'id,name,owner_id,version,created_at,accent,emblem,game,admin_caps,' +
+  'id,name,owner_id,version,created_at,accent,emblem,game,role_caps,' +
   'room_members(user_id,role,joined_at,is_ghost),' +
   'room_players(id,name,tier,division,linked_user_id,deleted_at),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +
@@ -880,11 +880,9 @@ export const useRoom = (roomId, userId) => {
   };
 };
 
-const ROLE_ORDER = { owner: 0, admin: 1, member: 2 };
+const ROLE_ORDER = { owner: 0, admin: 1, staff: 2, member: 3 };
 
-export const ROLE_LABEL = { owner: '방장', admin: '부방장', member: '멤버' };
-
-export const canEdit = (role) => role === 'owner' || role === 'admin';
+export const ROLE_LABEL = { owner: '방장', admin: '부방장', staff: '운영진', member: '멤버' };
 
 /* ---------- 또또 (배팅) ---------- */
 

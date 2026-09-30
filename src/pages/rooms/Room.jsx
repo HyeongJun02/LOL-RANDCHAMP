@@ -31,7 +31,6 @@ import { useAuth } from '../../auth/AuthContext';
 import {
   useRoom,
   useHallOfFame,
-  canEdit as canEditRole,
   ROLE_LABEL,
   addRoomPlayer,
   updateRoomPlayer,
@@ -47,7 +46,7 @@ import {
   transferRoom,
   kickMember,
   transferAccount,
-  setAdminCap,
+  setRoleCap,
   setRoomStyle,
   linkRoomPlayer,
   addGhostMember,
@@ -60,7 +59,7 @@ import { GameProvider, useGame, useGameKey } from '../../lib/GameContext';
 import { ACCENTS, EMBLEMS, accentVars } from '../../lib/roomStyle';
 import { titlesOf } from '../../rules/titles';
 import { MAX_ROOM_PLAYERS } from '../../server/limits';
-import { ROLES, CAPS, DEFAULT_CAPS, allows } from '../../rules/permissions';
+import { ROLES, CAPS, allows } from '../../rules/permissions';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
 import MatchHistory from './MatchHistory';
@@ -192,7 +191,9 @@ const Panel = ({ head, locked, children }) => (
 const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, reload, onGone }) => {
   const gameKey = useGameKey();
   const isOwner = myRole === 'owner';
-  const isAdmin = canEditRole(myRole);
+  /* '부방장인가'가 아니라 '이걸 할 수 있나'를 묻는다. 방마다 켜둔 것이
+     다르고, 운영진은 명단은 되지만 경기는 안 된다 */
+  const can = (cap) => allows(myRole, cap, room.role_caps);
   const [name, setName] = useState(room.name);
   const [code, setCode] = useState(null);
   const [newName, setNewName] = useState('');
@@ -473,8 +474,8 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
     reload();
   });
 
-  const toggleCap = guard(async (cap, on) => {
-    await setAdminCap(room.id, cap.key, on);
+  const toggleCap = guard(async (role, cap, on) => {
+    await setRoleCap(room.id, role, cap.key, on);
     reload();
   });
 
@@ -545,7 +546,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
             <button className="ghost-btn" onClick={copyCode}>
               <FaRegCopy /> 복사
             </button>
-            {isOwner && (
+            {can('code_reset') && (
               <button className="ghost-btn" onClick={rerollCode}>
                 <FaSync /> 새로 뽑기
               </button>
@@ -553,7 +554,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
           </div>
       </section>
 
-      <Panel locked={!isAdmin} head={<><FaPalette /> 방 꾸미기</>}>
+      <Panel locked={!can('style')} head={<><FaPalette /> 방 꾸미기</>}>
           <p className="rooms-hint">
             고른 색이 이 방 전체에 돕니다. 방 목록에서도 이 색으로 보여요.
           </p>
@@ -582,7 +583,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
           </div>
       </Panel>
 
-      <Panel locked={!isAdmin} head={<>방 이름</>}>
+      <Panel locked={!can('style')} head={<>방 이름</>}>
           <div className="rooms-form-row">
             <input
               className="rooms-input"
@@ -596,7 +597,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
           </div>
       </Panel>
 
-      <section className={`room-panel ${!isAdmin ? 'is-locked' : ''}`}>
+      <section className={`room-panel ${!can('roster') ? 'is-locked' : ''}`}>
           <div className="room-panel-head">
             <h3>
               <FaUsers /> 참가자<span className="panel-count">{players.length}명</span>
@@ -606,7 +607,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               disabled={players.length >= MAX_ROOM_PLAYERS}
             />
           </div>
-        <fieldset disabled={!isAdmin}>
+        <fieldset disabled={!can('roster')}>
           {/* 아래 '멤버'와 생긴 게 비슷해서 뭐가 뭔지 헷갈렸다.
               '경기에 뛰는 이름'과 '방에 들어온 계정'이라고 못 박아둔다 */}
           <p className="rooms-hint">
@@ -813,8 +814,8 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
         </h3>
         <p className="rooms-hint">
           {isOwner
-            ? '부방장 칸을 눌러 켜고 끕니다. 방장은 언제나 전부 할 수 있어요.'
-            : '방장이 부방장에게 무엇을 맡겼는지 보여줍니다.'}
+            ? '칸을 눌러 켜고 끕니다. 방장은 언제나 전부 할 수 있어요.'
+            : '방장이 어느 자리에 무엇을 맡겼는지 보여줍니다.'}
         </p>
 
         <ul className="perm-table">
@@ -831,16 +832,17 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
                 <em>{c.desc}</em>
               </span>
               {ROLES.map((r) => {
-                const on = allows(r.key, c, room.admin_caps || DEFAULT_CAPS);
-                /* 방장·멤버 칸은 규칙이지 설정이 아니다. 부방장 칸만 누른다 */
-                const canToggle = isOwner && r.key === 'admin' && !c.fixed && !c.everyone;
+                const on = allows(r.key, c, room.role_caps);
+                /* 방장 칸은 규칙이지 설정이 아니다. 여기서 뺄 수 있으면
+                   아무도 되돌릴 수 없는 방이 생긴다 */
+                const canToggle = isOwner && r.key !== 'owner' && !c.fixed && !c.everyone;
                 return canToggle ? (
                   <button
                     key={r.key}
                     className={`perm-cell is-btn ${on ? 'is-on' : ''}`}
-                    onClick={() => toggleCap(c, !on)}
+                    onClick={() => toggleCap(r.key, c, !on)}
                     aria-pressed={on}
-                    aria-label={`부방장 ${c.label} ${on ? '끄기' : '켜기'}`}
+                    aria-label={`${r.label} ${c.label} ${on ? '끄기' : '켜기'}`}
                   >
                     {on ? '○' : '✕'}
                   </button>
@@ -867,7 +869,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
 
         {/* 조용히 안 되고 있으면 아무도 모른다. 끼꼬가 전부 0인데
             이유를 못 찾는 일이 실제로 있었다 */}
-        {isAdmin && unlinked.length > 0 && (
+        {can('member') && unlinked.length > 0 && (
           <div className="member-warn">
             <span>
               <FaExclamationTriangle /> <b>{unlinked.length}명</b>이 참가자와 이어지지 않아
@@ -934,7 +936,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
             members={members}
             players={players}
             isOwner={isOwner}
-            isAdmin={isAdmin}
+            can={can}
             isMe={openMem === myId}
             onClose={() => setOpenMem(null)}
             onLink={link}
@@ -958,7 +960,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
           />
         )}
 
-        {isAdmin && (
+        {can('member') && (
           <div className="rooms-form-row member-add">
             <input
               className="rooms-input"
@@ -1035,7 +1037,8 @@ const Room = () => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
-  const editable = canEditRole(myRole);
+  /* 탭마다 필요한 권한이 다르다. 운영진은 명단을 고치지만 경기는 못 남긴다 */
+  const can = (cap) => allows(myRole, cap, room?.role_caps);
 
   const record = async (m) => {
     await addScrimByNames({ ...m, roomId, players, game: room?.game });
@@ -1157,15 +1160,15 @@ const Room = () => {
           players={players}
           members={members}
           activeScrim={activeScrim}
-          canEdit={editable}
+          canEdit={can('member')}
           tabs={TABS.filter((t) => t.key !== 'home')}
           onGo={setTab}
         />
       )}
 
-      {!editable && tab === 'record' && (
+      {!can('record') && tab === 'record' && (
         <p className="rooms-hint room-readonly">
-          이 방에서는 보기만 할 수 있어요. 기록은 방장과 부방장이 남깁니다.
+          이 방에서는 보기만 할 수 있어요. 기록은 권한을 받은 사람이 남깁니다.
         </p>
       )}
 
@@ -1177,10 +1180,10 @@ const Room = () => {
           <ScrimRecord
             matches={matches}
             players={players}
-            canEdit={editable}
+            canEdit={can('record')}
             onAdd={record}
             onRemove={unrecord}
-            onOpenBetting={editable ? openBet : undefined}
+            onOpenBetting={can('bet') ? openBet : undefined}
           />
         )}
         {tab === 'history' && (
@@ -1190,8 +1193,8 @@ const Room = () => {
             players={players}
             members={members}
             myId={user.id}
-            canEdit={editable}
-            isOwner={myRole === 'owner'}
+            canEdit={can('record')}
+            isOwner={can('undo')}
             version={room.version}
             onRemove={unrecord}
             onChanged={reload}
@@ -1219,8 +1222,8 @@ const Room = () => {
             players={allPlayers}
             members={members}
             myId={user.id}
-            canEdit={editable}
-            isOwner={myRole === 'owner'}
+            canEdit={can('bet')}
+            isOwner={can('undo')}
             version={room.version}
             onChanged={reload}
           />
@@ -1230,7 +1233,7 @@ const Room = () => {
             roomId={roomId}
             members={members}
             myId={user.id}
-            isOwner={myRole === 'owner'}
+            isOwner={can('adjust')}
             onChanged={reload}
           />
         )}

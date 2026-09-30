@@ -175,6 +175,11 @@ select.rooms-input:hover:not(:disabled) {
   background: rgba(56, 189, 248, 0.14);
 }
 
+.role-staff {
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.14);
+}
+
 .role-member {
   color: #94a3b8;
   background: rgba(148, 163, 184, 0.12);
@@ -2159,7 +2164,7 @@ li.day-sep em {
 
 .perm-table li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 2.6rem 3.2rem 2.6rem;
+  grid-template-columns: minmax(0, 1fr) 2.4rem 3.1rem 2.9rem 2.4rem;
   align-items: center;
   gap: 0.4rem;
   padding: 0.25rem 0.5rem;
@@ -2218,7 +2223,7 @@ li.day-sep em {
   color: var(--gg-green);
 }
 
-/* 누를 수 있는 건 부방장 칸뿐이다. 나머지는 규칙이지 설정이 아니다 */
+/* 방장 칸은 못 누른다. 거기서 권한을 뺄 수 있으면 아무도 되돌릴 수 없는 방이 생긴다 */
 .perm-cell.is-btn {
   border: 1px solid var(--gg-panel-border);
   border-radius: 6px;
@@ -2245,7 +2250,7 @@ li.day-sep em {
   }
 
   .perm-table li {
-    grid-template-columns: minmax(0, 1fr) 2.2rem 2.8rem 2.2rem;
+    grid-template-columns: minmax(0, 1fr) 2rem 2.6rem 2.4rem 2rem;
   }
 }
 

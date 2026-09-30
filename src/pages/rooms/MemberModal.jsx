@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FaLink, FaGhost, FaUserSlash, FaCrown, FaUserShield, FaExchangeAlt } from 'react-icons/fa';
 import Modal from '../../components/common/Modal';
 import { ROLE_LABEL } from '../../server/rooms';
+import { SET_ROLES } from '../../rules/permissions';
 import { MONTHLY_KKIKO } from '../../rules/tuning';
 
 const num = (n) => Number(n || 0).toLocaleString();
@@ -17,7 +18,7 @@ const MemberModal = ({
   members,
   players,
   isOwner,
-  isAdmin,
+  can,
   isMe,
   onClose,
   onLink,
@@ -45,7 +46,7 @@ const MemberModal = ({
       onClose={onClose}
     >
       <div className="mem-modal">
-        {isAdmin && (
+        {can('member') && (
           <label className="mem-field">
             <span className="mem-field-label">
               <FaLink /> 이 계정은 명단의 누구인가
@@ -78,24 +79,32 @@ const MemberModal = ({
               <FaUserShield /> 권한
             </span>
             <div className="rooms-form-row">
-              <button
-                className="ghost-btn"
-                onClick={() => onRole(m, m.role === 'admin' ? 'member' : 'admin')}
+              <select
+                className="rooms-input"
+                value={m.role}
+                onChange={(e) => onRole(m, e.target.value)}
               >
-                {m.role === 'admin' ? '부방장 해제' : '부방장으로'}
-              </button>
+                {SET_ROLES.map((r) => (
+                  <option key={r.key} value={r.key}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
               <button className="ghost-btn" onClick={() => onHandOver(m)}>
                 <FaCrown /> 방장 넘기기
               </button>
             </div>
-            <p className="rooms-hint">부방장은 경기와 또또를 남길 수 있어요.</p>
+            <p className="rooms-hint">
+              부방장은 경기와 또또까지, 운영진은 명단·연결 같은 방 살림을 맡습니다.
+              어느 자리가 뭘 할 수 있는지는 설정 탭의 <b>역할별 권한</b>에서 켜고 꺼요.
+            </p>
           </div>
         )}
 
         {/* 내보내기와는 다르다. 내보내기는 '이 사람 나가요'라서 끼꼬만
             넘기면 되지만, 계정 옮기기는 '같은 사람인데 계정이 바뀌었다'라서
             그 계정이 남긴 것이 전부 따라와야 한다 */}
-        {isAdmin && !m.is_ghost && others.length > 0 && (
+        {can('account') && !m.is_ghost && others.length > 0 && (
           <div className="mem-field">
             <span className="mem-field-label">
               <FaExchangeAlt /> 계정 옮기기
@@ -163,7 +172,7 @@ const MemberModal = ({
           </div>
         )}
 
-        {isAdmin && m.is_ghost && (
+        {can('member') && m.is_ghost && (
           <div className="mem-field is-danger">
             <span className="mem-field-label">
               <FaGhost /> 유령 멤버
@@ -177,7 +186,7 @@ const MemberModal = ({
           </div>
         )}
 
-        {!isAdmin && (
+        {!can('member') && (
           <p className="rooms-hint">
             {m.player ? `명단의 '${m.player.name}'과 이어져 있어요.` : '참가자와 안 이어졌어요.'}
           </p>

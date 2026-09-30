@@ -1836,7 +1836,7 @@ test('시즌이 넘어갈 때 끼꼬를 초기화 전에 박제한다', () => {
 /* 화면의 권한 표(rules/permissions.js)와 서버가 부르는 기능 이름이
    어긋나면, 화면은 된다고 적어두고 서버가 거절한다 */
 test('권한 이름이 화면과 서버에서 같다', () => {
-  const { CAPS, DEFAULT_CAPS } = require('../rules/permissions');
+  const { CAPS, DEFAULT_ROLE_CAPS } = require('../rules/permissions');
   const inSql = new Set(
     [...sql.matchAll(/room_can\([^,]+,\s*'(\w+)'\)/g)].map((m) => m[1])
   );
@@ -1850,20 +1850,35 @@ test('권한 이름이 화면과 서버에서 같다', () => {
   const known = new Set(CAPS.map((c) => c.key));
   [...inSql].forEach((k) => expect(known.has(k)).toBe(true));
 
+  /* 새 방이 시작하는 자리가 화면과 서버에서 같아야 한다. 어긋나면 방을
+     만든 직후의 표가 실제와 다른 말을 한다 */
+  const dflt = sql.match(/role_caps jsonb not null\s+default '([^']+)'/)[1];
+  expect(JSON.parse(dflt)).toEqual(DEFAULT_ROLE_CAPS);
   /* 기본값은 예전 '부방장' 그대로 */
-  expect(sql).toContain(
-    "default array['record','bet','roster','member','style','account']"
-  );
-  expect(DEFAULT_CAPS.sort()).toEqual(
+  expect(DEFAULT_ROLE_CAPS.admin.slice().sort()).toEqual(
     ['account', 'bet', 'member', 'record', 'roster', 'style']
   );
+  /* 운영진은 방 살림만. 경기·또또·끼꼬는 안 준다 */
+  expect(DEFAULT_ROLE_CAPS.staff).not.toContain('record');
+  expect(DEFAULT_ROLE_CAPS.staff).not.toContain('bet');
+  expect(DEFAULT_ROLE_CAPS.member).toEqual([]);
+});
+
+/* 역할 이름이 화면·제약·함수 셋에서 같아야 한다. 하나라도 빠지면
+   그 자리를 줄 수는 있는데 아무것도 못 하거나, 아예 저장이 거절된다 */
+test('역할 이름이 화면과 서버에서 같다', () => {
+  const { SET_ROLES } = require('../rules/permissions');
+  expect(SET_ROLES.map((r) => r.key)).toEqual(['admin', 'staff', 'member']);
+  expect(sql).toContain("check (role in ('owner','admin','staff','member'))");
+  expect(fnBody('set_member_role')).toContain("p_role not in ('admin', 'staff', 'member')");
+  expect(fnBody('set_role_cap')).toContain("p_role not in ('admin','staff','member')");
 });
 
 /* 부방장이 방을 지우거나 방장을 끌어내릴 수 있으면 방장이라는 자리가
    뜻이 없어진다. 화면에서 못 누르게 막는 것만으로는 부족하다 */
 test('넘길 수 없는 권한은 서버가 거절한다', () => {
   const { CAPS } = require('../rules/permissions');
-  const body = fnBody('set_admin_cap');
+  const body = fnBody('set_role_cap');
   const allowed = body.match(/p_cap not in \(([^)]+)\)/)[1];
   CAPS.filter((c) => c.fixed || c.everyone).forEach((c) => {
     expect(allowed).not.toContain(`'${c.key}'`);
@@ -1878,7 +1893,7 @@ test('넘길 수 없는 권한은 서버가 거절한다', () => {
 test('권한 관문은 한 군데뿐이다', () => {
   const body = fnBody('room_can');
   expect(body).toContain("m.role = 'owner'");
-  expect(body).toContain("m.role = 'admin' and cap = any(r.admin_caps)");
+  expect(body).toContain("jsonb_exists(r.role_caps -> m.role, cap)");
   /* 옛 관문이 남아 있으면 '이걸 쓰면 되나' 싶어진다 */
   expect(sql).not.toContain('function public.is_room_admin(');
   expect(sql).not.toContain('function public.is_room_recorder(');
@@ -1886,7 +1901,7 @@ test('권한 관문은 한 군데뿐이다', () => {
 
 /* 방장 자리 자체를 건드리는 것만 room_can 밖에 둔다 */
 test('방장 자리는 권한 목록 밖이다', () => {
-  ['set_member_role', 'transfer_room', 'delete_room', 'set_admin_cap'].forEach((name) => {
+  ['set_member_role', 'transfer_room', 'delete_room', 'set_role_cap'].forEach((name) => {
     expect(fnBody(name)).toContain('public.is_room_owner(');
   });
 });
