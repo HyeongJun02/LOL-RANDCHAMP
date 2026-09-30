@@ -79,43 +79,46 @@ const FeedTab = ({ roomId, version }) => {
     load(page - 1, cursors);
   };
 
-  const chips = (
-    <div className="feed-filters">
-      {FEED_FILTERS.map((f, i) => (
-        <button
-          key={f.label}
-          className={`feed-filter ${i === filter ? 'is-on' : ''}`}
-          onClick={() => setFilter(i)}
-        >
-          {f.label}
-        </button>
-      ))}
+  /* 이 탭도 패널 없이 맨몸이라 다른 탭과 따로 놀았다. 제목줄이 달린
+     같은 패널에 넣고, 걸러내기 단추를 그 안 맨 위에 둔다 */
+  const frame = (body) => (
+    <div className="room-settings">
+      <section className="room-panel">
+        <h3>
+          <FaListUl /> 방에서 일어난 일
+          {FEED_FILTERS[filter].label !== '전체' && (
+            <span className="panel-count">{FEED_FILTERS[filter].label}</span>
+          )}
+        </h3>
+        <div className="feed-filters">
+          {FEED_FILTERS.map((f, i) => (
+            <button
+              key={f.label}
+              className={`feed-filter ${i === filter ? 'is-on' : ''}`}
+              onClick={() => setFilter(i)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {body}
+      </section>
     </div>
   );
 
-  if (loading) {
-    return (
-      <>
-        {chips}
-        <SkelRows count={6} h={40} />
-      </>
-    );
-  }
+  if (loading) return frame(<SkelRows count={6} h={40} />);
 
   if (items.length === 0) {
-    return (
-      <>
-        {chips}
-        <Empty
-          icon={<FaListUl />}
-          title={filter === 0 ? '아직 남은 기록이 없어요' : `'${FEED_FILTERS[filter].label}' 기록이 없어요`}
-          desc={
-            filter === 0
-              ? '경기·또또·끼꼬가 오갈 때마다 여기에 한 줄씩 쌓입니다.'
-              : '다른 라벨을 골라보세요.'
-          }
-        />
-      </>
+    return frame(
+      <Empty
+        icon={<FaListUl />}
+        title={filter === 0 ? '아직 남은 기록이 없어요' : `'${FEED_FILTERS[filter].label}' 기록이 없어요`}
+        desc={
+          filter === 0
+            ? '경기·또또·끼꼬가 오갈 때마다 여기에 한 줄씩 쌓입니다.'
+            : '다른 라벨을 골라보세요.'
+        }
+      />
     );
   }
 
@@ -123,10 +126,8 @@ const FeedTab = ({ roomId, version }) => {
      어느 날 일인지 놓친다 (한 페이지에 며칠이 섞여 들어온다) */
   let lastDay = null;
 
-  return (
+  return frame(
     <>
-      {chips}
-
       <ul className="room-feed">
         {items.map((log) => {
           const { tag, parts } = feedParts(log);
@@ -137,7 +138,7 @@ const FeedTab = ({ roomId, version }) => {
           return (
             <React.Fragment key={log.id}>
               {fresh && (
-                <li className="feed-day" aria-hidden="true">
+                <li className="day-sep" aria-hidden="true">
                   <span>{dayLabel(at)}</span>
                 </li>
               )}

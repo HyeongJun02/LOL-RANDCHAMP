@@ -73,9 +73,13 @@ test('기록이 없으면 무엇을 하면 되는지까지 알려준다', () => 
   expect(el.querySelector('.empty-desc').textContent).toContain('게임 시작');
 });
 
+/* 날짜 구분선도 같은 목록 안의 li다 (로그 탭과 같은 .day-sep).
+   경기 줄만 세야 한다 */
+const rowsOf = (el) => [...el.querySelectorAll('.history-list li:not(.day-sep)')];
+
 test('양 팀과 이긴 쪽을 보여준다', () => {
   const el = render({ initial: [game()] });
-  const rows = [...el.querySelectorAll('.history-list li')];
+  const rows = rowsOf(el);
   expect(rows).toHaveLength(1);
   expect(rows[0].textContent).toContain('철수');
   expect(rows[0].textContent).toContain('영희');
@@ -137,11 +141,11 @@ test('또또가 걸린 판만 결과를 열 수 있다', () => {
 test('삭제는 확인창을 거친다', async () => {
   const el = render({ initial: [game()] });
 
-  await click(el.querySelector('.row-del'));
+  await click(el.querySelector('.hist-del'));
   await click(byText(document, 'button', '취소'));
   expect(el.querySelector('.history-list')).not.toBeNull();
 
-  await click(el.querySelector('.row-del'));
+  await click(el.querySelector('.hist-del'));
   await click(document.querySelector('.dialog-ok'));
   expect(el.querySelector('.history-list')).toBeNull();
 });
@@ -149,9 +153,9 @@ test('삭제는 확인창을 거친다', async () => {
 /* 입장 코드로 들어온 사람은 보기만 한다 */
 test('수정 권한이 없으면 삭제 버튼이 안 보인다', () => {
   const el = render({ canEdit: false, initial: [game()] });
-  expect(el.querySelector('.row-del')).toBeNull();
+  expect(el.querySelector('.hist-del')).toBeNull();
   /* 기록 자체는 보인다 */
-  expect(el.querySelector('.history-list li').textContent).toContain('철수');
+  expect(rowsOf(el)[0].textContent).toContain('철수');
 });
 
 /* 시간만 죽 나열하면 언제 몰아서 했는지가 안 보인다 */
@@ -165,7 +169,7 @@ test('날짜로 묶고 오늘·어제는 말로 적는다', () => {
     ],
   });
 
-  const labels = [...el.querySelectorAll('.hist-day-label')].map((n) => n.textContent);
+  const labels = [...el.querySelectorAll('.day-sep')].map((n) => n.textContent);
   expect(labels).toHaveLength(2);
   expect(labels[0]).toContain('오늘');
   expect(labels[0]).toContain('2판');
@@ -179,8 +183,9 @@ test('몇 판·며칠·또또 몇 판인지 먼저 보여준다', () => {
       { ...game(), id: 'b', playedAt: Date.now() - 86400000 },
     ],
   });
-  const sum = el.querySelector('.hist-summary').textContent;
-  expect(sum).toContain('2판');
-  expect(sum).toContain('2일');
-  expect(sum).toContain('또또');
+  /* 따로 상자를 두지 않고 패널 제목줄에 붙인다 (다른 탭과 같은 틀) */
+  const head = el.querySelector('.room-panel h3').textContent;
+  expect(head).toContain('2판');
+  expect(head).toContain('2일');
+  expect(head).toContain('또또');
 });

@@ -560,6 +560,224 @@ select.rooms-input:hover:not(:disabled) {
   font-size: 0.7rem;
 }
 
+/* ---------- 내전 기록 (지난 판) ---------- */
+
+/* 한 행에 한 판. 두 열로 늘어놓아 봤는데 눈이 좌우로 왔다 갔다 하느라
+   오히려 안 읽혔다. 카드 안이 이미 1팀/2팀 두 칸이라, 밖에서 또 나누면
+   한 화면에 네 덩어리가 된다 */
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* 한 줄에 팀 둘을 'vs'로 욱여넣으니 이름이 잘리고, 퍼블·총 킬을 붙일
+   자리도 없었다. 위는 '언제·무슨 일이 있었나', 아래는 '누가 이겼나'로
+   나눈 작은 카드로 바꾼다.
+
+   이제 .room-panel 안에 들어간다 (다른 탭과 같은 틀). 패널이 이미
+   테두리를 두르고 있어서 카드 테두리는 한 톤 죽인다 - 안 그러면
+   테두리가 이중으로 보인다 */
+
+.history-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.history-list li:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.hist-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.hist-time {
+  flex: none;
+  font-size: 0.72rem;
+  color: #5b6b85;
+}
+
+/* 한 판에서 알아둘 만한 것들. 없는 건 아예 안 그린다 -
+   '-'로 채우면 빈 칸이 정보인 척한다 */
+.hist-facts {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.hist-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #8b98ae;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hist-fact svg {
+  font-size: 0.62rem;
+  opacity: 0.85;
+}
+
+/* 기준선과 결과. 숫자 뒤에 한 톤 낮춰 붙인다 */
+.hist-fact em {
+  font-style: normal;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+/* 오버는 위로 넘친 것이라 붉게, 언더는 모자란 것이라 푸르게.
+   같은 '총 킬'이라도 어느 쪽이었는지가 색으로 먼저 들어온다 */
+.hist-fact.is-over {
+  background: rgba(249, 115, 98, 0.12);
+  color: #ffb3a8;
+}
+
+.hist-fact.is-under {
+  background: rgba(56, 189, 248, 0.12);
+  color: #a5dcf7;
+}
+
+.hist-fact.is-bet {
+  background: rgba(200, 170, 110, 0.14);
+  color: var(--gg-gold-light);
+}
+
+/* 1팀은 늘 왼쪽, 2팀은 늘 오른쪽. 이긴 쪽을 위로 올리면 카드마다
+   자리가 바뀌어 여러 판을 훑을 때 매번 다시 읽어야 한다 */
+.hist-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.hist-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* 이긴 쪽만 색과 왼쪽 띠를 준다. 굵기만으로는 훑을 때 안 걸린다 */
+.hist-side.is-win {
+  background: rgba(200, 170, 110, 0.1);
+  box-shadow: inset 2px 0 0 var(--gg-gold);
+}
+
+.hist-side.is-lose {
+  opacity: 0.5;
+}
+
+.hist-tag {
+  flex: none;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #5b6b85;
+}
+
+.is-win .hist-tag {
+  color: var(--gg-gold);
+}
+
+.hist-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.3rem;
+  min-width: 0;
+  color: #7d8ba3;
+}
+
+.is-win .hist-names {
+  color: #e6ecf7;
+  font-weight: 600;
+}
+
+.hist-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  white-space: nowrap;
+}
+
+/* 퍼블을 딴 사람. 위에 따로 적는 것보다 이름에 붙는 편이 바로 읽힌다 */
+.hist-name.is-fb {
+  color: #ffb3a8;
+  font-weight: 700;
+}
+
+.hist-name.is-fb svg {
+  font-size: 0.66rem;
+}
+
+/* 쉼표는 이름 사이를 떼어줄 뿐이라 한 톤 죽인다 */
+.hist-comma {
+  font-style: normal;
+  opacity: 0.4;
+}
+
+/* 좁아도 순서는 그대로. 1팀이 위, 2팀이 아래로 쌓일 뿐이다 */
+@media (max-width: 480px) {
+  .hist-teams {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* 패널 제목 오른쪽에 붙는 곁 숫자. panel-count가 '몇 판'을 말하고,
+   이쪽이 '며칠에 걸쳐·또또는 몇 판'을 말한다 */
+/* 카드 안에서 쓰는 작은 삭제 단추. 공용 .icon-btn보다 한 치수 작다 */
+.hist-del {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.68rem;
+}
+
+.hist-sub {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #6b7a94;
+}
+
+.hist-sub b {
+  font-weight: 700;
+  color: #b9c3d6;
+  font-variant-numeric: tabular-nums;
+}
+
+.hist-sub .is-bet {
+  color: var(--gg-gold-light);
+}
+
 /* ---------- 멤버 관리 팝업 ---------- */
 
 .mem-modal {
@@ -693,32 +911,6 @@ select.rooms-input:hover:not(:disabled) {
   line-height: 1.5;
 }
 
-/* ----- 9/29 (월) ----- 날짜가 바뀌는 자리에 넣는다. 시간만 적혀 있으면
-   스크롤하는 동안 어느 날 일인지 놓친다 (한 쪽에 며칠이 섞여 들어온다) */
-.room-feed .feed-day {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 0.55rem 0 0.15rem;
-  padding: 0;
-  background: none;
-  color: #6b7a94;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.room-feed .feed-day:first-child {
-  margin-top: 0;
-}
-
-.room-feed .feed-day::before,
-.room-feed .feed-day::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--gg-panel-border);
-}
-
 /* 줄에 붙는 라벨이 곧 단추 이름이다. 종류가 아홉이라 한 줄에 다 안
    들어가는데, 좌우로 스크롤시키면 뒤쪽 단추가 안 보인다. 접어서 쌓는다 */
 .feed-filters {
@@ -751,6 +943,44 @@ select.rooms-input:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent, #c8aa6e) 12%, transparent);
   color: #f4f7fc;
   font-weight: 700;
+}
+
+/* ----- 9/29 (월) ----- 로그 탭과 내전 기록 탭이 같이 쓴다.
+   한쪽만 고치면 같은 방 안에서 날짜 구분선이 두 가지로 보인다.
+
+   li로 못을 박아야 한다. .room-feed li와 .history-list li가 알약 배경과
+   padding을 주고 있어서, 클래스만으로는 specificity에서 져 구분선에
+   배경이 남는다. 두 목록 규칙보다 뒤에 있어야 하는 이유도 같다 */
+li.day-sep {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.75rem 0 0.35rem;
+  padding: 0;
+  background: none;
+  color: #6b7a94;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+li.day-sep:first-child {
+  margin-top: 0;
+}
+
+li.day-sep::before,
+li.day-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gg-panel-border);
+}
+
+li.day-sep em {
+  margin-left: 0.35rem;
+  font-style: normal;
+  font-weight: 400;
+  color: #5b6779;
 }
 
 /* 무엇에 관한 줄인지 먼저 눈에 들어와야 훑기 편하다 */

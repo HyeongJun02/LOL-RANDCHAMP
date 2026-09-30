@@ -1527,3 +1527,27 @@ test('폭을 줄인 탭은 가운데로 모은다', () => {
   expect(body).toMatch(/max-width/);
   expect(body).toMatch(/margin-inline:\s*auto/);
 });
+
+/* 로그·내전 기록 탭만 패널 없이 맨몸이라, 탭을 옮기면 그 둘만 허전해
+   보였다. 다른 탭은 전부 제목줄 달린 .room-panel 안에 들어 있다 */
+test('모든 방 탭이 같은 틀(.room-panel)을 쓴다', () => {
+  const dir = path.join(__dirname, '..', 'pages', 'rooms');
+  ['MatchHistory', 'FeedTab', 'BetTab', 'KkikoTab'].forEach((name) => {
+    const src = fs.readFileSync(path.join(dir, `${name}.jsx`), 'utf8');
+    expect(src).toContain('room-panel');
+  });
+});
+
+/* 같은 방 안에서 날짜 구분선이 두 가지로 보이면 안 된다 */
+test('날짜 구분선은 로그·내전 기록이 같은 것을 쓴다', () => {
+  const dir = path.join(__dirname, '..', 'pages', 'rooms');
+  ['MatchHistory', 'FeedTab'].forEach((name) => {
+    expect(fs.readFileSync(path.join(dir, `${name}.jsx`), 'utf8')).toContain('"day-sep"');
+  });
+  /* .room-feed li / .history-list li가 알약 배경을 주므로 li로 못을 박아야
+     specificity에서 이긴다 */
+  const css = fs.readFileSync(path.join(dir, 'Rooms.css'), 'utf8');
+  expect(css).toContain('li.day-sep {');
+  expect(css.indexOf('li.day-sep {')).toBeGreaterThan(css.indexOf('.history-list li {'));
+  expect(css.indexOf('li.day-sep {')).toBeGreaterThan(css.indexOf('.room-feed li {'));
+});

@@ -13,13 +13,16 @@ import Modal from '../../components/common/Modal';
 import Empty from '../../components/common/Empty';
 import BetTab from './BetTab';
 import { timeAgo } from '../../lib/timeAgo';
-import '../scrimRecord/ScrimRecord.css';
 
 /* 방의 '내전 기록' 탭.
 
    전에는 '게임 시작' 탭 밑에 붙어 있었는데, 팀을 넣는 화면과 지난 판을
    훑는 화면은 하는 일이 다르다. 한 판 기록하려고 들어왔다가 목록을
-   지나쳐야 했고, 지난 판을 보려면 입력칸부터 스크롤해야 했다. */
+   지나쳐야 했고, 지난 판을 보려면 입력칸부터 스크롤해야 했다.
+
+   이 탭만 패널(.room-panel) 없이 맨몸이었다. 다른 탭은 전부 제목줄이
+   달린 패널 안에 들어 있어서, 탭을 옮기면 이 탭만 허전해 보였다.
+   같은 틀에 넣고, 날짜 구분선도 로그 탭과 같은 것(.day-sep)을 쓴다. */
 
 const num = (n) => Number(n || 0).toLocaleString();
 
@@ -90,11 +93,18 @@ const MatchHistory = ({
 
   if (history.length === 0) {
     return (
-      <Empty
-        icon={<FaClipboardList />}
-        title="아직 남긴 판이 없어요"
-        desc="게임 시작 탭에서 팀을 채우고 이긴 팀을 고르면 여기에 쌓입니다."
-      />
+      <div className="room-settings">
+        <section className="room-panel">
+          <h3>
+            <FaClipboardList /> 지난 판
+          </h3>
+          <Empty
+            icon={<FaClipboardList />}
+            title="아직 남긴 판이 없어요"
+            desc="게임 시작 탭에서 팀을 채우고 이긴 팀을 고르면 여기에 쌓입니다."
+          />
+        </section>
+      </div>
     );
   }
 
@@ -144,7 +154,7 @@ const MatchHistory = ({
                 </span>
 
                 {canEdit && (
-                  <button className="row-del" onClick={() => remove(m)} aria-label="기록 삭제">
+                  <button className="icon-btn hist-del" onClick={() => remove(m)} aria-label="기록 삭제">
                     <FaTimes />
                   </button>
                 )}
@@ -186,32 +196,39 @@ const MatchHistory = ({
   };
 
   return (
-    <>
-      {/* 며칠에 걸쳐 몇 판 했는지가 먼저 보이면 아래 목록이 읽히기 시작한다 */}
-      <div className="hist-summary">
-        <span>
-          <b>{history.length}</b>판
-        </span>
-        <span>
-          <b>{days.size}</b>일
-        </span>
-        {betGames > 0 && (
-          <span className="is-bet">
-            또또 <b>{betGames}</b>판
+    <div className="room-settings">
+      {/* 다른 탭과 같은 틀. 제목줄 왼쪽의 강조 막대까지 그대로 따라온다.
+          날짜마다 패널을 하나씩 두면 한두 판만 한 날이 우스워지므로,
+          패널 하나 안에서 날짜로만 끊는다 */}
+      <section className="room-panel">
+        <h3>
+          <FaClipboardList /> 지난 판
+          <span className="panel-count">{history.length}판</span>
+          <span className="hist-sub">
+            <b>{days.size}</b>일
+            {betGames > 0 && (
+              <>
+                {' · '}
+                <span className="is-bet">
+                  또또 <b>{betGames}</b>판
+                </span>
+              </>
+            )}
           </span>
-        )}
-      </div>
+        </h3>
 
-      {[...days.entries()].map(([key, list]) => (
-        <section className="hist-day" key={key}>
-          <h3 className="hist-day-label">
-            {dayLabel(list[0].playedAt)}
-            <em>{list.length}판</em>
-          </h3>
-          {/* 넓은 화면에서는 두 열. 한 열로만 두면 좌우가 통째로 비어 있다 */}
-          <ul className="history-list">{list.map(card)}</ul>
-        </section>
-      ))}
+        <ul className="history-list">
+          {[...days.entries()].flatMap(([key, list]) => [
+            <li className="day-sep" key={`d-${key}`} aria-hidden="true">
+              <span>
+                {dayLabel(list[0].playedAt)}
+                <em>{list.length}판</em>
+              </span>
+            </li>,
+            ...list.map(card),
+          ])}
+        </ul>
+      </section>
 
       {/* 또또 탭과 같은 화면을 그대로 띄운다. 결과를 두 벌로 그리면
           둘이 조금씩 달라지고, 어느 쪽이 맞는지 아무도 모르게 된다 */}
@@ -235,7 +252,7 @@ const MatchHistory = ({
           />
         </Modal>
       )}
-    </>
+    </div>
   );
 };
 
