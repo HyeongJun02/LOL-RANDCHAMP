@@ -229,3 +229,16 @@ test('대기는 많이 뛴 순으로, 눌러서 이름 순으로 바꾼다', asy
   await click(byText(el, 'button', '이름 순'));
   expect(poolNames()).toEqual(['가', '나']);
 });
+
+/* 대기 칸에 overflow-y: auto를 걸었다가 카드를 못 끌게 됐다. 누르고
+   움직이면 드래그 대신 그 칸이 스크롤됐다. 끌어야 하는 것은 스크롤
+   상자에 넣지 않는다 */
+test('대기 칸은 스크롤 상자가 아니다', () => {
+  const css = require('fs').readFileSync(
+    require('path').join(__dirname, 'ScrimRecord.css'),
+    'utf8'
+  );
+  const rule = css.match(/\.sr-pool-cards\s*\{[^}]*\}/)[0];
+  expect(rule).not.toMatch(/overflow/);
+  expect(rule).not.toMatch(/max-height/);
+});

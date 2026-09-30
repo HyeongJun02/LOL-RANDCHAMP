@@ -35,6 +35,9 @@ import './ScrimRecord.css';
 
 /* 대기가 길어지면 '누가 아직 안 들어갔지'를 눈으로 훑게 된다.
    자주 오는 사람이 위로 오는 게 기본 - 내전은 대개 같은 얼굴들이다 */
+/* 대기에 한 번에 펼쳐 둘 카드 수. 넘으면 접는다 */
+const POOL_SHOWN = 12;
+
 const SORTS = [
   { key: 'games', label: '많이 뛴 순' },
   { key: 'tier', label: '티어 순' },
@@ -167,6 +170,9 @@ const ScrimRecord = ({
   const [extras, setExtras] = useState([]);
   const [typed, setTyped] = useState('');
   const [sort, setSort] = useState('games');
+  /* 대기가 길면 접어둔다. 스크롤 상자에 넣으면 카드를 끌 수가 없다 -
+     누르고 움직이는 순간 드래그 대신 그 칸이 스크롤된다 */
+  const [allPool, setAllPool] = useState(false);
   /* 지금 끌고 있는 카드와, 그 카드가 올라온 칸.
      올라온 칸을 useState로 들고 있었더니 끄는 내내 화면이 다시 그려졌고,
      그 사이에 끌던 카드가 새로 그려지면 브라우저가 드래그를 접어버린다.
@@ -576,7 +582,16 @@ const ScrimRecord = ({
             )}
           </div>
           {pool.length > 0 ? (
-            <div className="sr-pool-cards">{pool.map((n) => card(n, null))}</div>
+            <>
+              <div className="sr-pool-cards">
+                {(allPool ? pool : pool.slice(0, POOL_SHOWN)).map((n) => card(n, null))}
+              </div>
+              {pool.length > POOL_SHOWN && (
+                <button className="sr-pool-more" onClick={() => setAllPool(!allPool)}>
+                  {allPool ? '접기' : `${pool.length - POOL_SHOWN}명 더 보기`}
+                </button>
+              )}
+            </>
           ) : (
             <p className="sr-pool-hint">
               대기가 비었어요. 팀에서 ✕를 누르거나 카드를 여기로 끌어다 놓으면 돌아옵니다.

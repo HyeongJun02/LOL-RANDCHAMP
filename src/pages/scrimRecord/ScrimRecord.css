@@ -358,24 +358,34 @@
   color: #55637a;
 }
 
-/* 명단이 스무 명이면 대기만으로 화면을 다 먹는다. 여기서 굴린다 */
+/* 여기에 overflow-y: auto를 걸었다가 카드를 못 끌게 됐다. 누르고 움직이면
+   드래그 대신 이 칸이 스크롤됐다. 대기가 길면 접어서 줄인다 - 끌어야 하는
+   것들을 스크롤 상자에 넣지 않는다 */
 .sr-pool-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
   gap: 0.4rem;
   margin-bottom: 0.5rem;
-  max-height: 17rem;
-  overflow-y: auto;
-  padding-right: 0.15rem;
 }
 
-.sr-pool-cards::-webkit-scrollbar {
-  width: 6px;
+.sr-pool-more {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.3rem;
+  border: 1px dashed var(--gg-panel-border);
+  border-radius: 8px;
+  background: none;
+  color: #6b7a94;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.sr-pool-cards::-webkit-scrollbar-thumb {
-  background: rgba(200, 170, 110, 0.35);
-  border-radius: 10px;
+.sr-pool-more:hover {
+  border-color: rgba(200, 170, 110, 0.45);
+  color: var(--gg-gold-light);
 }
 
 .sr-pool-add {
@@ -585,7 +595,6 @@
   /* 좁은 화면에서는 대기 카드를 한 줄에 하나 또는 둘 */
   .sr-pool-cards {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    max-height: 14rem;
   }
 }
 
