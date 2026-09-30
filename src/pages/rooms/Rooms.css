@@ -1727,11 +1727,31 @@ li.day-sep em {
 /* 설정 탭의 짧은 칸들(입장 코드·방 꾸미기·방 이름)을 좌우로 나눈다.
    세로로만 쌓으니 넓은 화면에서 오른쪽이 텅 비고, 아래 참가자·멤버까지
    한참 내려가야 했다. 좁아지면 알아서 한 줄로 돌아온다 */
+/* align-items를 start로 두었더니 짧은 칸만 위에 붕 떠서 둘이 한 줄이라는
+   게 안 읽혔다. 격자는 그냥 두면 칸 끝을 맞춰준다(stretch) */
 .settings-cols {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  align-items: start;
   gap: 0.9rem;
+}
+
+/* 한 칸 안에 이름·색·엠블럼이 같이 있다. 무엇을 고르는 자리인지
+   작게라도 적어두지 않으면 한 덩어리로 보인다 */
+.style-label {
+  display: block;
+  margin: 0.9rem 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #8b98ae;
+}
+
+.style-label:first-child {
+  margin-top: 0;
+}
+
+/* 제목 바로 아래 오는 설명은 라벨에 붙어 있어야 한다 */
+.style-label + .rooms-hint {
+  margin-top: 0;
 }
 
 /* 직접 적는 엠블럼. 왼쪽에 지금 모양을 띄워두면 적으면서 확인이 된다 */

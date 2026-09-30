@@ -560,7 +560,23 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
           </div>
       </section>
 
-      <Panel locked={!can('style')} head={<><FaPalette /> 방 꾸미기</>}>
+      {/* 이름·색·엠블럼은 전부 '이 방을 어떻게 보이게 할까'다. 칸을 셋으로
+          나눠 두었더니 짧은 칸들이 높이만 안 맞고 할 말은 같았다 */}
+      <Panel locked={!can('style')} head={<><FaPalette /> 방 이름·꾸미기</>}>
+          <span className="style-label">이름</span>
+          <div className="rooms-form-row">
+            <input
+              className="rooms-input"
+              value={name}
+              maxLength={20}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <button className="ghost-btn" onClick={saveName} disabled={name.trim() === room.name}>
+              저장
+            </button>
+          </div>
+
+          <span className="style-label">색</span>
           <p className="rooms-hint">
             고른 색이 이 방 전체에 돕니다. 방 목록에서도 이 색으로 보여요.
           </p>
@@ -576,6 +592,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               />
             ))}
           </div>
+          <span className="style-label">엠블럼</span>
           <div className="style-row style-emblems">
             {EMBLEMS.map((e) => (
               <button
@@ -604,20 +621,6 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               disabled={!badge || badge === room.emblem}
             >
               적용
-            </button>
-          </div>
-      </Panel>
-
-      <Panel locked={!can('style')} head={<>방 이름</>}>
-          <div className="rooms-form-row">
-            <input
-              className="rooms-input"
-              value={name}
-              maxLength={20}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <button className="ghost-btn" onClick={saveName} disabled={name.trim() === room.name}>
-              저장
             </button>
           </div>
       </Panel>
