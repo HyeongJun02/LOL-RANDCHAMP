@@ -1517,3 +1517,13 @@ test('화살표는 폭이 넉넉한 칸에만 건다', () => {
   expect(rooms).toContain('select.rooms-input {');
   expect(rooms).toMatch(/select\.rooms-input \{[^}]*padding-right/);
 });
+
+/* max-width만 걸고 내보냈다가, 좁은 탭은 왼쪽에 붙고 넓은 탭은 전체 폭을
+   써서 탭을 옮길 때마다 정렬이 달라 보였다 */
+test('폭을 줄인 탭은 가운데로 모은다', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'Rooms.css'), 'utf8');
+  const rule = css.slice(css.indexOf('.room-panel-wrap.is-narrow {'));
+  const body = rule.slice(0, rule.indexOf('}'));
+  expect(body).toMatch(/max-width/);
+  expect(body).toMatch(/margin-inline:\s*auto/);
+});
