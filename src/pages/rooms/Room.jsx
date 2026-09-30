@@ -47,7 +47,7 @@ import {
   transferRoom,
   kickMember,
   transferAccount,
-  setAdminScope,
+  setAdminCap,
   setRoomStyle,
   linkRoomPlayer,
   addGhostMember,
@@ -60,7 +60,7 @@ import { GameProvider, useGame, useGameKey } from '../../lib/GameContext';
 import { ACCENTS, EMBLEMS, accentVars } from '../../lib/roomStyle';
 import { titlesOf } from '../../rules/titles';
 import { MAX_ROOM_PLAYERS } from '../../server/limits';
-import { ROLES, CAPS, SCOPES, allows } from '../../rules/permissions';
+import { ROLES, CAPS, DEFAULT_CAPS, allows } from '../../rules/permissions';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
 import MatchHistory from './MatchHistory';
@@ -473,11 +473,8 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
     reload();
   });
 
-  const saveScope = guard(async (scope) => {
-    await setAdminScope(room.id, scope);
-    toast.success(
-      scope === 'full' ? '부방장에게 전체를 맡겼어요.' : '부방장을 기록까지로 제한했어요.'
-    );
+  const toggleCap = guard(async (cap, on) => {
+    await setAdminCap(room.id, cap.key, on);
     reload();
   });
 
@@ -814,31 +811,11 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
         <h3>
           <FaUserShield /> 역할별 권한
         </h3>
-
-        {isOwner ? (
-          <>
-            <p className="rooms-hint">부방장을 어디까지 믿을지 고릅니다.</p>
-            <div className="seg-tabs scope-tabs">
-              {SCOPES.map((sc) => (
-                <button
-                  key={sc.key}
-                  className={`seg-tab ${(room.admin_scope || 'full') === sc.key ? 'active' : ''}`}
-                  onClick={() => saveScope(sc.key)}
-                >
-                  부방장 {sc.label}
-                </button>
-              ))}
-            </div>
-            <p className="rooms-hint">
-              {SCOPES.find((x) => x.key === (room.admin_scope || 'full'))?.desc}
-            </p>
-          </>
-        ) : (
-          <p className="rooms-hint">
-            이 방의 부방장은 <b>{SCOPES.find((x) => x.key === (room.admin_scope || 'full'))?.label}</b>
-            까지 할 수 있습니다. 바꾸는 건 방장만 가능해요.
-          </p>
-        )}
+        <p className="rooms-hint">
+          {isOwner
+            ? '부방장 칸을 눌러 켜고 끕니다. 방장은 언제나 전부 할 수 있어요.'
+            : '방장이 부방장에게 무엇을 맡겼는지 보여줍니다.'}
+        </p>
 
         <ul className="perm-table">
           <li className="perm-head">
@@ -854,10 +831,22 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
                 <em>{c.desc}</em>
               </span>
               {ROLES.map((r) => {
-                const on = allows(r.key, c, room.admin_scope || 'full');
-                return (
+                const on = allows(r.key, c, room.admin_caps || DEFAULT_CAPS);
+                /* 방장·멤버 칸은 규칙이지 설정이 아니다. 부방장 칸만 누른다 */
+                const canToggle = isOwner && r.key === 'admin' && !c.fixed && !c.everyone;
+                return canToggle ? (
+                  <button
+                    key={r.key}
+                    className={`perm-cell is-btn ${on ? 'is-on' : ''}`}
+                    onClick={() => toggleCap(c, !on)}
+                    aria-pressed={on}
+                    aria-label={`부방장 ${c.label} ${on ? '끄기' : '켜기'}`}
+                  >
+                    {on ? '○' : '✕'}
+                  </button>
+                ) : (
                   <span key={r.key} className={`perm-cell ${on ? 'is-on' : ''}`}>
-                    {on ? '○' : '—'}
+                    {on ? '○' : '✕'}
                   </span>
                 );
               })}

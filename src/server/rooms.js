@@ -84,9 +84,10 @@ export const kickMember = (roomId, userId, toUserId = null) =>
 export const transferAccount = (roomId, fromUserId, toUserId) =>
   rpc('transfer_account', { p_room: roomId, p_from: fromUserId, p_to: toUserId });
 
-/* 부방장이 어디까지 할 수 있는지. 'full' | 'record' */
-export const setAdminScope = (roomId, scope) =>
-  rpc('set_admin_scope', { p_room: roomId, p_scope: scope });
+/* 부방장에게 이 기능을 줄지 뺄지. 이름은 rules/permissions.js의 CAPS와,
+   막는 쪽은 setup.sql의 room_can과 같아야 한다 */
+export const setAdminCap = (roomId, cap, on) =>
+  rpc('set_admin_cap', { p_room: roomId, p_cap: cap, p_on: on });
 
 /* 멤버 ↔ 참가자 묶기. playerId가 null이면 연결을 끊는다.
    묶어두면 경기 참여 포인트가 이 계정으로 간다 */
@@ -732,7 +733,7 @@ export const useMyRooms = (userId, ready = true) => {
    PostgREST가 FK를 따라 한 번에 묶어주므로 방+멤버+참가자+경기는 한 요청이다.
    프로필만 FK가 없어 따로 받는다 (RLS가 같은 방 사람으로 이미 좁혀준다) */
 const ROOM_SELECT =
-  'id,name,owner_id,version,created_at,accent,emblem,game,admin_scope,' +
+  'id,name,owner_id,version,created_at,accent,emblem,game,admin_caps,' +
   'room_members(user_id,role,joined_at,is_ghost),' +
   'room_players(id,name,tier,division,linked_user_id,deleted_at),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +

@@ -238,35 +238,49 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $fn$;
 
--- 부방장이 어디까지 할 수 있는가. 'full'이면 방장과 거의 같고,
--- 'record'면 경기와 또또만 남긴다 (끼꼬 조정·명단·멤버·코드는 방장만).
--- 방마다 다르다 - 친구 방은 다 열어두고, 사람 많은 방은 잠근다.
-alter table public.rooms add column if not exists admin_scope text not null default 'full';
-alter table public.rooms drop constraint if exists rooms_admin_scope_check;
-alter table public.rooms add constraint rooms_admin_scope_check
-  check (admin_scope in ('full', 'record'));
+-- 부방장이 무엇을 할 수 있는가. 기능 이름을 담아둔다.
+-- 방장은 목록과 상관없이 전부 된다. 기본값은 예전 '부방장' 그대로다 -
+-- 돈을 되돌리거나 사람을 내보내는 것만 방장 몫이었다.
+alter table public.rooms drop column if exists admin_scope;
+alter table public.rooms add column if not exists admin_caps text[] not null
+  default array['record','bet','roster','member','style','account'];
 
--- '방장과 거의 같은 권한'. 부방장은 방의 admin_scope가 full일 때만 해당한다.
--- record로 잠가두면 여기서 걸러지고, 경기·또또만 되는 is_room_recorder가
--- 남는다. 이 함수를 그대로 쓰는 곳은 전부 '방장 몫'이라는 뜻이다.
-create or replace function public.is_room_admin(rid bigint)
+-- 이 방에서 나에게 이 기능의 권한이 있는가.
+--
+-- 관문을 기능마다 따로 두지 않고 여기 하나로 모은다. 열여섯 군데가
+-- 이걸 부르는데, 권한 규칙이 두 군데로 갈리면 화면이 말하는 것과 서버가
+-- 막는 것이 조용히 달라진다.
+--
+-- src/rules/permissions.js의 CAPS와 이름이 같아야 한다 (테스트가 대조).
+create or replace function public.room_can(rid bigint, cap text)
 returns boolean language sql stable security definer set search_path = public as $fn$
   select exists (
     select 1 from room_members m join rooms r on r.id = m.room_id
      where m.room_id = rid and m.user_id = auth.user_id()
-       and (m.role = 'owner' or (m.role = 'admin' and r.admin_scope = 'full'))
+       and (m.role = 'owner' or (m.role = 'admin' and cap = any(r.admin_caps)))
   );
 $fn$;
 
--- 경기·또또를 남길 수 있는가. 부방장은 범위와 상관없이 여기까지는 된다 -
--- 애초에 그러라고 만든 자리다.
-create or replace function public.is_room_recorder(rid bigint)
-returns boolean language sql stable security definer set search_path = public as $fn$
-  select exists (
-    select 1 from room_members
-     where room_id = rid and user_id = auth.user_id() and role in ('owner','admin')
-  );
-$fn$;
+-- 방장만 바꾼다. 화면이 보내는 기능 이름을 그대로 믿지 않고 목록을 본다
+create or replace function public.set_admin_cap(p_room bigint, p_cap text, p_on boolean)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  if not public.is_room_owner(p_room) then
+    raise exception '방장만 권한을 바꿀 수 있어요.';
+  end if;
+  -- 방장 자리를 흔드는 것들은 넘길 수 없다. 부방장이 방을 지우거나
+  -- 방장을 끌어내릴 수 있으면 방장이라는 자리가 뜻이 없어진다
+  if p_cap not in ('record','bet','roster','member','style','account',
+                   'code_reset','adjust','undo') then
+    raise exception '넘길 수 없는 권한이에요.';
+  end if;
+  update rooms
+     set admin_caps = case when p_on
+           then (select array(select distinct unnest(admin_caps || p_cap)))
+           else array_remove(admin_caps, p_cap) end,
+         version = version + 1
+   where id = p_room;
+end; $fn$;
 
 create or replace function public.is_room_owner(rid bigint)
 returns boolean language sql stable security definer set search_path = public as $fn$
@@ -374,7 +388,7 @@ alter table public.hall_of_fame  enable row level security;
 
 -- 입장 코드는 컬럼 단위로 뺀다. 멤버 전원이 코드를 볼 수 있으면
 -- 재발급이 아무 의미가 없다. 방장·부방장은 get_join_code()로 본다.
-grant select (id, name, owner_id, version, created_at, accent, emblem, game, admin_scope) on public.rooms to authenticated;
+grant select (id, name, owner_id, version, created_at, accent, emblem, game, admin_caps) on public.rooms to authenticated;
 grant update (name, accent, emblem) on public.rooms to authenticated;
 grant select on public.room_members to authenticated;
 -- 잔액은 같은 방 사람끼리 서로 본다 (포인트 탭의 순위가 그것이다).
@@ -391,7 +405,7 @@ create policy rooms_read on public.rooms
 drop policy if exists rooms_admin_edit on public.rooms;
 create policy rooms_admin_edit on public.rooms
   for update to authenticated
-  using (public.is_room_admin(id)) with check (public.is_room_admin(id));
+  using (public.room_can(id, 'style')) with check (public.room_can(id, 'style'));
 
 drop policy if exists members_read on public.room_members;
 create policy members_read on public.room_members
@@ -408,7 +422,8 @@ create policy players_read on public.room_players
 drop policy if exists players_admin_write on public.room_players;
 create policy players_admin_write on public.room_players
   for all to authenticated
-  using (public.is_room_admin(room_id)) with check (public.is_room_admin(room_id));
+  using (public.room_can(room_id, 'roster'))
+  with check (public.room_can(room_id, 'roster'));
 
 drop policy if exists scrims_read on public.scrims;
 create policy scrims_read on public.scrims
@@ -417,7 +432,8 @@ create policy scrims_read on public.scrims
 drop policy if exists scrims_admin_write on public.scrims;
 create policy scrims_admin_write on public.scrims
   for all to authenticated
-  using (public.is_room_admin(room_id)) with check (public.is_room_admin(room_id));
+  using (public.room_can(room_id, 'record'))
+  with check (public.room_can(room_id, 'record'));
 
 drop policy if exists hof_read on public.hall_of_fame;
 create policy hof_read on public.hall_of_fame
@@ -585,7 +601,7 @@ create or replace function public.reset_join_code(p_room bigint)
 returns text language plpgsql security definer set search_path = public as $fn$
 declare code text;
 begin
-  if not public.is_room_owner(p_room) then
+  if not public.room_can(p_room, 'code_reset') then
     raise exception '방장만 입장 코드를 새로 뽑을 수 있어요.';
   end if;
   for i in 1..5 loop
@@ -645,8 +661,8 @@ declare
   who      text;
   to_name  text;
 begin
-  if not public.is_room_admin(p_room) then
-    raise exception '방장과 부방장만 내보낼 수 있어요.';
+  if not public.room_can(p_room, 'role') then
+    raise exception '방장만 내보낼 수 있어요.';
   end if;
   if p_user = (select owner_id from rooms where id = p_room) then
     raise exception '방장은 내보낼 수 없어요.';
@@ -732,8 +748,8 @@ declare
   from_n text;
   to_n   text;
 begin
-  if not public.is_room_admin(p_room) then
-    raise exception '방장과 부방장만 계정을 옮길 수 있어요.';
+  if not public.room_can(p_room, 'account') then
+    raise exception '계정을 옮길 권한이 없어요.';
   end if;
   if p_from = p_to then raise exception '같은 계정이에요.'; end if;
   if p_from = (select owner_id from rooms where id = p_room) then
@@ -799,20 +815,6 @@ begin
 end; $fn$;
 
 
--- 부방장 권한 범위. 방장만 바꾼다.
-create or replace function public.set_admin_scope(p_room bigint, p_scope text)
-returns void language plpgsql security definer set search_path = public as $fn$
-begin
-  if not public.is_room_owner(p_room) then
-    raise exception '방장만 권한을 바꿀 수 있어요.';
-  end if;
-  if p_scope not in ('full', 'record') then
-    raise exception '알 수 없는 권한 범위예요.';
-  end if;
-  update rooms set admin_scope = p_scope, version = version + 1 where id = p_room;
-end; $fn$;
-
-
 -- 멤버 ↔ 참가자 묶기.
 --
 -- '이 계정이 곧 이 참가자다'를 방장이 정해준다. 묶어두면 경기 참여
@@ -827,8 +829,8 @@ create or replace function public.link_room_player(
 returns void language plpgsql security definer set search_path = public as $fn$
 declare owner_of text;
 begin
-  if not public.is_room_admin(p_room) then
-    raise exception '방장과 부방장만 참가자를 연결할 수 있어요.';
+  if not public.room_can(p_room, 'member') then
+    raise exception '멤버를 연결할 권한이 없어요.';
   end if;
   if not exists (select 1 from room_members where room_id = p_room and user_id = p_user) then
     raise exception '그 사람은 이 방 멤버가 아니에요.';
@@ -862,8 +864,8 @@ declare
   nm   text := nullif(trim(p_name), '');
   n    int;
 begin
-  if not public.is_room_admin(p_room) then
-    raise exception '방장과 부방장만 유령 멤버를 만들 수 있어요.';
+  if not public.room_can(p_room, 'member') then
+    raise exception '유령 멤버를 만들 권한이 없어요.';
   end if;
   if nm is null then raise exception '이름을 적어주세요.'; end if;
   if length(nm) > 16 then raise exception '이름은 16자까지예요.'; end if;
@@ -882,8 +884,8 @@ end; $fn$;
 create or replace function public.remove_ghost_member(p_room bigint, p_user text)
 returns void language plpgsql security definer set search_path = public as $fn$
 begin
-  if not public.is_room_admin(p_room) then
-    raise exception '방장과 부방장만 지울 수 있어요.';
+  if not public.room_can(p_room, 'member') then
+    raise exception '유령 멤버를 지울 권한이 없어요.';
   end if;
   if not exists (
     select 1 from room_members
@@ -918,7 +920,7 @@ declare
 begin
   perform public.roll_season();
 
-  if not public.is_room_owner(p_room) then
+  if not public.room_can(p_room, 'adjust') then
     raise exception '방장만 끼꼬를 조정할 수 있어요.';
   end if;
   if not exists (select 1 from room_members where room_id = p_room and user_id = p_user) then
@@ -1114,7 +1116,7 @@ grant execute on function
   public.transfer_room(bigint, text),
   public.kick_member(bigint, text, text),
   public.transfer_account(bigint, text, text),
-  public.set_admin_scope(bigint, text),
+  public.set_admin_cap(bigint, text, boolean),
   public.link_room_player(bigint, text, bigint),
   public.add_ghost_member(bigint, text),
   public.remove_ghost_member(bigint, text),
@@ -1123,7 +1125,7 @@ grant execute on function
   public.delete_room(bigint),
   public.transfer_points(bigint, text, int),
   public.is_room_member(bigint),
-  public.is_room_admin(bigint),
+  public.room_can(bigint, text),
   public.is_room_owner(bigint)
 to authenticated;
 
@@ -1325,8 +1327,8 @@ returns bigint language plpgsql security definer set search_path = public as $fn
 declare sid bigint; n int;
 begin
   perform public.roll_season();
-  if not public.is_room_recorder(p_room) then
-    raise exception '방장과 부방장만 기록을 남길 수 있어요.';
+  if not public.room_can(p_room, 'record') then
+    raise exception '경기를 남길 권한이 없어요.';
   end if;
   if p_winner not in ('A', 'B') then
     raise exception '이긴 팀을 골라주세요.';
@@ -1365,8 +1367,8 @@ returns bigint language plpgsql security definer set search_path = public as $fn
 declare sid bigint; n int; closes timestamptz;
 begin
   perform public.roll_season();
-  if not public.is_room_recorder(p_room) then
-    raise exception '방장과 부방장만 배팅을 열 수 있어요.';
+  if not public.room_can(p_room, 'bet') then
+    raise exception '또또를 열 권한이 없어요.';
   end if;
   if exists (select 1 from scrims where room_id = p_room and status in ('betting', 'locked')) then
     raise exception '아직 끝나지 않은 배팅 경기가 있어요. 그것부터 정산해 주세요.';
@@ -1600,8 +1602,8 @@ begin
   -- 시간이 다 된 뒤에는 아무 멤버나 닫을 수 있다. 방장만 닫게 두면
   -- 방장이 화면을 안 보고 있을 때 아무도 배당을 못 보는 상태로 멈춘다.
   -- (실제로 닫는 건 시간을 본 첫 사람의 브라우저다)
-  if not expired and not public.is_room_recorder(s.room_id) then
-    raise exception '방장과 부방장만 마감할 수 있어요.';
+  if not expired and not public.room_can(s.room_id, 'bet') then
+    raise exception '또또를 마감할 권한이 없어요.';
   end if;
   if expired and not public.is_room_member(s.room_id) then
     raise exception '이 방의 멤버가 아니에요.';
@@ -1694,8 +1696,8 @@ begin
 
   select * into s from scrims where id = p_scrim;
   if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
-  if not public.is_room_recorder(s.room_id) then
-    raise exception '방장과 부방장만 결과를 넣을 수 있어요.';
+  if not public.room_can(s.room_id, 'bet') then
+    raise exception '결과를 넣을 권한이 없어요.';
   end if;
   -- 이미 정산된 경기에 다시 불러도 아무 일이 없어야 한다.
   -- 네트워크 재시도로 두 번 지급되는 사고를 막는다.
@@ -1791,7 +1793,7 @@ declare s scrims;
 begin
   select * into s from scrims where id = p_scrim;
   if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
-  if not public.is_room_owner(s.room_id) then
+  if not public.room_can(s.room_id, 'undo') then
     raise exception '방장만 정산을 되돌릴 수 있어요.';
   end if;
   if s.status <> 'settled' then raise exception '아직 정산되지 않은 경기예요.'; end if;
@@ -2134,8 +2136,8 @@ begin
     if not public.is_room_owner(s.room_id) then
       raise exception '배팅이 걸린 경기는 방장만 취소할 수 있어요.';
     end if;
-  elsif not public.is_room_recorder(s.room_id) then
-    raise exception '방장과 부방장만 기록을 지울 수 있어요.';
+  elsif not public.room_can(s.room_id, 'record') then
+    raise exception '기록을 지울 권한이 없어요.';
   end if;
 
   perform public.rollback_scrim(p_scrim);
@@ -2411,8 +2413,8 @@ begin
 
   select room_id into r from room_players where id = p_keep;
   if r is null then raise exception '남길 참가자를 찾을 수 없어요.'; end if;
-  if not public.is_room_admin(r) then
-    raise exception '방장과 부방장만 합칠 수 있어요.';
+  if not public.room_can(r, 'roster') then
+    raise exception '명단을 고칠 권한이 없어요.';
   end if;
 
   select room_id into r2 from room_players where id = p_drop;

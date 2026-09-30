@@ -461,9 +461,9 @@ test('되돌리기는 아직 안 뒤집은 줄만 고른다', () => {
   expect(body).toContain('set reversed_at = now()');
 });
 
-test('되돌리기는 방장만, 되돌린 사실은 피드에 남는다', () => {
+test('되돌리기는 되돌리기 권한이 있어야 한다 (기본은 방장만)', () => {
   const body = fnBody('unsettle_scrim');
-  expect(body).toContain('is_room_owner');
+  expect(body).toContain("room_can(s.room_id, 'undo')");
   expect(body).toContain("'settle_undone'");
 });
 
@@ -583,7 +583,7 @@ test('시간이 지나면 status가 betting이어도 더 못 건다', () => {
 
 test('시간이 지난 뒤에는 방장이 아니어도 마감할 수 있다 (방장이 자리를 비워도 배당이 열려야 한다)', () => {
   const body = sql.slice(sql.indexOf('function public.lock_betting'));
-  expect(body).toContain('if not expired and not public.is_room_recorder');
+  expect(body).toContain("if not expired and not public.room_can(s.room_id, 'bet')");
   /* 대신 시간이 안 됐으면 여전히 방장만 */
   expect(body).toContain('expired and not public.is_room_member');
 });
@@ -654,7 +654,7 @@ test('시즌 초기화도 방 지갑 기준이다', () => {
 
 test('연결은 방장·부방장만, 그리고 그 방 멤버에게만 걸 수 있다', () => {
   const body = fnBody('link_room_player');
-  expect(body).toContain('is_room_admin(p_room)');
+  expect(body).toContain("room_can(p_room, 'member')");
   /* 남의 방 사람을 참가자에 묶으면 참여 포인트가 방 밖으로 샌다 */
   expect(body).toMatch(/room_members where room_id = p_room and user_id = p_user/);
 });
@@ -684,7 +684,7 @@ test('방을 떠나면 참가자 연결도 같이 풀린다', () => {
 test('유령 멤버는 실제 계정과 겹치지 않는 id를 받는다', () => {
   const body = fnBody('add_ghost_member');
   expect(body).toContain("'ghost:' || gen_random_uuid()");
-  expect(body).toContain('is_room_admin(p_room)');
+  expect(body).toContain("room_can(p_room, 'member')");
   /* 방 인원 제한은 유령에게도 그대로 걸린다 */
   expect(body).toContain('>= 50');
 });
@@ -709,8 +709,8 @@ test('연결 함수들은 로그인한 사람에게만 열려 있다', () => {
 
 /* ---------- 방장의 끼꼬 조정 ---------- */
 
-test('끼꼬 조정은 방장만 할 수 있다', () => {
-  expect(fnBody('adjust_points')).toContain('is_room_owner(p_room)');
+test('끼꼬 조정은 조정 권한이 있어야 한다 (기본은 방장만)', () => {
+  expect(fnBody('adjust_points')).toContain("room_can(p_room, 'adjust')");
 });
 
 test('조정하면 반드시 로그가 남는다 (조용히 자기 잔액만 올릴 수 없게)', () => {
@@ -976,7 +976,7 @@ test('배팅이 걸린 경기도 방장이면 취소할 수 있다', () => {
   expect(body).not.toContain('배팅이 걸린 경기는 지울 수 없어요');
   expect(body).toContain('배팅이 걸린 경기는 방장만 취소할 수 있어요');
   /* 돈이 안 걸린 기록은 부방장도 그대로 지운다 */
-  expect(body).toContain('방장과 부방장만 기록을 지울 수 있어요');
+  expect(body).toContain('기록을 지울 권한이 없어요');
 });
 
 /* 되돌리는 몸통은 rollback_scrim으로 옮겼다. 방장 취소와 관리자 취소가
@@ -1396,7 +1396,7 @@ test('서로 맞붙은 적이 있으면 합치기를 막는다 (같은 사람이
 });
 
 test('합치기는 방장·부방장만', () => {
-  expect(fnBody('merge_room_players')).toContain('if not public.is_room_admin(r) then');
+  expect(fnBody('merge_room_players')).toContain("if not public.room_can(r, 'roster') then");
 });
 
 /* 배당을 실시간으로 보여주면 마감 직전에 유리한 쪽으로 몰린다.
@@ -1833,49 +1833,68 @@ test('시즌이 넘어갈 때 끼꼬를 초기화 전에 박제한다', () => {
 
 /* ---------- 역할별 권한 ---------- */
 
-/* 화면의 권한 표(rules/permissions.js)와 서버의 관문이 어긋나면, 화면은
-   된다고 적어두고 서버가 거절한다. 표의 need가 곧 서버 함수 이름이다 */
-test('권한 표의 관문이 SQL에 그대로 있다', () => {
-  const { CAPS } = require('../rules/permissions');
-  const fn = {
-    owner: 'is_room_owner',
-    admin: 'is_room_admin',
-    recorder: 'is_room_recorder',
-    member: 'is_room_member',
-  };
-  CAPS.forEach((c) => {
-    expect(fn[c.need]).toBeDefined();
-    expect(sql).toContain(`create or replace function public.${fn[c.need]}(`);
-  });
-  /* 설명이 없으면 그 권한이 무슨 일인지 알 수가 없다 */
-  CAPS.forEach((c) => expect(c.desc.length).toBeGreaterThan(5));
-});
-
-/* 부방장을 '기록까지'로 잠가도 경기·또또는 되어야 한다. 그게 그 자리를
-   만든 이유다 */
-test('경기·또또는 부방장 범위와 상관없이 된다', () => {
-  ['record_scrim', 'open_betting', 'lock_betting', 'settle_scrim', 'delete_scrim'].forEach(
-    (name) => {
-      expect(fnBody(name)).toContain('public.is_room_recorder(');
-    }
+/* 화면의 권한 표(rules/permissions.js)와 서버가 부르는 기능 이름이
+   어긋나면, 화면은 된다고 적어두고 서버가 거절한다 */
+test('권한 이름이 화면과 서버에서 같다', () => {
+  const { CAPS, DEFAULT_CAPS } = require('../rules/permissions');
+  const inSql = new Set(
+    [...sql.matchAll(/room_can\([^,]+,\s*'(\w+)'\)/g)].map((m) => m[1])
   );
-  /* 나머지는 is_room_admin이 막는다 - 그쪽이 admin_scope를 본다 */
-  expect(fnBody('is_room_admin')).toContain("r.admin_scope = 'full'");
-  expect(fnBody('is_room_recorder')).not.toContain('admin_scope');
+  /* 켜고 끌 수 있는 권한은 전부 서버 관문이 있어야 한다. 없으면 화면에서
+     껐는데도 서버가 그냥 통과시킨다.
+     (code는 멤버면 누구나, room은 방장 자리 자체라 room_can 밖이다) */
+  CAPS.filter((c) => !c.everyone && !c.fixed).forEach((c) => {
+    expect([c.key, [...inSql]]).toEqual([c.key, expect.arrayContaining([c.key])]);
+  });
+  /* 서버가 쓰는데 표에 없는 이름이 있으면 화면이 그 권한을 못 보여준다 */
+  const known = new Set(CAPS.map((c) => c.key));
+  [...inSql].forEach((k) => expect(known.has(k)).toBe(true));
+
+  /* 기본값은 예전 '부방장' 그대로 */
+  expect(sql).toContain(
+    "default array['record','bet','roster','member','style','account']"
+  );
+  expect(DEFAULT_CAPS.sort()).toEqual(
+    ['account', 'bet', 'member', 'record', 'roster', 'style']
+  );
 });
 
-/* 돈을 되돌리거나 사람을 내보내는 건 범위와 무관하게 방장만 */
-test('되돌리기·권한·방은 방장만', () => {
-  ['adjust_points', 'unsettle_scrim', 'set_member_role', 'reset_join_code',
-   'delete_room', 'transfer_room', 'set_admin_scope'].forEach((name) => {
+/* 부방장이 방을 지우거나 방장을 끌어내릴 수 있으면 방장이라는 자리가
+   뜻이 없어진다. 화면에서 못 누르게 막는 것만으로는 부족하다 */
+test('넘길 수 없는 권한은 서버가 거절한다', () => {
+  const { CAPS } = require('../rules/permissions');
+  const body = fnBody('set_admin_cap');
+  const allowed = body.match(/p_cap not in \(([^)]+)\)/)[1];
+  CAPS.filter((c) => c.fixed || c.everyone).forEach((c) => {
+    expect(allowed).not.toContain(`'${c.key}'`);
+  });
+  CAPS.filter((c) => !c.fixed && !c.everyone).forEach((c) => {
+    expect(allowed).toContain(`'${c.key}'`);
+  });
+  expect(body).toContain('public.is_room_owner(p_room)');
+});
+
+/* 방장은 목록과 상관없이 전부 된다 */
+test('권한 관문은 한 군데뿐이다', () => {
+  const body = fnBody('room_can');
+  expect(body).toContain("m.role = 'owner'");
+  expect(body).toContain("m.role = 'admin' and cap = any(r.admin_caps)");
+  /* 옛 관문이 남아 있으면 '이걸 쓰면 되나' 싶어진다 */
+  expect(sql).not.toContain('function public.is_room_admin(');
+  expect(sql).not.toContain('function public.is_room_recorder(');
+});
+
+/* 방장 자리 자체를 건드리는 것만 room_can 밖에 둔다 */
+test('방장 자리는 권한 목록 밖이다', () => {
+  ['set_member_role', 'transfer_room', 'delete_room', 'set_admin_cap'].forEach((name) => {
     expect(fnBody(name)).toContain('public.is_room_owner(');
   });
 });
 
-/* 입장 코드는 멤버면 본다. 새로 뽑는 건 여전히 방장만 */
+/* 입장 코드는 멤버면 본다. 새로 뽑는 건 넘길 수 있는 권한이다 */
 test('입장 코드는 멤버면 볼 수 있다', () => {
   expect(fnBody('get_join_code')).toContain('if not public.is_room_member(p_room) then');
-  expect(fnBody('reset_join_code')).toContain('public.is_room_owner(');
+  expect(fnBody('reset_join_code')).toContain("room_can(p_room, 'code_reset')");
 });
 
 /* ---------- 계정 옮기기 ---------- */
