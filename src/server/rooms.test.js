@@ -80,6 +80,7 @@ const {
   killLineFor,
   killLineOfScrim,
   firstBloodRates,
+  openBettingByNames,
 } = require('./rooms');
 
 beforeEach(() => {
@@ -1609,4 +1610,64 @@ test('내전 기록의 VS가 줄마다 같은 자리에 선다', () => {
   );
   expect(jsx).toContain('<span className="hist-time" title={timeAgo(m.playedAt)}>');
   expect(jsx).toContain('{hhmm(m.playedAt)}');
+});
+
+/* ---------- 또또 열 때 방장이 정한 기준선 ---------- */
+
+/* openBettingByNames는 killLine을 넘기는데 openBetting이 그걸 안 받고
+   있었다. 서버는 null을 받으면 인원으로 다시 계산해서 넣어버리므로,
+   화면은 방장이 정한 값을 보여주는 줄 알지만 실제로는 다른 기준선으로
+   정산됐다. 오류도 안 나고 조용히 틀린다 */
+test('방장이 정한 킬 기준선이 서버까지 간다', async () => {
+  await openBettingByNames({
+    roomId: 7,
+    mode: 'normal',
+    teamA: ['철수'],
+    teamB: ['영희'],
+    players,
+    closeSeconds: 180,
+    killLine: 71.5,
+  });
+
+  const call = rpcCalls.find((c) => c.fn === 'open_betting');
+  expect(call.args.p_kill_line).toBe(71.5);
+  expect(call.args.p_close_seconds).toBe(180);
+});
+
+test('안 정했으면 null로 보낸다 (서버가 인원으로 계산한다)', async () => {
+  await openBettingByNames({
+    roomId: 7,
+    mode: 'normal',
+    teamA: ['철수'],
+    teamB: ['영희'],
+    players,
+  });
+  expect(rpcCalls.find((c) => c.fn === 'open_betting').args.p_kill_line).toBeNull();
+});
+
+/* 보내는 이름이 하나라도 틀리면 PostgREST는 그 인자를 조용히 버린다.
+   함수가 default를 갖고 있으면 오류조차 안 난다 */
+test('rpc로 보내는 인자 이름이 전부 SQL 함수에 있다', () => {
+  const declared = {};
+  const re = /create or replace function public\.(\w+)\(([^)]*)\)/g;
+  let m;
+  while ((m = re.exec(sql))) {
+    declared[m[1]] = (declared[m[1]] || []).concat(
+      (m[2].match(/\bp_\w+/g) || [])
+    );
+  }
+
+  const bad = [];
+  ['rooms.js', 'admin.js'].forEach((file) => {
+    const src = fs.readFileSync(path.join(__dirname, file), 'utf8');
+    const calls = src.matchAll(/rpc\(\s*'(\w+)'\s*,\s*\{([^}]*)\}/g);
+    for (const c of calls) {
+      const params = declared[c[1]];
+      if (!params) continue;
+      (c[2].match(/\bp_\w+(?=\s*:)/g) || []).forEach((key) => {
+        if (!params.includes(key)) bad.push(`${c[1]}(${key})`);
+      });
+    }
+  });
+  expect(bad).toEqual([]);
 });

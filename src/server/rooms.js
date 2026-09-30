@@ -890,13 +890,18 @@ export const marketLabel = (market) => {
 
 export const agreeFairplay = () => rpc('agree_fairplay');
 
-export const openBetting = (roomId, mode, teamA, teamB, closeSeconds = null) =>
+/* killLine을 빠뜨리면 안 된다. 서버가 null을 받으면 인원으로 다시
+   계산해서 넣어버리는데, 화면은 '방장이 정한 값'을 보여주는 줄 알고
+   있으니 아무 오류 없이 조용히 다른 기준선으로 정산된다.
+   (실제로 openBettingByNames는 넘기는데 여기서 안 받고 있었다) */
+export const openBetting = (roomId, mode, teamA, teamB, closeSeconds = null, killLine = null) =>
   rpc('open_betting', {
     p_room: roomId,
     p_mode: mode,
     p_team_a: teamA,
     p_team_b: teamB,
     p_close_seconds: closeSeconds,
+    p_kill_line: killLine,
   });
 
 export const placeBets = (scrimId, bets) =>
