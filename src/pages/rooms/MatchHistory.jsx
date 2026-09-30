@@ -132,10 +132,15 @@ const MatchHistory = ({
      1팀은 늘 왼쪽, 2팀은 늘 오른쪽 - 이긴 쪽을 위로 올리지 않는다. */
   const card = (m) => (
     <li key={m.id} className={`hist-row ${m.betCount > 0 ? 'has-bets' : ''}`}>
-      <span className="hist-time" title={timeAgo(m.playedAt)}>
-        {hhmm(m.playedAt)}
+      {/* 시간과 모드를 한 칸에 담는다. 모드를 따로 칸으로 두면 모드가 없는
+          방(롤)에서는 요소가 하나 적어져서 뒤의 것들이 전부 한 칸씩
+          밀린다 - 2팀이 1.6rem 칸에 들어가 이름이 세 줄로 접혔다 */}
+      <span className="hist-meta">
+        <span className="hist-time" title={timeAgo(m.playedAt)}>
+          {hhmm(m.playedAt)}
+        </span>
+        {showMode && <span className="hist-mode">{getMode(gameKey, m.mode).label}</span>}
       </span>
-      {showMode && <span className="hist-mode">{getMode(gameKey, m.mode).label}</span>}
 
       {[
         { side: 'A', label: '1팀', names: m.teamA },

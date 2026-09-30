@@ -189,3 +189,19 @@ test('몇 판·며칠·또또 몇 판인지 먼저 보여준다', () => {
   expect(head).toContain('2일');
   expect(head).toContain('또또');
 });
+
+/* 격자 칸 수와 요소 수가 어긋나면 전부 한 칸씩 밀린다. 실제로 모드를 따로
+   칸으로 뒀다가, 모드가 없는 방(롤)에서 2팀이 1.6rem 칸에 들어가 이름이
+   세 줄로 접혔다. 줄 안의 요소 순서와 개수를 못 박아둔다 */
+test('한 줄의 칸 구성이 항상 같다', () => {
+  const el = render({ initial: [game()] });
+  const row = el.querySelector('.hist-row');
+  const kinds = [...row.children].map((n) => n.className.split(' ')[0]);
+  expect(kinds).toEqual(['hist-meta', 'hist-side', 'hist-vs', 'hist-side', 'hist-facts', 'icon-btn']);
+
+  /* 삭제 버튼은 맨 끝이라 없어도 앞의 자리가 안 밀린다 */
+  document.body.innerHTML = '';
+  const ro = render({ initial: [game()], canEdit: false });
+  const kinds2 = [...ro.querySelector('.hist-row').children].map((n) => n.className.split(' ')[0]);
+  expect(kinds2).toEqual(['hist-meta', 'hist-side', 'hist-vs', 'hist-side', 'hist-facts']);
+});
