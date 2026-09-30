@@ -160,7 +160,7 @@ const PlayerRow = ({ player, onPatch, onDrop }) => {
 };
 
 /* 방장·부방장만 보이는 설정 묶음. 멤버에게는 멤버 목록과 나가기만 남는다 */
-const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone }) => {
+const Settings = ({ room, members, players, lostIds, titles, myRole, myId, reload, onGone }) => {
   const gameKey = useGameKey();
   const isOwner = myRole === 'owner';
   const isAdmin = canEditRole(myRole);
@@ -306,16 +306,26 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
      있다). 전적을 붙이려면 경기 쪽 id까지 갈아끼워야 해서 서버가 한다 */
   const mergePlayers = guard(async () => {
     const keep = players.find((p) => String(p.id) === mergeKeep);
-    const drop = players.find((p) => String(p.id) === mergeDrop);
+    /* 없앨 쪽은 명단에 없는 id일 수도 있다 - 옛날에 참가자를 진짜로
+       지우던 시절의 기록이 가리키는 '?' 자리 */
+    const drop =
+      players.find((p) => String(p.id) === mergeDrop) ||
+      (lostIds.some((id) => String(id) === mergeDrop)
+        ? { id: Number(mergeDrop), name: `이름 없음 #${mergeDrop}`, lost: true }
+        : null);
     if (!keep || !drop || keep.id === drop.id) {
       toast.error('합칠 두 사람을 서로 다르게 골라주세요.');
       return;
     }
     const ok = await confirm({
-      title: '같은 사람 합치기',
-      message: `'${drop.name}' 님의 전적을 '${keep.name}' 님에게 넘길까요?`,
-      detail: `'${drop.name}'은(는) 명단에서 사라지고, 그 이름으로 뛴 지난 경기가 전부 '${keep.name}'의 기록이 됩니다. 되돌릴 수 없어요.`,
-      confirmText: '합치기',
+      title: drop.lost ? '이 사람이 누구인지 지정' : '같은 사람 합치기',
+      message: drop.lost
+        ? `기록에 '?'로 남은 자리가 '${keep.name}' 님인가요?`
+        : `'${drop.name}' 님의 전적을 '${keep.name}' 님에게 넘길까요?`,
+      detail: drop.lost
+        ? `그 자리로 뛴 지난 경기가 전부 '${keep.name}'의 기록이 됩니다. 되돌릴 수 없어요.`
+        : `'${drop.name}'은(는) 명단에서 사라지고, 그 이름으로 뛴 지난 경기가 전부 '${keep.name}'의 기록이 됩니다. 되돌릴 수 없어요.`,
+      confirmText: drop.lost ? '지정' : '합치기',
       danger: true,
     });
     if (!ok) return;
@@ -609,11 +619,19 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
 
           {/* 이름을 고치는 것만으로는 안 되는 경우. 'poop'으로 몇 판 뛰고
               '푸푸'로 다시 들어오면 줄이 둘이 되어 전적이 갈린다 */}
-          {players.length >= 2 && (
+          {(players.length >= 2 || lostIds.length > 0) && (
             <div className="player-merge">
               <span className="player-merge-head">
                 <FaExchangeAlt /> 같은 사람이 두 줄로 나뉘었을 때
               </span>
+              {/* 옛날에 참가자를 진짜로 지우던 시절의 기록. 그 자리가
+                  화면에서 '?'가 되거나 아예 빠져서 5명이 4명으로 보인다 */}
+              {lostIds.length > 0 && (
+                <p className="rooms-hint player-merge-lost">
+                  기록에 이름이 안 남은 자리가 <b>{lostIds.length}개</b> 있어요. 아래
+                  &apos;없앨 이름&apos;에서 골라 누구였는지 지정하면 그 전적이 합쳐집니다.
+                </p>
+              )}
               <div className="rooms-form-row">
                 <select
                   className="rooms-input"
@@ -645,6 +663,13 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
                         {p.name}
                       </option>
                     ))}
+                  {/* 기록이 가리키는데 명단에 없는 자리. 화면에서 '?'로
+                      보이는 게 이것들이다 */}
+                  {lostIds.map((id) => (
+                    <option key={`lost-${id}`} value={id}>
+                      이름 없음 #{id}
+                    </option>
+                  ))}
                 </select>
                 <button
                   className="ghost-btn"
@@ -828,6 +853,8 @@ const Room = () => {
     loading,
     error,
     reload,
+    allPlayers,
+    lostIds,
   } = useRoom(roomId, user?.id);
   const { hofRows } = useHallOfFame(roomId);
   /* 탭을 주소(#bet)에 둔다. useState에만 담아두면 새로고침하거나
@@ -1015,11 +1042,13 @@ const Room = () => {
             <Season matches={matches} players={players} />
           </>
         )}
+        {/* BetTab의 players는 이름을 붙이는 데만 쓴다. 지운 사람까지
+            넘겨야 지난 판에서 그 사람이 '?'로 남지 않는다 */}
         {tab === 'bet' && (
           <BetTab
             scrims={scrims}
             activeScrim={activeScrim}
-            players={players}
+            players={allPlayers}
             members={members}
             myId={user.id}
             canEdit={editable}
@@ -1041,6 +1070,7 @@ const Room = () => {
         {tab === 'settings' && (
           <Settings
             room={room}
+            lostIds={lostIds}
             members={members}
             players={players}
             titles={titles}

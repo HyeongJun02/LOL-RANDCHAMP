@@ -2254,6 +2254,11 @@ $fn$;
 --
 -- 지난 경기는 room_players.id를 들고 있어서, 이름만 고쳐도 예전 판은
 -- 여전히 옛 줄을 가리킨다. 경기 쪽의 id를 갈아끼워야 전적이 붙는다.
+--
+-- p_drop은 명단에 없는 id여도 된다. 참가자를 지워도 행을 남기는 장치가
+-- 생기기 전에는 진짜로 지웠고, 그 시절 기록이 가리키는 id는 행이 없어서
+-- 화면에서 '?'가 된다. 그게 누구였는지 지정하는 것도 여기서 한다.
+-- 다만 아무 숫자나 못 쓴다 - 이 방의 경기가 실제로 가리키는 id여야 한다.
 create or replace function public.merge_room_players(p_keep bigint, p_drop bigint)
 returns int language plpgsql security definer set search_path = public as $fn$
 declare
@@ -2265,12 +2270,24 @@ declare
 begin
   if p_keep = p_drop then raise exception '같은 줄이에요.'; end if;
 
-  select room_id into r  from room_players where id = p_keep;
-  select room_id into r2 from room_players where id = p_drop;
-  if r is null or r2 is null then raise exception '참가자를 찾을 수 없어요.'; end if;
-  if r <> r2 then raise exception '다른 방의 참가자예요.'; end if;
+  select room_id into r from room_players where id = p_keep;
+  if r is null then raise exception '남길 참가자를 찾을 수 없어요.'; end if;
   if not public.is_room_admin(r) then
     raise exception '방장과 부방장만 합칠 수 있어요.';
+  end if;
+
+  select room_id into r2 from room_players where id = p_drop;
+  if r2 is not null then
+    if r <> r2 then raise exception '다른 방의 참가자예요.'; end if;
+  else
+    -- 행이 없는 id. 이 방의 경기가 실제로 가리키고 있어야만 받아준다
+    if not exists (
+      select 1 from scrims x
+       where x.room_id = r
+         and (public.has_player(x.team_a, p_drop) or public.has_player(x.team_b, p_drop))
+    ) then
+      raise exception '이 방의 기록에 없는 참가자예요.';
+    end if;
   end if;
 
   -- 둘이 서로 상대 팀이었던 판이 있으면 같은 사람일 수 없다. 합치면
@@ -2298,6 +2315,7 @@ begin
 
   -- 명예의 전당은 이름으로 박제돼 있어 손댈 게 없다.
   -- 없앤 줄은 지우지 않고 감춘다 (다른 데서 아직 id를 볼 수 있다).
+  -- 애초에 행이 없던 id면 지울 것도 없다.
   update room_players set deleted_at = now(), linked_user_id = null
    where id = p_drop;
 
@@ -2305,7 +2323,8 @@ begin
   values (r, 'player_merge',
           jsonb_build_object(
             'keep', (select name from room_players where id = p_keep),
-            'drop', (select name from room_players where id = p_drop),
+            'drop', coalesce((select name from room_players where id = p_drop),
+                             '이름 없음 #' || p_drop),
             'games', moved));
 
   return moved;

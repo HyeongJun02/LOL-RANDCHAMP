@@ -1753,3 +1753,39 @@ test('담은 배팅은 그 자리에서 뺄 수 있다', () => {
   expect(jsx).toContain('bet-cart-drop');
   expect(jsx).toContain('onClick={() => pick(market, v.selection)}');
 });
+
+/* ---------- 기록에만 남고 명단에 없는 자리 ---------- */
+
+/* 참가자를 지워도 행을 남기는 장치(deleted_at)가 생기기 전에는 진짜로
+   지웠다. 그 시절 기록이 가리키는 id는 행이 없어서 화면에서 '?'가 되거나
+   아예 빠져 5명이 4명으로 보인다 */
+test('합치기는 행이 없는 id도 받되, 이 방 기록이 가리키는 것만 받는다', () => {
+  const body = fnBody('merge_room_players');
+  /* 남길 쪽은 반드시 있어야 한다 */
+  expect(body).toContain("if r is null then raise exception '남길 참가자를 찾을 수 없어요.'");
+  /* 없앨 쪽은 행이 없어도 된다 - 대신 이 방의 경기가 가리켜야 한다 */
+  expect(body).toContain('if r2 is not null then');
+  expect(body).toMatch(/public\.has_player\(x\.team_a, p_drop\)[\s\S]{0,80}이 방의 기록에 없는/);
+  /* 아무 숫자나 넣어 남의 방 기록을 건드릴 수 없어야 한다 */
+  expect(body).toContain('where x.room_id = r');
+});
+
+/* 지운 사람은 행이 남아 있으니 이름도 남아 있다. 또또 화면이 산 사람만
+   받아보고 있어서 그 사람만 '?'로 나왔다 */
+test('또또 화면은 지운 사람 이름까지 받아본다', () => {
+  const src = fs.readFileSync(
+    path.join(__dirname, '..', 'pages', 'rooms', 'Room.jsx'),
+    'utf8'
+  );
+  const bet = src.slice(src.indexOf('<BetTab'), src.indexOf('members={members}', src.indexOf('<BetTab')));
+  expect(bet).toContain('players={allPlayers}');
+});
+
+test('명단에 없는 id를 찾아 설정에 넘긴다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const body = src.slice(src.indexOf('const knownIds'), src.indexOf('return {', src.indexOf('const knownIds')));
+  /* 지운 사람은 행이 남아 있으므로 '없는 id'가 아니다 */
+  expect(body).toContain('allPlayers.map((p) => Number(p.id))');
+  expect(body).toContain('team_a');
+  expect(body).toContain('team_b');
+});

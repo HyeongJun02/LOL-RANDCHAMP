@@ -778,6 +778,22 @@ export const useRoom = (roomId, userId) => {
 
   const scrims = room?.scrims || [];
 
+  /* 경기가 가리키는데 명단에 아예 없는 id.
+
+     참가자를 지워도 행은 남기지만(deleted_at), 그 장치가 생기기 전에는
+     진짜로 지웠다. 그 시절 기록이 남아 있으면 그 자리가 화면에서 '?'가
+     되거나 아예 빠져서 5명이 4명으로 보인다. 설정에서 누구였는지
+     지정할 수 있게 목록으로 넘긴다 */
+  const knownIds = new Set(allPlayers.map((p) => Number(p.id)));
+  const lostIds = [
+    ...new Set(
+      scrims
+        .flatMap((s) => [...(s.team_a || []), ...(s.team_b || [])])
+        .map(Number)
+        .filter((id) => Number.isFinite(id) && !knownIds.has(id))
+    ),
+  ].sort((a, b) => a - b);
+
   return {
     room,
     loading,
@@ -787,6 +803,9 @@ export const useRoom = (roomId, userId) => {
     /* 아직 안 끝난 배팅 경기는 방에 하나뿐이다 (open_betting이 막는다) */
     activeScrim: scrims.find((s) => s.status === 'betting' || s.status === 'locked') || null,
     players: [...players].sort((a, b) => a.name.localeCompare(b.name, 'ko')),
+    /* 지운 사람까지. 지난 경기의 이름을 붙이려면 이쪽을 봐야 한다 */
+    allPlayers,
+    lostIds,
     matches: toMatches(room?.scrims, allPlayers, room?.game),
     members: members
       .map((m) => ({
