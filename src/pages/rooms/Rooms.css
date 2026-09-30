@@ -853,16 +853,20 @@ select.rooms-input:hover:not(:disabled) {
   white-space: nowrap;
 }
 
-/* 퍼블을 딴 사람. 위에 따로 적는 것보다 이름에 붙는 편이 바로 읽힌다.
+/* 첫 킬을 딴 사람. 위에 따로 적는 것보다 이름에 붙는 편이 바로 읽힌다.
 
    붉은 글씨만 입혔더니 '이 사람이 땄다'가 아니라 '이 사람이 뭔가 다르다'로만
-   읽혔다. 방 안의 다른 표시들(칩·태그)과 같은 알약으로 못을 박는다 */
+   읽혔다. 방 안의 다른 표시들(칩·태그)과 같은 알약으로 못을 박는다.
+
+   색은 붉은색을 피한다. 핏빛이라 딴 사람이 아니라 당한 사람처럼 보이고,
+   같은 줄의 '오버' 칩이 이미 그 붉은색이라 둘이 섞였다.
+   이 줄에서 금색은 승리, 하늘색은 언더가 쓰고 있어 보라가 비어 있다 */
 .hist-name.is-fb {
   padding: 0.02rem 0.3rem 0.02rem 0.4rem;
   border-radius: 999px;
-  background: rgba(249, 115, 98, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(249, 115, 98, 0.3);
-  color: #ffc4bb;
+  background: rgba(167, 139, 250, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.34);
+  color: #d6c9ff;
   font-weight: 700;
 }
 

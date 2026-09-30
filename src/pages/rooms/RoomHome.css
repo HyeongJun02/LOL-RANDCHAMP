@@ -431,6 +431,13 @@
   color: #7dd3fc;
 }
 
+/* '첫 킬 N회' 칭호. 색을 안 주면 혼자 회색이라 칭호가 아니라 꼬리표로
+   보였다. 내전 기록의 첫 킬 알약과 같은 보라를 쓴다 */
+.title-badge.tone-fb {
+  border-color: rgba(167, 139, 250, 0.4);
+  color: #c4b5fd;
+}
+
 .title-badge.tone-ghost {
   opacity: 0.7;
 }
