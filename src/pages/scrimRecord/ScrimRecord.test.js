@@ -11,7 +11,7 @@ let React;
 /* 기록은 부모(방)가 맡는다. 여기서는 넘긴 값만 붙잡아 본다 */
 let added;
 
-const render = ({ initial = [], canEdit = true } = {}) => {
+const render = ({ initial = [], canEdit = true, players = [] } = {}) => {
   added = jest.fn();
   jest.resetModules();
   React = require('react');
@@ -24,7 +24,7 @@ const render = ({ initial = [], canEdit = true } = {}) => {
   const Harness = () =>
     React.createElement(ScrimRecord, {
       matches: initial,
-      players: [],
+      players,
       canEdit,
       onAdd: added,
     });
@@ -129,4 +129,58 @@ test('게임 시작 화면에는 순위표를 두지 않는다', () => {
   expect(el.querySelector('.rank-list')).toBeNull();
   /* 지난 판 목록도 여기 없다. '내전 기록' 탭이 맡는다 */
   expect(el.querySelector('.history-list')).toBeNull();
+});
+
+
+/* poop으로 40판 뛴 사람이 한 번 '푸푸'로 적히면, 서버가 조용히 새 참가자로
+   등록해서 전적이 두 줄로 갈린다. 나중에 이름만 고쳐도 안 붙는다 -
+   지난 경기가 옛 줄의 id를 들고 있기 때문이다.
+   기계는 둘이 같은 사람인지 알 수 없으니, 사람에게 한 번 물어본다 */
+const roster = [{ id: 1, name: 'poop' }, { id: 2, name: '영희' }];
+
+test('명단에 없는 이름이면 물어보고, 취소하면 기록하지 않는다', async () => {
+  const el = render({ players: roster });
+  fill(el, '푸푸', '영희');
+
+  await click(byText(el, 'button', '1팀 승리'));
+
+  /* 확인창이 떴고 아직 아무것도 안 보냈다 */
+  expect(document.querySelector('.dialog-message').textContent).toContain('푸푸');
+  /* 헷갈릴 상대를 같이 보여줘야 '아 poop인데'를 그 자리에서 안다 */
+  expect(document.querySelector('.dialog-detail').textContent).toContain('poop');
+  expect(added).not.toHaveBeenCalled();
+
+  await click(byText(document.body, 'button', '취소'));
+  expect(added).not.toHaveBeenCalled();
+});
+
+test('넣고 진행을 누르면 그대로 기록한다', async () => {
+  const el = render({ players: roster });
+  fill(el, '푸푸', '영희');
+
+  await click(byText(el, 'button', '1팀 승리'));
+  await click(byText(document.body, 'button', '넣고 진행'));
+
+  expect(added).toHaveBeenCalledTimes(1);
+  expect(added.mock.calls[0][0]).toMatchObject({ teamA: ['푸푸'], teamB: ['영희'] });
+});
+
+test('명단에 있는 이름만 쓰면 묻지 않는다', async () => {
+  const el = render({ players: roster });
+  fill(el, 'poop', '영희');
+
+  await click(byText(el, 'button', '1팀 승리'));
+
+  expect(document.querySelector('.dialog-message')).toBeNull();
+  expect(added).toHaveBeenCalledTimes(1);
+});
+
+test('방금 만든 방(명단이 빈 방)에서는 묻지 않는다', async () => {
+  const el = render({ players: [] });
+  fill(el, '철수', '영희');
+
+  await click(byText(el, 'button', '1팀 승리'));
+
+  expect(document.querySelector('.dialog-message')).toBeNull();
+  expect(added).toHaveBeenCalledTimes(1);
 });

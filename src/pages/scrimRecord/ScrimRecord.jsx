@@ -15,6 +15,7 @@ import Modal from '../../components/common/Modal';
 import TeamBalance from '../teamBalance/TeamBalance';
 import BetOpenModal from '../rooms/BetOpenModal';
 import RosterPicker from '../../components/common/RosterPicker';
+import { useDialog } from '../../components/common/Dialog';
 import ClearInput from '../../components/common/ClearInput';
 import { timeAgo } from '../../lib/timeAgo';
 import { defaultModeOf, getMode, hasModeChoice } from '../../rules/games';
@@ -83,6 +84,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onOpe
   /* 더블클릭으로 같은 경기가 두 번 들어가는 걸 막는다.
      상태로 잡으면 렌더 클로저의 옛 값을 읽어서 두 번 통과한다 */
   const saving = useRef(false);
+  const { confirm } = useDialog();
   const [showBalancer, setShowBalancer] = useState(false);
   const [showBetOpen, setShowBetOpen] = useState(false);
 
@@ -153,6 +155,28 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onOpe
     setTeamB(blankTeam(modeInfo.teamSize));
   };
 
+  /* 명단에 없는 이름을 적으면 서버가 조용히 새 참가자로 등록한다.
+     그래서 poop으로 40판 뛴 사람이 한 번 푸푸로 적히면 전적이 두 줄로
+     갈린다. 나중에 이름만 고쳐도 안 붙는다 - 지난 경기는 옛 줄의 id를
+     들고 있기 때문이다 (합치려면 설정에서 따로 합쳐야 한다).
+     기계는 poop과 푸푸가 같은 사람인지 알 수 없다. 대신 한 번 물어본다.
+     명단을 같이 보여주면 '아 내가 쓰던 이름이 저건데'를 그 자리에서 안다 */
+  const confirmNewNames = async (names) => {
+    /* 방금 만든 방은 명단이 비어 있다. 헷갈릴 상대가 없으니 묻지 않는다 */
+    if (players.length === 0) return true;
+    const have = new Set(players.map((p) => p.name));
+    const fresh = [...new Set(names)].filter((n) => !have.has(n));
+    if (fresh.length === 0) return true;
+    return confirm({
+      title: '명단에 없는 이름',
+      message: `${fresh.join(', ')} — 이 방 명단에 넣고 진행할까요?`,
+      detail:
+        '이미 있는 사람이 이름만 바꿔 적은 거라면 전적이 두 줄로 갈립니다. ' +
+        `지금 명단: ${players.map((p) => p.name).join(', ')}`,
+      confirmText: '넣고 진행',
+    });
+  };
+
   const recordWin = async (winner) => {
     if (saving.current) return;
     const a = teamA.map((n) => n.trim()).filter(Boolean);
@@ -166,6 +190,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onOpe
       toast.error(`'${overlap}' 님이 양 팀에 모두 있어요.`);
       return;
     }
+    if (!(await confirmNewNames([...a, ...b]))) return;
 
     saving.current = true;
     try {
@@ -192,6 +217,7 @@ const ScrimRecord = ({ matches = [], players = [], canEdit = false, onAdd, onOpe
       toast.error(`'${overlap}' 님이 양 팀에 모두 있어요.`);
       return;
     }
+    if (!(await confirmNewNames([...a, ...b]))) return;
     saving.current = true;
     try {
       await onOpenBetting({ mode, teamA: a, teamB: b, closeSeconds, killLine });
