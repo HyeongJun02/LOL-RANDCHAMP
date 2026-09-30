@@ -1552,3 +1552,35 @@ test('날짜 구분선은 로그·내전 기록이 같은 것을 쓴다', () => 
   expect(css.indexOf('li.day-sep {')).toBeGreaterThan(css.indexOf('.history-list li {'));
   expect(css.indexOf('li.day-sep {')).toBeGreaterThan(css.indexOf('.room-feed li {'));
 });
+
+/* 포인트 탭도 좌우 두 칸. 왼쪽은 현황(순위·내 내역), 오른쪽은 조작
+   (보내기·조정). 오른쪽에 max-height를 걸면 안쪽 스크롤이 페이지
+   스크롤과 겹친다 - sticky만 쓴다 */
+test('포인트 탭은 좌우 두 칸이고, 안쪽 스크롤을 만들지 않는다', () => {
+  const dir = path.join(__dirname, '..', 'pages', 'rooms');
+  const jsx = fs.readFileSync(path.join(dir, 'KkikoTab.jsx'), 'utf8');
+  expect(jsx).toContain('kkiko-cols');
+  expect(jsx).toContain('kkiko-col is-side');
+
+  const css = fs.readFileSync(path.join(dir, 'Rooms.css'), 'utf8');
+  const side = css.slice(css.indexOf('.kkiko-col.is-side {'));
+  const body = side.slice(0, side.indexOf('}'));
+  expect(body).toContain('position: sticky');
+  expect(body).not.toContain('max-height');
+  expect(body).not.toContain('overflow');
+});
+
+/* 한 판 = 한 줄. 위아래 두 줄로 두면 어느 칩이 어느 팀 것인지 헷갈리고,
+   칩 유무에 따라 줄 높이가 달라져 훑을 때 눈이 튄다 */
+test('내전 기록은 한 판을 한 줄로 읽는다', () => {
+  const dir = path.join(__dirname, '..', 'pages', 'rooms');
+  const jsx = fs.readFileSync(path.join(dir, 'MatchHistory.jsx'), 'utf8');
+  /* 시간 │ 1팀 │ VS │ 2팀 │ 칩 │ ✕ */
+  expect(jsx).toContain('hist-row');
+  expect(jsx).toContain('hist-vs');
+  /* 위/아래로 갈라놨던 껍데기는 없어졌다 */
+  expect(jsx).not.toContain('hist-head');
+  expect(jsx).not.toContain('hist-teams');
+  /* 금색 띠만으로는 '이겼다'가 아니라 '강조됐다'로만 읽힌다 */
+  expect(jsx).toContain('<b>승</b>');
+});

@@ -171,8 +171,16 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
     }
   };
 
+  /* 좌우 두 칸. 왼쪽은 '지금 어떤가'(순위·내 내역), 오른쪽은 '무엇을
+     할까'(보내기·조정). 한 줄로 쌓아두면 보내기 칸을 쓰려고 순위를
+     한참 지나쳐 내려가야 했다.
+
+     오른쪽은 따라 붙는다(sticky) - 왼쪽이 훨씬 길어서 그냥 두면 아래가
+     통째로 빈다. 통계 탭의 '숨은 기록'이 쓰는 것과 같은 방식이다.
+     max-height를 안 걸었으니 안쪽 스크롤은 생기지 않는다 */
   return (
-    <div className="room-settings">
+    <div className="kkiko-cols">
+      <div className="kkiko-col">
       <section className="room-panel">
         <h3>
           끼꼬 순위<span className="panel-count">{members.length}명</span>
@@ -196,6 +204,50 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
         <p className="rooms-hint">매월 1일 모두 10,000 끼꼬로 돌아갑니다. 지난 달 성적은 전당에 남습니다.</p>
       </section>
 
+
+      <section className="room-panel">
+        <h3>
+          내 끼꼬 내역
+          {page > 0 && <span className="panel-count">{page + 1}쪽</span>}
+        </h3>
+        {ledger.length === 0 ? (
+          <p className="rooms-hint">
+            {page === 0 ? '아직 움직인 내역이 없어요.' : '더 볼 내역이 없어요.'}
+          </p>
+        ) : (
+          <ul className="kkiko-ledger">
+            {ledger.map((l) => (
+              <li key={l.id}>
+                <span className="kkiko-when">{when(l.created_at)}</span>
+                <span className="rooms-name">
+                  {REASON[l.reason] || l.reason}
+                  {l.counterpart_user_id && (
+                    <em> · {nameOf.get(l.counterpart_user_id) || '알 수 없음'}</em>
+                  )}
+                </span>
+                <span className={`kkiko-delta ${l.delta >= 0 ? 'plus' : 'minus'}`}>
+                  {l.delta >= 0 ? '+' : ''}
+                  {l.delta.toLocaleString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {(page > 0 || hasNext) && (
+          <div className="feed-pager">
+            <button className="ghost-btn" onClick={prevPage} disabled={page === 0}>
+              <FaChevronLeft /> 이전
+            </button>
+            <span className="feed-page-no">{page + 1}쪽</span>
+            <button className="ghost-btn" onClick={nextPage} disabled={!hasNext}>
+              다음 <FaChevronRight />
+            </button>
+          </div>
+        )}
+      </section>
+      </div>
+
+      <div className="kkiko-col is-side">
       <section className="room-panel">
         <h3>
           <FaPaperPlane /> 끼꼬 보내기
@@ -270,6 +322,7 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
           </div>
         )}
       </section>
+
 
       {isOwner && (
         <section className="room-panel">
@@ -383,46 +436,7 @@ const KkikoTab = ({ roomId, members, myId, isOwner, onChanged }) => {
         </section>
       )}
 
-      <section className="room-panel">
-        <h3>
-          내 끼꼬 내역
-          {page > 0 && <span className="panel-count">{page + 1}쪽</span>}
-        </h3>
-        {ledger.length === 0 ? (
-          <p className="rooms-hint">
-            {page === 0 ? '아직 움직인 내역이 없어요.' : '더 볼 내역이 없어요.'}
-          </p>
-        ) : (
-          <ul className="kkiko-ledger">
-            {ledger.map((l) => (
-              <li key={l.id}>
-                <span className="kkiko-when">{when(l.created_at)}</span>
-                <span className="rooms-name">
-                  {REASON[l.reason] || l.reason}
-                  {l.counterpart_user_id && (
-                    <em> · {nameOf.get(l.counterpart_user_id) || '알 수 없음'}</em>
-                  )}
-                </span>
-                <span className={`kkiko-delta ${l.delta >= 0 ? 'plus' : 'minus'}`}>
-                  {l.delta >= 0 ? '+' : ''}
-                  {l.delta.toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {(page > 0 || hasNext) && (
-          <div className="feed-pager">
-            <button className="ghost-btn" onClick={prevPage} disabled={page === 0}>
-              <FaChevronLeft /> 이전
-            </button>
-            <span className="feed-page-no">{page + 1}쪽</span>
-            <button className="ghost-btn" onClick={nextPage} disabled={!hasNext}>
-              다음 <FaChevronRight />
-            </button>
-          </div>
-        )}
-      </section>
+      </div>
     </div>
   );
 };

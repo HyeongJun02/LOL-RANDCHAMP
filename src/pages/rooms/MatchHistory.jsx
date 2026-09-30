@@ -108,92 +108,87 @@ const MatchHistory = ({
     );
   }
 
-  const card = (m) => {
-    const hasBets = m.betCount > 0;
-    return (
-      <li key={m.id} className={hasBets ? 'has-bets' : ''}>
-              <div className="hist-head">
-                <span className="hist-time">{timeAgo(m.playedAt)}</span>
+  /* 한 판 = 한 줄. 왼쪽부터 순서대로 읽으면 끝난다.
 
-                {/* 한 판에서 알아둘 만한 것들. 없는 건 아예 안 그린다 -
-                    '-'로 채우면 빈 칸이 정보인 척한다 */}
-                <span className="hist-facts">
-                  {/* 총 킬만 적으면 그게 많은 건지 적은 건지 알 수가 없다.
-                      그 판의 기준선과 결과를 같이 붙인다 */}
-                  {m.totalKills != null && (
-                    <span
-                      className={`hist-fact ${
-                        m.killLine == null
-                          ? ''
-                          : m.totalKills > m.killLine
-                            ? 'is-over'
-                            : 'is-under'
-                      }`}
-                      title="총 킬"
-                    >
-                      <FaCrosshairs />
-                      {m.totalKills}킬
-                      {m.killLine != null && (
-                        <em>
-                          {m.killLine} {m.totalKills > m.killLine ? '오버' : '언더'}
-                        </em>
-                      )}
-                    </span>
-                  )}
-                  {hasBets && (
-                    <button
-                      className="hist-fact is-bet"
-                      onClick={() => setOpen(m)}
-                      title="또또 결과 보기"
-                    >
-                      <FaCoins />
-                      {num(m.betTotal)}
-                      <FaChevronRight className="hist-more" />
-                    </button>
-                  )}
-                </span>
+       19:42 │ 1팀 승 철수,민수 │ VS │ 2팀 영희,준호 │ 53킬 언더 · 또또 1.2만 │ ✕
 
-                {canEdit && (
-                  <button className="icon-btn hist-del" onClick={() => remove(m)} aria-label="기록 삭제">
-                    <FaTimes />
-                  </button>
-                )}
-              </div>
+     전에는 위에 '시간 + 칩', 아래에 '두 팀'으로 두 줄이었다. 그러면 어느
+     칩이 어느 팀 것인지 헷갈리고(둘 다 아닌 판 전체 것이다), 줄 높이가
+     칩 유무에 따라 달라져서 여러 판을 훑을 때 눈이 계속 튀었다.
+     1팀은 늘 왼쪽, 2팀은 늘 오른쪽 - 이긴 쪽을 위로 올리지 않는다. */
+  const card = (m) => (
+    <li key={m.id} className={`hist-row ${m.betCount > 0 ? 'has-bets' : ''}`}>
+      <span className="hist-time">{timeAgo(m.playedAt)}</span>
 
-              {/* 1팀은 늘 왼쪽, 2팀은 늘 오른쪽. 이긴 쪽을 위로 올리면
-                  카드마다 자리가 바뀌어서 여러 판을 훑을 때 매번 다시
-                  읽어야 한다. 자리는 고정하고 이긴 쪽에 금색 띠를 준다 */}
-              <div className="hist-teams">
-                {[
-                  { side: 'A', label: '1팀', names: m.teamA },
-                  { side: 'B', label: '2팀', names: m.teamB },
-                ].map(({ side, label, names }) => (
-                  <div
-                    key={side}
-                    className={`hist-side ${side === m.winner ? 'is-win' : 'is-lose'}`}
-                  >
-                    <span className="hist-tag">{label}</span>
-                    {/* 퍼블은 위에 따로 적는 것보다 그 사람 이름에 붙는 편이
-                        바로 읽힌다. '누가 땄나'를 이름에서 찾게 된다 */}
-                    <span className="hist-names">
-                      {names.map((n, i) => (
-                        <span
-                          key={n}
-                          className={`hist-name ${n === m.firstBlood ? 'is-fb' : ''}`}
-                          title={n === m.firstBlood ? '퍼스트 블러드' : undefined}
-                        >
-                          {n === m.firstBlood && <FaTint />}
-                          {n}
-                          {i < names.length - 1 && <i className="hist-comma">,</i>}
-                        </span>
-                      ))}
-                    </span>
-                  </div>
-                ))}
-              </div>
-      </li>
-    );
-  };
+      {[
+        { side: 'A', label: '1팀', names: m.teamA },
+        { side: 'B', label: '2팀', names: m.teamB },
+      ].flatMap(({ side, label, names }) => [
+        side === 'B' ? (
+          <span className="hist-vs" key="vs" aria-hidden="true">
+            VS
+          </span>
+        ) : null,
+        <div key={side} className={`hist-side ${side === m.winner ? 'is-win' : 'is-lose'}`}>
+          <span className="hist-tag">
+            {label}
+            {/* 금색 띠만으로는 '이겼다'가 아니라 '강조됐다'로만 읽힌다.
+                말로 한 번 더 적어준다 */}
+            {side === m.winner && <b>승</b>}
+          </span>
+          {/* 퍼블은 위에 따로 적는 것보다 그 사람 이름에 붙는 편이 바로
+              읽힌다. '누가 땄나'를 이름에서 찾게 된다 */}
+          <span className="hist-names">
+            {names.map((n, i) => (
+              <span
+                key={n}
+                className={`hist-name ${n === m.firstBlood ? 'is-fb' : ''}`}
+                title={n === m.firstBlood ? '퍼스트 블러드' : undefined}
+              >
+                {n === m.firstBlood && <FaTint />}
+                {n}
+                {i < names.length - 1 && <i className="hist-comma">,</i>}
+              </span>
+            ))}
+          </span>
+        </div>,
+      ])}
+
+      {/* 판 전체에 딸린 것들. 없는 건 아예 안 그린다 - '-'로 채우면
+          빈 칸이 정보인 척한다 */}
+      <span className="hist-facts">
+        {m.totalKills != null && (
+          <span
+            className={`hist-fact ${
+              m.killLine == null ? '' : m.totalKills > m.killLine ? 'is-over' : 'is-under'
+            }`}
+            title="총 킬"
+          >
+            <FaCrosshairs />
+            {m.totalKills}킬
+            {m.killLine != null && (
+              <em>
+                {m.killLine} {m.totalKills > m.killLine ? '오버' : '언더'}
+              </em>
+            )}
+          </span>
+        )}
+        {m.betCount > 0 && (
+          <button className="hist-fact is-bet" onClick={() => setOpen(m)} title="또또 결과 보기">
+            <FaCoins />
+            {num(m.betTotal)}
+            <FaChevronRight className="hist-more" />
+          </button>
+        )}
+      </span>
+
+      {canEdit && (
+        <button className="icon-btn hist-del" onClick={() => remove(m)} aria-label="기록 삭제">
+          <FaTimes />
+        </button>
+      )}
+    </li>
+  );
 
   return (
     <div className="room-settings">

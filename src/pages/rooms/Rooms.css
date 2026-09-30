@@ -560,6 +560,42 @@ select.rooms-input:hover:not(:disabled) {
   font-size: 0.7rem;
 }
 
+/* ---------- 포인트 탭: 좌우 두 칸 ---------- */
+/* 왼쪽은 '지금 어떤가'(순위·내 내역), 오른쪽은 '무엇을 할까'(보내기·조정).
+   한 줄로 쌓아두면 보내기 칸을 쓰려고 순위를 한참 지나쳐 내려가야 했다.
+
+   패널을 격자 칸에 하나씩 박지 않고 칸 안에 쌓는다. 칸마다 박으면 같은
+   줄의 두 패널이 높이를 맞추느라 짧은 쪽 아래가 통째로 빈다 */
+.kkiko-cols {
+  display: grid;
+  gap: 1rem;
+}
+
+.kkiko-col {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  min-width: 0;
+}
+
+/* 통계 탭과 같은 900px에서 갈린다. 여기서도 좁으면 그냥 한 줄로 쌓인다 */
+@media (min-width: 900px) {
+  .kkiko-cols {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 1.2rem;
+    align-items: start;
+  }
+
+  /* 왼쪽(순위 + 내역)이 훨씬 길다. 그냥 두면 오른쪽 아래가 통째로 비고,
+     아래까지 내려간 다음 보내기 칸을 쓰려면 다시 올라와야 한다.
+     통계 탭의 '숨은 기록'이 쓰는 것과 같은 방식.
+     max-height를 안 걸었으니 안쪽 스크롤은 생기지 않는다 */
+  .kkiko-col.is-side {
+    position: sticky;
+    top: calc(var(--header-h, 80px) + 3.6rem);
+  }
+}
+
 /* ---------- 내전 기록 (지난 판) ---------- */
 
 /* 한 행에 한 판. 두 열로 늘어놓아 봤는데 눈이 좌우로 왔다 갔다 하느라
@@ -582,27 +618,65 @@ select.rooms-input:hover:not(:disabled) {
    테두리를 두르고 있어서 카드 테두리는 한 톤 죽인다 - 안 그러면
    테두리가 이중으로 보인다 */
 
-.history-list li {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.6rem 0.75rem;
+/* 한 판 = 한 줄. 왼쪽부터 순서대로 읽으면 끝난다.
+     시간 │ 1팀 │ VS │ 2팀 │ 칩들 │ ✕
+   두 팀 칸만 남는 폭을 반씩 나눠 갖는다 (1fr 1fr). 이름이 길어도 두 칸의
+   폭은 늘 같아서, 여러 판을 훑을 때 VS가 한 줄에 정렬된다 */
+.history-list li.hist-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.055);
   transition: border-color 0.18s ease, background 0.18s ease;
 }
 
+/* 좁아지면 두 줄로 접는다. 시간·칩·삭제가 윗줄, 두 팀이 아랫줄.
+   억지로 한 줄에 두면 이름이 두 글자만 남는다 */
+@media (max-width: 760px) {
+  .history-list li.hist-row {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      'time facts del'
+      'a    vs    b';
+    gap: 0.4rem 0.5rem;
+  }
+
+  .history-list .hist-time {
+    grid-area: time;
+  }
+  .history-list .hist-facts {
+    grid-area: facts;
+  }
+  .history-list .hist-del {
+    grid-area: del;
+  }
+  .history-list .hist-side:first-of-type {
+    grid-area: a;
+  }
+  .history-list .hist-vs {
+    grid-area: vs;
+  }
+  .history-list .hist-side:last-of-type {
+    grid-area: b;
+  }
+}
+
+/* 가운데 VS. 이게 있어야 '두 팀이 맞붙었다'가 한눈에 읽힌다 */
+.hist-vs {
+  flex: none;
+  color: #4a566b;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .history-list li:hover {
   border-color: rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.05);
-}
-
-.hist-head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
 }
 
 .hist-time {
@@ -616,9 +690,9 @@ select.rooms-input:hover:not(:disabled) {
 .hist-facts {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.3rem;
   flex-wrap: wrap;
-  margin-left: auto;
 }
 
 .hist-fact {
@@ -664,21 +738,12 @@ select.rooms-input:hover:not(:disabled) {
   color: var(--gg-gold-light);
 }
 
-/* 1팀은 늘 왼쪽, 2팀은 늘 오른쪽. 이긴 쪽을 위로 올리면 카드마다
-   자리가 바뀌어 여러 판을 훑을 때 매번 다시 읽어야 한다 */
-.hist-teams {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
 .hist-side {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  align-items: baseline;
+  gap: 0.4rem;
   min-width: 0;
-  padding: 0.35rem 0.5rem;
+  padding: 0.3rem 0.5rem;
   border-radius: 8px;
   font-size: 0.82rem;
   background: rgba(255, 255, 255, 0.03);
@@ -704,6 +769,17 @@ select.rooms-input:hover:not(:disabled) {
 
 .is-win .hist-tag {
   color: var(--gg-gold);
+}
+
+/* 금색 띠만으로는 '이겼다'가 아니라 '강조됐다'로만 읽힌다 */
+.hist-tag b {
+  margin-left: 0.2rem;
+  padding: 0.02rem 0.22rem;
+  border-radius: 4px;
+  background: var(--gg-gold);
+  color: #06111f;
+  font-size: 0.6rem;
+  font-weight: 800;
 }
 
 .hist-names {
@@ -741,13 +817,6 @@ select.rooms-input:hover:not(:disabled) {
 .hist-comma {
   font-style: normal;
   opacity: 0.4;
-}
-
-/* 좁아도 순서는 그대로. 1팀이 위, 2팀이 아래로 쌓일 뿐이다 */
-@media (max-width: 480px) {
-  .hist-teams {
-    grid-template-columns: 1fr;
-  }
 }
 
 
