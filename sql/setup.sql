@@ -2093,16 +2093,31 @@ begin
 end; $fn$;
 
 
--- 배열에서 한 id를 다른 id로 갈아끼운다. 둘이 같은 팀에 있었으면
+-- 경기의 team_a/team_b는 jsonb 배열이다 (bigint[]가 아니다).
+-- 그래서 = any(team_a)를 쓰면 "op ANY/ALL (array) requires array on right
+-- side"가 난다. id가 숫자로도 문자열로도 들어와 있을 수 있어서, 이 파일이
+-- 이미 쓰는 방식(jsonb_array_elements_text(...)::bigint)으로 꺼내 비교한다.
+create or replace function public.has_player(a jsonb, p_id bigint)
+returns boolean language sql immutable as $fn$
+  select exists (
+    select 1 from jsonb_array_elements_text(coalesce(a, '[]'::jsonb)) e
+     where e::bigint = p_id);
+$fn$;
+
+-- jsonb 배열에서 한 id를 다른 id로 갈아끼운다. 둘이 같은 팀에 있었으면
 -- 한 명으로 줄어든다. 순서는 지키고 뒤에 나온 중복만 뺀다.
-create or replace function public.merge_ids(a bigint[], p_from bigint, p_to bigint)
-returns bigint[] language sql immutable as $fn$
-  select coalesce(array_agg(v order by rn), '{}'::bigint[])
+-- 꺼낼 때 숫자로 통일해서 넣는다 (record_scrim이 쓰는 모양과 같게).
+drop function if exists public.merge_ids(bigint[], bigint, bigint);
+create or replace function public.merge_ids(a jsonb, p_from bigint, p_to bigint)
+returns jsonb language sql immutable as $fn$
+  select coalesce(jsonb_agg(v order by rn), '[]'::jsonb)
     from (
       select v, min(rn) as rn
         from (
-          select case when v = p_from then p_to else v end as v, rn
-            from unnest(a) with ordinality as t(v, rn)
+          select to_jsonb(case when e::bigint = p_from then p_to else e::bigint end) as v,
+                 rn
+            from jsonb_array_elements_text(coalesce(a, '[]'::jsonb))
+                 with ordinality as t(e, rn)
         ) z
        group by v
     ) y;
@@ -2136,8 +2151,8 @@ begin
   -- 한 사람이 양 팀에 앉아버려서 전적이 조용히 망가진다.
   select count(*) into clash from scrims
    where room_id = r
-     and ((p_keep = any(team_a) and p_drop = any(team_b))
-       or (p_drop = any(team_a) and p_keep = any(team_b)));
+     and ((public.has_player(team_a, p_keep) and public.has_player(team_b, p_drop))
+       or (public.has_player(team_a, p_drop) and public.has_player(team_b, p_keep)));
   if clash > 0 then
     raise exception '두 사람이 서로 맞붙은 경기가 %판 있어요. 같은 사람이 아닙니다.', clash;
   end if;
@@ -2145,9 +2160,12 @@ begin
   update scrims
      set team_a = public.merge_ids(team_a, p_drop, p_keep),
          team_b = public.merge_ids(team_b, p_drop, p_keep)
-   where room_id = r and (p_drop = any(team_a) or p_drop = any(team_b));
-  moved := coalesce((select count(*) from scrims
-                      where room_id = r and (p_keep = any(team_a) or p_keep = any(team_b))), 0);
+   where room_id = r
+     and (public.has_player(team_a, p_drop) or public.has_player(team_b, p_drop));
+
+  select count(*) into moved from scrims
+   where room_id = r
+     and (public.has_player(team_a, p_keep) or public.has_player(team_b, p_keep));
 
   update scrims set first_blood_player_id = p_keep
    where room_id = r and first_blood_player_id = p_drop;

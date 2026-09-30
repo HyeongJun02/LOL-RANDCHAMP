@@ -1332,7 +1332,9 @@ test('합치기는 경기가 들고 있는 id까지 갈아끼운다', () => {
 
 test('서로 맞붙은 적이 있으면 합치기를 막는다 (같은 사람이 아니다)', () => {
   const body = fnBody('merge_room_players');
-  expect(body).toContain('p_keep = any(team_a) and p_drop = any(team_b)');
+  expect(body).toContain(
+    'public.has_player(team_a, p_keep) and public.has_player(team_b, p_drop)'
+  );
   expect(body).toMatch(/if clash > 0 then[\s\S]{0,40}raise exception/);
 });
 
@@ -1388,4 +1390,14 @@ test('plpgsql 변수 이름에 예약어를 쓰지 않는다', () => {
       });
   });
   expect(bad).toEqual([]);
+});
+
+/* scrims.team_a/team_b는 jsonb 배열이다. bigint[]로 착각해서 = any(team_a)를
+   쓰면 실행할 때 "op ANY/ALL (array) requires array on right side"가 난다.
+   파일만 봐서는 멀쩡해 보이고, 합치기를 눌러야 알 수 있었다 */
+test('jsonb 컬럼에 배열 연산자를 쓰지 않는다', () => {
+  const bare = sql.replace(/--[^\n]*/g, '');
+  expect(bare).not.toMatch(/any\s*\(\s*team_[ab]\s*\)/i);
+  /* 꺼내 쓰는 방식은 이 둘뿐이다 */
+  expect(bare).toMatch(/jsonb_array_elements_text\(\s*(coalesce\(a|s\.team_a)/);
 });
