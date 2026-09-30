@@ -63,10 +63,25 @@
   padding: 0.1rem 0.55rem;
 }
 
+/* 열 줄이 그대로 서 있으면 페이지가 그것만으로 한 화면을 넘긴다.
+   설정과 결과가 오른쪽에 붙어 있는데 거기까지 눈이 못 간다.
+   칸 높이를 묶고 안쪽에서 굴린다 (팝업에서 이미 하던 것) */
 .player-rows {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.player-rows::-webkit-scrollbar {
+  width: 6px;
+}
+
+.player-rows::-webkit-scrollbar-thumb {
+  background: rgba(200, 170, 110, 0.35);
+  border-radius: 10px;
 }
 
 .player-row {
@@ -229,9 +244,9 @@
 
 /* ---------- 결과 ---------- */
 
-/* 참가자 칸 위, 가로 전체. 팀 카드 둘을 나란히 세워 세로를 반으로 줄인다 */
+/* 평점 기준·랜덤성·팀 짜기 바로 아래. 고르고 누르고 결과를 보는 것이
+   한 덩어리다 */
 .tb-outcome {
-  margin-bottom: 1.1rem;
   padding: 0.9rem;
   border-radius: 16px;
   border: 1px solid color-mix(in srgb, var(--gg-gold) 25%, transparent);
@@ -272,33 +287,10 @@
   color: #6b7a94;
 }
 
-.outcome-reroll {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid rgba(200, 170, 110, 0.45);
-  background: rgba(200, 170, 110, 0.12);
-  color: var(--gg-gold-light);
-  font-family: inherit;
-  font-size: 0.76rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
-}
-
-.outcome-reroll:hover {
-  background: rgba(200, 170, 110, 0.22);
-}
-
-.outcome-reroll:active {
-  transform: scale(0.96);
-}
-
+/* 사이드바(330px) 안에서는 위아래로 쌓는다. 팝업처럼 가로가 넉넉한
+   자리에서만 나란히 세운다 */
 .outcome-teams {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 0.7rem;
 }
 
@@ -417,12 +409,6 @@
 }
 
 /* ---------- 반응형 ---------- */
-
-@media (max-width: 560px) {
-  .outcome-teams {
-    grid-template-columns: 1fr;
-  }
-}
 
 @media (max-width: 900px) {
   .tb-layout {
@@ -786,11 +772,21 @@
   margin-left: 0.3rem;
 }
 
-/* 팀 카드를 나란히 세우는 건 이제 페이지에서도 똑같이 한다(.outcome-teams).
-   여기서는 여백만 조금 줄인다 */
+/* 팝업에서는 설정 두 칸 아래를 통째로 쓴다. 가로가 넉넉하니 팀 카드도
+   나란히 - 그냥 쌓으면 가로는 텅 비고 세로만 길어진다 */
 .tb-embedded .tb-outcome {
+  grid-column: 1 / -1;
   padding: 0.8rem;
-  margin-bottom: 0.8rem;
+}
+
+.tb-embedded .outcome-teams {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 560px) {
+  .tb-embedded .outcome-teams {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tb-embedded .team-card {
@@ -799,17 +795,6 @@
 
 .tb-embedded .player-rows {
   max-height: 38vh;
-  overflow-y: auto;
-  padding-right: 0.2rem;
-}
-
-.tb-embedded .player-rows::-webkit-scrollbar {
-  width: 6px;
-}
-
-.tb-embedded .player-rows::-webkit-scrollbar-thumb {
-  background: rgba(200, 170, 110, 0.35);
-  border-radius: 10px;
 }
 
 /* 좁아지면 두 칸을 한 칸으로 */
