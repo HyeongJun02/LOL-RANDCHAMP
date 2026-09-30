@@ -207,3 +207,25 @@ test('방금 만든 방(명단이 빈 방)에서는 묻지 않는다', async () 
   expect(document.querySelector('.dialog-message')).toBeNull();
   expect(added).toHaveBeenCalledTimes(1);
 });
+
+/* 명단이 길어지면 '누가 아직 안 들어갔지'를 눈으로 훑게 된다.
+   자주 오는 사람이 위로 오는 게 기본 - 내전은 대개 같은 얼굴들이다 */
+test('대기는 많이 뛴 순으로, 눌러서 이름 순으로 바꾼다', async () => {
+  const el = render({
+    players: [{ id: 1, name: '가' }, { id: 2, name: '나' }],
+    /* 마지막 판은 명단 밖 사람들끼리 - 자동 채우기가 가/나를 팀으로
+       끌어가면 대기에 아무도 안 남는다 */
+    initial: [
+      { id: 'm1', mode: 'normal', teamA: ['나'], teamB: ['철수'], winner: 'A', playedAt: 1 },
+      { id: 'm2', mode: 'normal', teamA: ['나'], teamB: ['철수'], winner: 'A', playedAt: 2 },
+      { id: 'm3', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 3 },
+    ],
+  });
+
+  const poolNames = () =>
+    [...el.querySelectorAll('.sr-pool-cards .sr-card-name')].map((n) => n.textContent);
+
+  expect(poolNames()).toEqual(['나', '가']);
+  await click(byText(el, 'button', '이름 순'));
+  expect(poolNames()).toEqual(['가', '나']);
+});

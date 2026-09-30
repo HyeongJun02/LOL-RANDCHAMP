@@ -1,7 +1,10 @@
+/* 제목줄 안에 넣었더니 넷이 밀려 내려가면서 아래 여백이 사라졌다.
+   제 줄을 준다 */
 .sr-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
 }
 
 /* ---------- 팀 입력 ---------- */
@@ -78,11 +81,10 @@
    위는 이름과 티어, 아래는 칭호·전적·최근 폼 */
 
 .sr-card {
-  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.4rem 0.55rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.6rem;
   border-radius: 10px;
   border: 1px solid var(--gg-panel-border);
   background: rgba(0, 0, 0, 0.28);
@@ -98,6 +100,14 @@
   border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 50%, transparent);
   background: rgba(255, 255, 255, 0.05);
   transform: translateY(-1px);
+}
+
+.sr-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
 }
 
 .sr-card-top {
@@ -129,7 +139,8 @@
 }
 
 .sr-card-title {
-  flex: none;
+  min-width: 0;
+  flex: 0 1 auto;
   padding: 0.02rem 0.32rem;
   border-radius: 999px;
   border: 1px solid var(--gg-panel-border);
@@ -185,41 +196,37 @@
 }
 
 .sr-form i.is-l {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--gg-red, #f97362);
 }
 
 /* 팀에 들어간 카드에만 붙는 단추. 손가락으로는 끌 수가 없으니
    ⇄로 건너가고 ✕로 대기로 나온다 */
+/* 카드 오른쪽의 제 칸. 전에는 절대 위치로 띄워서 티어 배지 위에 겹쳤고,
+   흐리게 깔아둬서 ✕가 있는지도 몰랐다 */
 .sr-card-acts {
-  position: absolute;
-  top: 0.25rem;
-  right: 0.3rem;
+  flex: none;
   display: flex;
-  gap: 0.1rem;
+  gap: 0.2rem;
 }
 
 .sr-card-act {
   display: grid;
   place-items: center;
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.5rem;
+  height: 1.5rem;
   padding: 0;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: #55637a;
-  font-size: 0.6rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #8b98ae;
+  font-size: 0.66rem;
   cursor: pointer;
-  opacity: 0.55;
   transition: all 0.15s ease;
 }
 
-.sr-card:hover .sr-card-act {
-  opacity: 1;
-}
-
 .sr-card-act:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
   color: #e6ecf7;
 }
 
@@ -267,31 +274,78 @@
 
 .sr-pool-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   margin-bottom: 0.5rem;
+}
+
+.sr-pool-title {
   font-size: 0.76rem;
   font-weight: 800;
   color: #8b98ae;
 }
 
-.sr-pool-head b {
+.sr-pool-title b {
   margin-left: 0.3rem;
   color: var(--gg-gold);
 }
 
-.sr-pool-hint {
+.sr-sorts {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.12rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.sr-sort {
+  padding: 0.18rem 0.5rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b7a94;
+  font-family: inherit;
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sr-sort:hover {
+  color: #cbd5e5;
+}
+
+.sr-sort.is-on {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--gg-gold-light);
+}
+
+.sr-pool-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
   color: #55637a;
 }
 
+/* 명단이 스무 명이면 대기만으로 화면을 다 먹는다. 여기서 굴린다 */
 .sr-pool-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 0.35rem;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 0.4rem;
   margin-bottom: 0.5rem;
+  max-height: 17rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.sr-pool-cards::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sr-pool-cards::-webkit-scrollbar-thumb {
+  background: rgba(200, 170, 110, 0.35);
+  border-radius: 10px;
 }
 
 .sr-pool-add {
@@ -462,9 +516,10 @@
     grid-template-columns: 1fr;
   }
 
-  /* 대기 카드는 좁은 화면에서 두 줄로 */
+  /* 좁은 화면에서는 대기 카드를 한 줄에 하나 또는 둘 */
   .sr-pool-cards {
-    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    max-height: 14rem;
   }
 }
 

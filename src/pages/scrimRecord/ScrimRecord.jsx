@@ -21,14 +21,29 @@ import BetOpenModal from '../rooms/BetOpenModal';
 import BetTimer from '../rooms/BetTimer';
 import { useDialog } from '../../components/common/Dialog';
 import { timeAgo } from '../../lib/timeAgo';
-import { defaultModeOf, getMode, hasModeChoice, getTier, tierName } from '../../rules/games';
+import {
+  defaultModeOf,
+  getMode,
+  hasModeChoice,
+  getTier,
+  tierName,
+  ratingOf,
+} from '../../rules/games';
 import { statsFor, statOf } from '../../rules/matches';
 import { useGame, useGameKey } from '../../lib/GameContext';
 import './ScrimRecord.css';
 
-/* 최근 몇 판을 이겼나. 이름 → [최신순 true/false].
+/* 최근 몇 판을 이겼나. 이름 → [오래된 순 true/false].
    '8승 4패'는 통산이라 오늘 폼을 말해주지 않는다. 점 다섯 개가
    '요즘 잘 나가는 애'를 한눈에 보여준다 */
+/* 대기가 길어지면 '누가 아직 안 들어갔지'를 눈으로 훑게 된다.
+   자주 오는 사람이 위로 오는 게 기본 - 내전은 대개 같은 얼굴들이다 */
+const SORTS = [
+  { key: 'games', label: '많이 뛴 순' },
+  { key: 'tier', label: '티어 순' },
+  { key: 'name', label: '이름 순' },
+];
+
 const FORM_LEN = 5;
 const formsOf = (matches) => {
   const out = new Map();
@@ -45,6 +60,9 @@ const formsOf = (matches) => {
       m.teamA.forEach((n) => put(n, m.winner === 'A'));
       m.teamB.forEach((n) => put(n, m.winner === 'B'));
     });
+  /* 모으기는 최신부터(최근 다섯 판만 집으려고), 그리기는 오래된 것부터.
+     시간은 왼쪽에서 오른쪽으로 흐른다 - 오른쪽 끝이 방금 한 판이다 */
+  out.forEach((list) => list.reverse());
   return out;
 };
 
@@ -70,35 +88,43 @@ const PlayerCard = ({ name, game, player, title, stat, form, onTap, onMove, onRe
       role={onTap ? 'button' : undefined}
       title={onTap ? `${name} — 눌러서 넣기 (끌어다 놓아도 됩니다)` : name}
     >
-      <span className="sr-card-top">
-        <b className="sr-card-name">{name}</b>
-        {tier && (
-          <span className="tier-badge" style={{ '--tier': tier.color }}>
-            {tierName(game, player)}
-          </span>
-        )}
-      </span>
+      <span className="sr-card-body">
+        <span className="sr-card-top">
+          <b className="sr-card-name">{name}</b>
+          {tier && (
+            <span className="tier-badge" style={{ '--tier': tier.color }}>
+              {tierName(game, player)}
+            </span>
+          )}
+        </span>
 
-      <span className="sr-card-info">
-        {title && (
-          <em className={`sr-card-title tone-${title.tone}`}>
-            {title.icon} {title.label}
-          </em>
-        )}
-        {stat ? (
-          <span className="sr-card-rec">
-            {stat.wins}승 {stat.losses}패
-          </span>
-        ) : (
-          <span className="sr-card-rec is-new">첫 판</span>
-        )}
-        {form && form.length > 0 && (
-          <span className="sr-form" title={`최근 ${form.length}판 (왼쪽이 최신)`}>
-            {form.map((win, i) => (
-              <i key={i} className={win ? 'is-w' : 'is-l'} />
-            ))}
-          </span>
-        )}
+        <span className="sr-card-info">
+          {title && (
+            <em className={`sr-card-title tone-${title.tone}`}>
+              {title.icon} {title.label}
+            </em>
+          )}
+          {stat ? (
+            <span className="sr-card-rec">
+              {stat.wins}승 {stat.losses}패
+            </span>
+          ) : (
+            <span className="sr-card-rec is-new">첫 판</span>
+          )}
+          {form && form.length > 0 && (
+            <span className="sr-form" title={`최근 ${form.length}판 (오른쪽이 방금 판 판)`}>
+              {form.map((win, i) => (
+                <i
+                  key={i}
+                  className={win ? 'is-w' : 'is-l'}
+                  /* 오른쪽으로 갈수록 또렷하게. 다섯 점이 다 같은 진하기면
+                     어느 쪽이 최근인지 알 수가 없다 */
+                  style={{ opacity: 0.35 + (0.65 * (i + 1)) / form.length }}
+                />
+              ))}
+            </span>
+          )}
+        </span>
       </span>
 
       {(onMove || onRemove) && (
@@ -163,6 +189,7 @@ const ScrimRecord = ({
   /* 명단에 없는데 직접 적어 넣은 이름. 팀에서 빼도 대기에 남아 있어야 한다 */
   const [extras, setExtras] = useState([]);
   const [typed, setTyped] = useState('');
+  const [sort, setSort] = useState('games');
   /* 지금 끌고 있는 카드와, 그 카드가 올라온 자리 */
   const dragging = useRef(null);
   const [over, setOver] = useState(null);
@@ -183,9 +210,20 @@ const ScrimRecord = ({
 
   /* 아직 어느 팀도 아닌 사람들 */
   const inTeams = new Set([...teamA, ...teamB]);
-  const pool = [...players.map((p) => p.name), ...extras].filter(
-    (n, i, all) => all.indexOf(n) === i && !inTeams.has(n)
-  );
+  const pool = [...players.map((p) => p.name), ...extras]
+    .filter((n, i, all) => all.indexOf(n) === i && !inTeams.has(n))
+    .sort((a, b) => {
+      if (sort === 'name') return a.localeCompare(b, 'ko');
+      const tie = a.localeCompare(b, 'ko');
+      if (sort === 'tier') {
+        const r = (n) => {
+          const p = players.find((x) => x.name === n);
+          return p ? ratingOf(gameKey, p) : -1;
+        };
+        return r(b) - r(a) || tie;
+      }
+      return (statOf(stats, b)?.games || 0) - (statOf(stats, a)?.games || 0) || tie;
+    });
 
   /* 한 사람은 한 자리에만. 넣기 전에 양쪽에서 빼고 넣는다 -
      안 그러면 끌어다 옮길 때 양 팀에 동시에 있게 된다 */
@@ -466,12 +504,12 @@ const ScrimRecord = ({
       {live}
 
       <section className="room-panel">
-        <div className="room-panel-head">
-          <h3>
-            <FaGamepad /> 게임 시작
-            <span className="panel-count">{teamA.length + teamB.length}명</span>
-          </h3>
-          <div className="sr-toolbar">
+        <h3>
+          <FaGamepad /> 게임 시작
+          <span className="panel-count">{teamA.length + teamB.length}명</span>
+        </h3>
+
+        <div className="sr-toolbar">
             {/* 이것만 팝업을 여는 버튼이다. 나머지는 이 화면에서 바로 끝나는
                 동작이라, 같은 회색 버튼으로 두면 무슨 일이 날지 모르고 누른다 */}
             <button className="tool-btn is-open" onClick={() => setShowBalancer(true)}>
@@ -492,10 +530,9 @@ const ScrimRecord = ({
                 <FaArrowRight /> 방금 짠 팀
               </button>
             )}
-            <button className="ghost-btn" onClick={clearTeams}>
-              팀 비우기
-            </button>
-          </div>
+          <button className="ghost-btn" onClick={clearTeams}>
+            팀 비우기
+          </button>
         </div>
 
         {/* 모드가 하나뿐인 게임(롤)에서는 아예 안 그린다 */}
@@ -522,13 +559,29 @@ const ScrimRecord = ({
           onDrop={dropOn(null)}
         >
           <div className="sr-pool-head">
-            <span>
+            <span className="sr-pool-title">
               대기<b>{pool.length}</b>
             </span>
-            <span className="sr-pool-hint">눌러서 넣기 · 끌어다 놓기</span>
+            {pool.length > 1 && (
+              <div className="sr-sorts">
+                {SORTS.map((o) => (
+                  <button
+                    key={o.key}
+                    className={`sr-sort ${sort === o.key ? 'is-on' : ''}`}
+                    onClick={() => setSort(o.key)}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-          {pool.length > 0 && (
+          {pool.length > 0 ? (
             <div className="sr-pool-cards">{pool.map((n) => card(n, null))}</div>
+          ) : (
+            <p className="sr-pool-hint">
+              대기가 비었어요. 팀에서 ✕를 누르거나 카드를 여기로 끌어다 놓으면 돌아옵니다.
+            </p>
           )}
           <div className="sr-pool-add">
             <input
