@@ -138,14 +138,16 @@
   color: #6b7a94;
 }
 
-.sr-card-title {
-  min-width: 0;
-  flex: 0 1 auto;
-  padding: 0.02rem 0.32rem;
+/* 칭호가 붙는 줄. 칭호가 없는 사람에게도 판수를 넣어 칸을 채운다 -
+   있는 사람만 줄이 생기면 카드마다 아랫줄 위치가 달라서 눈이 튄다 */
+.sr-card-tag {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 0.02rem 0.34rem;
   border-radius: 999px;
   border: 1px solid var(--gg-panel-border);
   background: rgba(255, 255, 255, 0.04);
-  font-style: normal;
+  font-size: 0.66rem;
   font-weight: 700;
   color: #a8b4c8;
   overflow: hidden;
@@ -153,24 +155,46 @@
   white-space: nowrap;
 }
 
-.sr-card-title.tone-hot {
+/* 칭호가 없는 사람의 판수. 자리만 지키는 것이라 조용히 */
+.sr-card-tag.is-plain {
+  border-color: transparent;
+  background: none;
+  padding-left: 0;
+  color: #55637a;
+  font-weight: 600;
+}
+
+.sr-card-tag.tone-hot {
   border-color: rgba(249, 115, 98, 0.4);
   color: #fca5a5;
 }
 
-.sr-card-title.tone-cold {
+.sr-card-tag.tone-cold,
+.sr-card-tag.tone-coaster {
   border-color: rgba(56, 189, 248, 0.35);
   color: #7dd3fc;
 }
 
-.sr-card-title.tone-fb {
+.sr-card-tag.tone-fb,
+.sr-card-tag.tone-owl {
   border-color: rgba(167, 139, 250, 0.4);
   color: #c4b5fd;
+}
+
+.sr-card-tag.tone-ace {
+  border-color: rgba(200, 170, 110, 0.5);
+  color: var(--gg-gold-light);
 }
 
 .sr-card-rec {
   flex: none;
   font-variant-numeric: tabular-nums;
+}
+
+/* 승패만 적으면 12승 8패와 3승 2패가 비슷해 보인다 */
+.sr-card-rec b {
+  margin-left: 0.3rem;
+  color: #a8b4c8;
 }
 
 .sr-card-rec.is-new {
@@ -435,13 +459,54 @@
 
 /* ---------- 승리 버튼 ---------- */
 
-/* 승리 기록과 또또 열기는 여기서 고르는 갈래라 나란히 둔다.
-   전보다 낮췄다 - 세 개가 되면서 예전 높이로는 화면을 다 먹는다 */
+/* 또또 열기는 '판을 시작한다', 승리 기록은 '판이 끝났다'다.
+   셋을 똑같은 크기로 나란히 뒀더니 세 갈래처럼 보였다 */
+.sr-bet-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--gg-panel-border);
+}
+
+.sr-bet-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9px;
+  border: 1px solid rgba(200, 170, 110, 0.5);
+  background: rgba(200, 170, 110, 0.12);
+  color: var(--gg-gold-light);
+  font-family: inherit;
+  font-size: 0.83rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.sr-bet-btn:hover {
+  background: rgba(200, 170, 110, 0.22);
+}
+
+.sr-bet-btn:active {
+  transform: scale(0.97);
+}
+
 .win-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.6rem;
-  margin-bottom: 0.6rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+/* 두 단추가 무엇을 고르는 것인지 한 줄로 말해준다.
+   이름만 있으면 '눌러도 되나'를 망설인다 */
+.win-label {
+  grid-column: 1 / -1;
+  font-size: 0.74rem;
+  color: #6b7a94;
 }
 
 .win-btn {
@@ -449,15 +514,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.65rem;
+  gap: 0.45rem;
+  padding: 0.55rem;
   border: none;
   border-radius: 11px;
   background: color-mix(in srgb, var(--team) 18%, transparent);
   border: 1px solid color-mix(in srgb, var(--team) 45%, transparent);
   color: var(--team);
   font-family: inherit;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 800;
   cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease;
@@ -467,16 +532,11 @@
   --team: var(--gg-red);
 }
 
-/* 또또도 같은 크기로. 구석의 작은 버튼이면 이런 게 있는 줄도 모른다 */
-.win-btn.bet-open {
-  --team: var(--gg-gold);
-}
-
 .sr-bet-hint {
-  margin: 0 0 1.5rem;
-  font-size: 0.75rem;
+  margin: 0;
+  font-size: 0.73rem;
+  line-height: 1.45;
   color: #6b7a94;
-  text-align: center;
 }
 
 .win-btn:hover {

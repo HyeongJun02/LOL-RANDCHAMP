@@ -431,6 +431,22 @@
   color: #7dd3fc;
 }
 
+/* 승률왕. 한 방에 한 명뿐이라 금색을 준다 */
+.title-badge.tone-ace {
+  border-color: rgba(200, 170, 110, 0.5);
+  color: var(--gg-gold-light);
+}
+
+.title-badge.tone-coaster {
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+}
+
+.title-badge.tone-owl {
+  border-color: rgba(167, 139, 250, 0.4);
+  color: #c4b5fd;
+}
+
 /* '첫 킬 N회' 칭호. 색을 안 주면 혼자 회색이라 칭호가 아니라 꼬리표로
    보였다. 내전 기록의 첫 킬 알약과 같은 보라를 쓴다 */
 .title-badge.tone-fb {

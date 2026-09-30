@@ -29,13 +29,10 @@ import {
   tierName,
   ratingOf,
 } from '../../rules/games';
-import { statsFor, statOf } from '../../rules/matches';
+import { statsFor, statOf, recentFormOf } from '../../rules/matches';
 import { useGame, useGameKey } from '../../lib/GameContext';
 import './ScrimRecord.css';
 
-/* 최근 몇 판을 이겼나. 이름 → [오래된 순 true/false].
-   '8승 4패'는 통산이라 오늘 폼을 말해주지 않는다. 점 다섯 개가
-   '요즘 잘 나가는 애'를 한눈에 보여준다 */
 /* 대기가 길어지면 '누가 아직 안 들어갔지'를 눈으로 훑게 된다.
    자주 오는 사람이 위로 오는 게 기본 - 내전은 대개 같은 얼굴들이다 */
 const SORTS = [
@@ -43,28 +40,6 @@ const SORTS = [
   { key: 'tier', label: '티어 순' },
   { key: 'name', label: '이름 순' },
 ];
-
-const FORM_LEN = 5;
-const formsOf = (matches) => {
-  const out = new Map();
-  [...matches]
-    .sort((a, b) => b.playedAt - a.playedAt)
-    .forEach((m) => {
-      const put = (name, win) => {
-        const cur = out.get(name) || [];
-        if (cur.length < FORM_LEN) {
-          cur.push(win);
-          out.set(name, cur);
-        }
-      };
-      m.teamA.forEach((n) => put(n, m.winner === 'A'));
-      m.teamB.forEach((n) => put(n, m.winner === 'B'));
-    });
-  /* 모으기는 최신부터(최근 다섯 판만 집으려고), 그리기는 오래된 것부터.
-     시간은 왼쪽에서 오른쪽으로 흐른다 - 오른쪽 끝이 방금 한 판이다 */
-  out.forEach((list) => list.reverse());
-  return out;
-};
 
 /* 사람 하나 = 카드 하나. 끌어다 팀에 넣는다.
    손가락으로는 끌 수가 없어서(모바일 브라우저는 HTML5 드래그를 안 준다)
@@ -98,21 +73,23 @@ const PlayerCard = ({ name, game, player, title, stat, form, onTap, onMove, onRe
           )}
         </span>
 
+        {/* 칭호가 있는 사람만 이 줄이 생기면 카드마다 아랫줄 위치가
+            달라져서 훑을 때 눈이 튄다. 없으면 판수로 칸을 채운다 */}
+        <span className={`sr-card-tag ${title ? `tone-${title.tone}` : 'is-plain'}`}>
+          {title ? `${title.icon} ${title.label}` : stat ? `${stat.games}판` : '새 얼굴'}
+        </span>
+
         <span className="sr-card-info">
-          {title && (
-            <em className={`sr-card-title tone-${title.tone}`}>
-              {title.icon} {title.label}
-            </em>
-          )}
           {stat ? (
             <span className="sr-card-rec">
               {stat.wins}승 {stat.losses}패
+              <b>{Math.round((stat.wins / stat.games) * 100)}%</b>
             </span>
           ) : (
             <span className="sr-card-rec is-new">첫 판</span>
           )}
           {form && form.length > 0 && (
-            <span className="sr-form" title={`최근 ${form.length}판 (오른쪽이 방금 판 판)`}>
+            <span className="sr-form" title={`최근 ${form.length}판 (오른쪽이 방금 한 판)`}>
               {form.map((win, i) => (
                 <i
                   key={i}
@@ -205,7 +182,7 @@ const ScrimRecord = ({
     [matches]
   );
   const stats = useMemo(() => statsFor(matches), [matches]);
-  const forms = useMemo(() => formsOf(matches), [matches]);
+  const forms = useMemo(() => recentFormOf(matches), [matches]);
   const infoOf = (name) => players.find((p) => p.name === name) || null;
 
   /* 아직 어느 팀도 아닌 사람들 */
@@ -602,26 +579,29 @@ const ScrimRecord = ({
           {teamPanel('B', '2팀', teamB, 'team-red')}
         </div>
 
-        {/* 승리 기록과 또또 열기는 여기서 고르는 두 갈래다.
-            또또가 구석의 작은 버튼이면 이런 게 있는 줄도 모른다 */}
+        {/* 셋을 똑같은 크기로 나란히 뒀더니 세 갈래처럼 보였다.
+            또또 열기는 '판을 시작한다', 승리 기록은 '판이 끝났다'다.
+            순서대로 두고 크기도 나눈다 */}
+        {onOpenBetting && (
+          <div className="sr-bet-row">
+            <button className="sr-bet-btn" onClick={() => setShowBetOpen(true)}>
+              <FaDice /> 또또 열기
+            </button>
+            <p className="sr-bet-hint">
+              먼저 열면 결과는 나중에 넣습니다. 그 사이에 다들 끼꼬를 걸 수 있어요.
+            </p>
+          </div>
+        )}
+
         <div className="win-buttons">
+          <span className="win-label">판이 끝났으면 이긴 팀을 누릅니다</span>
           <button className="win-btn team-blue" onClick={() => recordWin('A')}>
             <FaTrophy /> 1팀 승리
           </button>
           <button className="win-btn team-red" onClick={() => recordWin('B')}>
             <FaTrophy /> 2팀 승리
           </button>
-          {onOpenBetting && (
-            <button className="win-btn bet-open" onClick={() => setShowBetOpen(true)}>
-              <FaDice /> 또또 열기
-            </button>
-          )}
         </div>
-        {onOpenBetting && (
-          <p className="sr-bet-hint">
-            또또를 열면 결과를 나중에 넣습니다. 그 사이에 다들 끼꼬를 걸 수 있어요.
-          </p>
-        )}
       </section>
 
       {showBetOpen && (

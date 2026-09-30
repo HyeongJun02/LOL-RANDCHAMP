@@ -76,3 +76,46 @@ test('기록이 없으면 아무에게도 안 붙는다', () => {
   expect(titlesOf({}).size).toBe(0);
   expect(titlesOf({ matches: [] }).size).toBe(0);
 });
+
+/* 새로 붙인 것들. 조건을 못 넘기면 안 붙어야 한다 - 아무나 받으면
+   배지가 값이 없다 */
+describe('덧붙인 칭호', () => {
+  test('승률이 좋으면 에이스가 붙는다', () => {
+    /* 여섯 판 중 넷을 이긴 사람(67%). 연승이 안 되게 사이에 패를 끼운다 */
+    const matches = [
+      g(['가'], ['나'], 'A', 1),
+      g(['가'], ['나'], 'B', 2),
+      g(['가'], ['나'], 'A', 3),
+      g(['가'], ['나'], 'B', 4),
+      g(['가'], ['나'], 'A', 5),
+      g(['가'], ['나'], 'A', 6),
+    ];
+    expect(titlesOf({ matches }).get('가')).toMatchObject({ tone: 'ace' });
+  });
+
+  test('다섯 판이 승패 번갈아면 롤러코스터', () => {
+    const matches = [
+      g(['가'], ['나'], 'A', 1),
+      g(['가'], ['나'], 'B', 2),
+      g(['가'], ['나'], 'A', 3),
+      g(['가'], ['나'], 'B', 4),
+      g(['가'], ['나'], 'A', 5),
+    ];
+    const t = titlesOf({ matches });
+    /* 다섯 판 3승이면 60%라 에이스 기준(65%)에는 못 미친다 */
+    expect(t.get('가')).toMatchObject({ tone: 'coaster' });
+    expect(t.get('나')).toMatchObject({ tone: 'coaster' });
+  });
+
+  test('새벽에만 뛰면 올빼미', () => {
+    /* 승패를 섞어 연승·에이스가 먼저 걸리지 않게 둔다 */
+    const matches = [
+      { ...g(['가'], ['나'], 'A'), playedAt: new Date(2026, 0, 1, 2).getTime() },
+      { ...g(['가'], ['나'], 'B'), playedAt: new Date(2026, 0, 2, 3).getTime() },
+      { ...g(['가'], ['나'], 'A'), playedAt: new Date(2026, 0, 3, 1).getTime() },
+      { ...g(['가'], ['나'], 'B'), playedAt: new Date(2026, 0, 4, 4).getTime() },
+      { ...g(['가'], ['나'], 'B'), playedAt: new Date(2026, 0, 5, 20).getTime() },
+    ];
+    expect(titlesOf({ matches }).get('가')).toMatchObject({ tone: 'owl' });
+  });
+});

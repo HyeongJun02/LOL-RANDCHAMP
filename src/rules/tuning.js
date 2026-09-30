@@ -143,6 +143,16 @@ export const TITLE_MIN_PAIR = 3;
 /* 방의 마지막 경기로부터 며칠 안 보이면 '유령'인가 */
 export const TITLE_GHOST_DAYS = 14;
 
+/* '에이스'(승률왕). 판수가 적으면 승률은 그냥 우연이라 최소 판수를 둔다.
+   방에서 한 명만 받는다 - 조건을 넘긴 사람 중 제일 높은 승률 */
+export const TITLE_ACE_GAMES = 6;
+export const TITLE_ACE_RATE = 0.65;
+
+/* '올빼미'. 새벽(0~5시)에 뛴 판이 이 비율을 넘으면.
+   내전은 원래 밤에 하는 놀이라 기준을 자정 뒤로 잡는다 */
+export const TITLE_NIGHT_GAMES = 4;
+export const TITLE_NIGHT_RATE = 0.6;
+
 /* ============================================================
    참여 보상 · 시즌 [DB]
    ============================================================ */

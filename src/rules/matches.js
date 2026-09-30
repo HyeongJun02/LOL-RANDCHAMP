@@ -106,6 +106,27 @@ export const gameCountsOf = (list) => {
   return counts;
 };
 
+/* 이름별 '최근 n판'. 오래된 것부터 담는다 - 화면에서 왼쪽이 옛날,
+   오른쪽이 방금 한 판이다. 모으기는 최신부터 해야 n판만 집을 수 있다 */
+export const recentFormOf = (list, n = 5) => {
+  const out = new Map();
+  [...list]
+    .sort((a, b) => (b.playedAt || 0) - (a.playedAt || 0))
+    .forEach((m) => {
+      const put = (name, won) => {
+        const cur = out.get(name) || [];
+        if (cur.length < n) {
+          cur.push(won);
+          out.set(name, cur);
+        }
+      };
+      (m.teamA || []).forEach((name) => put(name, m.winner === 'A'));
+      (m.teamB || []).forEach((name) => put(name, m.winner === 'B'));
+    });
+  out.forEach((cur) => cur.reverse());
+  return out;
+};
+
 /* ---------- 월별 정산 ---------- */
 
 /* 'YYYY-MM'. 로컬 시각 기준 (내전은 우리 동네 밤에 한다) */

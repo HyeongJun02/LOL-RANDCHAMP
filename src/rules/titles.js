@@ -5,11 +5,17 @@ import {
   underdogsOf,
   streakBreakersOf,
   gameCountsOf,
+  statsFor,
+  recentFormOf,
 } from './matches';
 import {
   TITLE_MIN_PAIR as MIN_PAIR,
   TITLE_MIN_STREAK as MIN_STREAK,
   TITLE_GHOST_DAYS as GHOST_DAYS,
+  TITLE_ACE_GAMES as ACE_GAMES,
+  TITLE_ACE_RATE as ACE_RATE,
+  TITLE_NIGHT_GAMES as NIGHT_GAMES,
+  TITLE_NIGHT_RATE as NIGHT_RATE,
 } from './tuning';
 
 /* 데이터가 붙여주는 별명.
@@ -36,6 +42,27 @@ const firstBloodsOf = (scrims, players) => {
 };
 
 const top = (map) => [...map.entries()].sort((a, b) => b[1] - a[1])[0];
+
+/* 새벽(0~5시)에 뛴 판의 비율. 내전은 원래 밤에 하는 놀이라
+   기준을 자정 뒤로 잡는다 */
+const nightRatesOf = (list) => {
+  const out = new Map();
+  list.forEach((m) => {
+    const hour = new Date(m.playedAt || 0).getHours();
+    const late = hour < 6;
+    [...(m.teamA || []), ...(m.teamB || [])].forEach((name) => {
+      const cur = out.get(name) || { games: 0, night: 0 };
+      cur.games += 1;
+      if (late) cur.night += 1;
+      out.set(name, cur);
+    });
+  });
+  return out;
+};
+
+/* 이겼다 졌다를 다섯 판 내리 반복. 순서가 번갈아면 된다 */
+const isCoaster = (form) =>
+  form.length >= 5 && form.every((won, i) => i === 0 || won !== form[i - 1]);
 
 /* 이름 → { icon, label, tone } */
 export const titlesOf = ({ matches = [], scrims = [], players = [] } = {}) => {
@@ -73,6 +100,20 @@ export const titlesOf = ({ matches = [], scrims = [], players = [] } = {}) => {
     give(duo.b, { icon: '🤝', label: `${duo.a}와 짝꿍`, tone: 'duo' });
   }
 
+  /* 에이스 - 승률이 제일 좋은 사람. 판수가 적으면 그냥 우연이라
+     최소 판수를 넘긴 사람들끼리만 견준다 */
+  const rates = [...statsFor(matches).entries()]
+    .filter(([, s]) => s.games >= ACE_GAMES)
+    .map(([name, s]) => ({ name, rate: s.wins / s.games }))
+    .sort((a, b) => b.rate - a.rate);
+  if (rates[0] && rates[0].rate >= ACE_RATE) {
+    give(rates[0].name, {
+      icon: '🏆',
+      label: `승률 ${Math.round(rates[0].rate * 100)}%`,
+      tone: 'ace',
+    });
+  }
+
   /* 사냥꾼 - 첫 킬을 제일 많이 딴 사람 */
   const fb = top(firstBloodsOf(scrims, players));
   if (fb && fb[1] >= 2) {
@@ -90,6 +131,18 @@ export const titlesOf = ({ matches = [], scrims = [], players = [] } = {}) => {
   if (under && under[1] >= 2) {
     give(under[0], { icon: '🐺', label: '언더독', tone: 'under' });
   }
+
+  /* 롤러코스터 - 이겼다 졌다를 다섯 판 내리 반복한 사람 */
+  recentFormOf(matches).forEach((form, name) => {
+    if (isCoaster(form)) give(name, { icon: '🎢', label: '롤러코스터', tone: 'coaster' });
+  });
+
+  /* 올빼미 - 새벽에만 나타나는 사람 */
+  nightRatesOf(matches).forEach((v, name) => {
+    if (v.games >= NIGHT_GAMES && v.night / v.games >= NIGHT_RATE) {
+      give(name, { icon: '🦉', label: '올빼미', tone: 'owl' });
+    }
+  });
 
   /* 개근 - 판수가 제일 많은 사람. 절반은 나와야 준다 */
   const iron = top(counts);
