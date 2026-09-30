@@ -1481,19 +1481,175 @@ li.day-sep em {
 }
 
 .bet-cart h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0;
-  font-size: 0.85rem;
-  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.bet-cart-n {
+  min-width: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.bet-cart-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+/* 한 건 = 한 덩어리. 윗줄은 '무엇에 얼마', 아랫줄은 금액 단추.
+   전에는 마켓 이름이 본문 크기 700이라 이 칸에서 제일 크고 굵었는데,
+   정작 눈이 가야 할 곳은 금액이다 */
+.bet-cart-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  background: rgba(2, 6, 14, 0.4);
+}
+
+.bet-cart-item .bet-chips {
+  grid-column: 1 / -1;
+}
+
+.bet-cart-what {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  min-width: 0;
+  font-size: 0.76rem;
+}
+
+.bet-cart-what b {
+  flex: none;
+  color: #8b98ae;
+  font-weight: 600;
+}
+
+.bet-cart-what em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+  font-weight: 700;
+  color: #7dd3fc;
+}
+
+/* 금액이 이 칸의 주인공이다. 혼자 크고 숫자 폭이 고정이라
+   여러 건을 담아도 자릿수가 세로로 맞는다 */
+.bet-cart-amt {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
+.bet-cart-amt i {
+  font-style: normal;
+  font-size: 0.66rem;
+  color: #64748b;
+}
+
+.bet-amount {
+  width: 5.2rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.6);
+  color: #e6ecf7;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.bet-amount:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+/* 위아래 화살표는 +단추가 이미 하는 일이라 자리만 먹는다 */
+.bet-amount::-webkit-outer-spin-button,
+.bet-amount::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.bet-amount[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* 빼려면 위로 올라가 같은 칸을 다시 눌러야 했다 */
+.bet-cart-drop {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.62rem;
+}
+
+.bet-cap {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.66rem;
+  color: #5b6779;
+  white-space: nowrap;
 }
 
 .bet-cart-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.5rem 0.7rem;
   flex-wrap: wrap;
-  font-size: 0.85rem;
-  color: #cbd5e1;
+  font-size: 0.76rem;
+  color: #8b98ae;
+}
+
+.bet-cart-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.bet-cart-total i {
+  font-style: normal;
+}
+
+.bet-cart-total strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #f4f7fc;
+}
+
+/* '잔액 12,000'만 적혀 있으면 걸고 나서 얼마가 남는지를 매번 머리로 뺀다 */
+.bet-cart-left {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bet-cart-left b {
+  font-weight: 400;
+  color: #4a566b;
+}
+
+.bet-cart-foot .primary-btn {
+  margin-left: auto;
 }
 
 .bet-result {
@@ -1753,8 +1909,9 @@ li.day-sep em {
 }
 
 /* 잔액을 넘겼을 때. 누르고 나서야 알려주면 늦다 */
-.bet-cart-foot.is-over strong {
+.bet-cart-foot.is-over .bet-cart-left {
   color: var(--gg-red);
+  font-weight: 700;
 }
 
 .bet-over-msg {
@@ -1875,19 +2032,6 @@ li.day-sep em {
   opacity: 0.75;
 }
 
-/* 담은 배팅 줄. 마켓 이름 + 내가 고른 것 */
-.bet-cart-what em {
-  font-style: normal;
-  font-weight: 700;
-  color: #7dd3fc;
-}
-
-.bet-cart-what em::before {
-  content: ' · ';
-  font-weight: 400;
-  color: #64748b;
-}
-
 /* 상태 칩 + 남은 시간을 헤더 오른쪽에 한 덩어리로 */
 .bet-head-live {
   display: flex;
@@ -2001,13 +2145,9 @@ li.day-sep em {
 
 /* ---------- 배팅 금액 빠른 입력 ---------- */
 
-.bet-cart-row {
-  display: grid;
-  gap: 0.35rem;
-}
-
 .bet-chips {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 0.25rem;
 }

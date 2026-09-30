@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaLock, FaCheck, FaUndo, FaChevronRight, FaTrash, FaDice } from 'react-icons/fa';
+import { FaLock, FaCheck, FaUndo, FaChevronRight, FaTrash, FaDice, FaTimes } from 'react-icons/fa';
 import {
   killLineOfScrim,
   killMarket,
@@ -678,47 +678,80 @@ const BetTab = ({
 
           {activeScrim.status === 'betting' && cartRows.length > 0 && (
             <div className="bet-cart">
-              <h4>담은 배팅 {cartRows.length}건</h4>
-              {cartRows.map(([market, v]) => (
-                <div className="bet-cart-row" key={market}>
-                  <div className="rooms-form-row">
-                    {/* 마켓 이름만 적혀 있으면 위로 올라가 다시 확인해야 한다.
-                        무엇에 걸었는지를 여기서 같이 보여준다 */}
-                    <span className="rooms-name bet-cart-what">
-                      {marketLabel(market)}
-                      <em>{selectionLabel(market, v.selection)}</em>
-                    </span>
-                    <input
-                      className="rooms-input"
-                      type="number"
-                      min="1"
-                      max={capOf(market) || undefined}
-                      value={v.amount}
-                      placeholder="끼꼬"
-                      onChange={(e) => setAmount(market, e.target.value)}
-                    />
-                  </div>
-                  <div className="bet-chips">
-                    {/* 좁은 화면에서 초기화까지 한 줄에 들어가야 해서
-                        천 단위 쉼표는 뺀다 (+1,000 → +1000) */}
-                    {BUMPS.map((n) => (
-                      <button key={n} className="bet-chip" onClick={() => bump(market, n)}>
-                        +{n}
+              <h4>
+                담은 배팅<span className="bet-cart-n">{cartRows.length}</span>
+              </h4>
+
+              <ul className="bet-cart-list">
+                {cartRows.map(([market, v]) => {
+                  const cap = capOf(market);
+                  return (
+                    <li className="bet-cart-item" key={market}>
+                      {/* 무엇에 걸었는지가 먼저. 마켓 이름만 적혀 있으면
+                          위로 올라가 다시 확인해야 한다 */}
+                      <span className="bet-cart-what">
+                        <b>{marketLabel(market)}</b>
+                        <em>{selectionLabel(market, v.selection)}</em>
+                      </span>
+
+                      <span className="bet-cart-amt">
+                        <input
+                          className="bet-amount"
+                          type="number"
+                          inputMode="numeric"
+                          min="1"
+                          max={cap || undefined}
+                          value={v.amount}
+                          placeholder="0"
+                          aria-label={`${marketLabel(market)}에 걸 끼꼬`}
+                          onChange={(e) => setAmount(market, e.target.value)}
+                        />
+                        <i>끼꼬</i>
+                      </span>
+
+                      {/* 빼려면 위로 올라가 같은 칸을 다시 눌러야 했다 */}
+                      <button
+                        className="icon-btn bet-cart-drop"
+                        onClick={() => pick(market, v.selection)}
+                        aria-label={`${marketLabel(market)} 빼기`}
+                        title="빼기"
+                      >
+                        <FaTimes />
                       </button>
-                    ))}
-                    <button
-                      className="bet-chip is-clear"
-                      onClick={() => setAmount(market, '')}
-                      disabled={!v.amount}
-                    >
-                      초기화
-                    </button>
-                  </div>
-                </div>
-              ))}
+
+                      <div className="bet-chips">
+                        {/* 좁은 화면에서 초기화까지 한 줄에 들어가야 해서
+                            천 단위 쉼표는 뺀다 (+1,000 → +1000) */}
+                        {BUMPS.map((n) => (
+                          <button key={n} className="bet-chip" onClick={() => bump(market, n)}>
+                            +{n}
+                          </button>
+                        ))}
+                        <button
+                          className="bet-chip is-clear"
+                          onClick={() => setAmount(market, '')}
+                          disabled={!v.amount}
+                        >
+                          초기화
+                        </button>
+                        {cap && <em className="bet-cap">최대 {num(cap)}</em>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
               <div className={`bet-cart-foot ${overBalance ? 'is-over' : ''}`}>
-                <span>
-                  총 <strong>{num(cartTotal)}</strong> 끼꼬 · 잔액 {num(me?.points)}
+                <span className="bet-cart-total">
+                  <i>합계</i>
+                  <strong>{num(cartTotal)}</strong>
+                </span>
+                {/* '잔액 12,000'만 적혀 있으면 걸고 나서 얼마가 남는지를
+                    매번 머리로 뺀다 */}
+                <span className="bet-cart-left">
+                  {num(me?.points)}
+                  <b>→</b>
+                  {num((me?.points ?? 0) - cartTotal)}
                 </span>
                 <button
                   className="primary-btn"

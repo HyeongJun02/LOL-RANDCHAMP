@@ -1727,3 +1727,29 @@ test('rpc로 보내는 인자 이름이 전부 SQL 함수에 있다', () => {
   });
   expect(bad).toEqual([]);
 });
+
+/* 담은 배팅 칸에서 눈이 가야 할 곳은 금액이다. 마켓 이름이 본문 크기
+   700이라 제일 크고 굵었는데, 정작 금액은 그보다 작았다 */
+test('담은 배팅은 금액이 제일 크다', () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, '..', 'pages', 'rooms', 'Rooms.css'),
+    'utf8'
+  );
+  const size = (sel) => {
+    const rule = css.slice(css.indexOf(`${sel} {`));
+    const m = rule.slice(0, rule.indexOf('}')).match(/font-size:\s*([\d.]+)rem/);
+    return m ? Number(m[1]) : null;
+  };
+  expect(size('.bet-amount')).toBeGreaterThan(size('.bet-cart-what'));
+  expect(size('.bet-cart-total strong')).toBeGreaterThan(size('.bet-cart-foot'));
+});
+
+/* 담은 것을 빼려면 위로 올라가 같은 칸을 다시 눌러야 했다 */
+test('담은 배팅은 그 자리에서 뺄 수 있다', () => {
+  const jsx = fs.readFileSync(
+    path.join(__dirname, '..', 'pages', 'rooms', 'BetTab.jsx'),
+    'utf8'
+  );
+  expect(jsx).toContain('bet-cart-drop');
+  expect(jsx).toContain('onClick={() => pick(market, v.selection)}');
+});
