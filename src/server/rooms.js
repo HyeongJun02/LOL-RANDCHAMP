@@ -782,17 +782,49 @@ export const useRoom = (roomId, userId) => {
 
      참가자를 지워도 행은 남기지만(deleted_at), 그 장치가 생기기 전에는
      진짜로 지웠다. 그 시절 기록이 남아 있으면 그 자리가 화면에서 '?'가
-     되거나 아예 빠져서 5명이 4명으로 보인다. 설정에서 누구였는지
-     지정할 수 있게 목록으로 넘긴다 */
+     되거나 아예 빠져서 5명이 4명으로 보인다.
+
+     '#23' 하나만 보여주면 그게 누구였는지 알 길이 없다. 언제 몇 판
+     뛰었는지, 누구와 같은 팀이었는지를 같이 모아서 넘긴다 - 사람은
+     그걸 보고 기억해낸다. */
   const knownIds = new Set(allPlayers.map((p) => Number(p.id)));
-  const lostIds = [
-    ...new Set(
-      scrims
-        .flatMap((s) => [...(s.team_a || []), ...(s.team_b || [])])
-        .map(Number)
-        .filter((id) => Number.isFinite(id) && !knownIds.has(id))
-    ),
-  ].sort((a, b) => a - b);
+  const nameOfId = new Map(allPlayers.map((p) => [Number(p.id), p.name]));
+  const lost = new Map();
+
+  scrims.forEach((s) => {
+    const at = new Date(s.played_at).getTime();
+    [s.team_a || [], s.team_b || []].forEach((team) => {
+      const ids = team.map(Number).filter(Number.isFinite);
+      ids.forEach((id) => {
+        if (knownIds.has(id)) return;
+        const cur = lost.get(id) || {
+          id,
+          games: 0,
+          first: at,
+          last: at,
+          mates: new Map(),
+        };
+        cur.games += 1;
+        cur.first = Math.min(cur.first, at);
+        cur.last = Math.max(cur.last, at);
+        /* 같은 팀이었던 사람. 이름이 있는 쪽만 센다 */
+        ids.forEach((other) => {
+          const nm = other === id ? null : nameOfId.get(other);
+          if (nm) cur.mates.set(nm, (cur.mates.get(nm) || 0) + 1);
+        });
+        lost.set(id, cur);
+      });
+    });
+  });
+
+  const lostPlayers = [...lost.values()]
+    .map((x) => ({
+      ...x,
+      mates: [...x.mates.entries()]
+        .map(([name, n]) => ({ name, n }))
+        .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ko')),
+    }))
+    .sort((a, b) => b.games - a.games || a.id - b.id);
 
   return {
     room,
@@ -805,7 +837,7 @@ export const useRoom = (roomId, userId) => {
     players: [...players].sort((a, b) => a.name.localeCompare(b.name, 'ko')),
     /* 지운 사람까지. 지난 경기의 이름을 붙이려면 이쪽을 봐야 한다 */
     allPlayers,
-    lostIds,
+    lostPlayers,
     matches: toMatches(room?.scrims, allPlayers, room?.game),
     members: members
       .map((m) => ({

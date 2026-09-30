@@ -159,8 +159,15 @@ const PlayerRow = ({ player, onPatch, onDrop }) => {
   );
 };
 
+/* '9/12' 정도면 충분하다. 해가 넘어간 기록이면 연도까지 */
+const dayText = (ts) => {
+  const d = new Date(ts);
+  const y = d.getFullYear() === new Date().getFullYear() ? '' : `${d.getFullYear()}. `;
+  return `${y}${d.getMonth() + 1}/${d.getDate()}`;
+};
+
 /* 방장·부방장만 보이는 설정 묶음. 멤버에게는 멤버 목록과 나가기만 남는다 */
-const Settings = ({ room, members, players, lostIds, titles, myRole, myId, reload, onGone }) => {
+const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, reload, onGone }) => {
   const gameKey = useGameKey();
   const isOwner = myRole === 'owner';
   const isAdmin = canEditRole(myRole);
@@ -171,6 +178,8 @@ const Settings = ({ room, members, players, lostIds, titles, myRole, myId, reloa
      줄마다 버튼을 달지 않고 아래에 한 줄만 둔다 */
   const [mergeKeep, setMergeKeep] = useState('');
   const [mergeDrop, setMergeDrop] = useState('');
+  /* 기록에만 남은 자리마다 '누구인가' 고른 값. id → 참가자 id */
+  const [lostPick, setLostPick] = useState({});
   const [ghostName, setGhostName] = useState('');
   const [showLoader, setShowLoader] = useState(false);
   /* 관리 팝업을 띄운 멤버의 user_id. 객체로 들고 있으면 폴링이 한 번 돌 때
@@ -306,26 +315,16 @@ const Settings = ({ room, members, players, lostIds, titles, myRole, myId, reloa
      있다). 전적을 붙이려면 경기 쪽 id까지 갈아끼워야 해서 서버가 한다 */
   const mergePlayers = guard(async () => {
     const keep = players.find((p) => String(p.id) === mergeKeep);
-    /* 없앨 쪽은 명단에 없는 id일 수도 있다 - 옛날에 참가자를 진짜로
-       지우던 시절의 기록이 가리키는 '?' 자리 */
-    const drop =
-      players.find((p) => String(p.id) === mergeDrop) ||
-      (lostIds.some((id) => String(id) === mergeDrop)
-        ? { id: Number(mergeDrop), name: `이름 없음 #${mergeDrop}`, lost: true }
-        : null);
+    const drop = players.find((p) => String(p.id) === mergeDrop);
     if (!keep || !drop || keep.id === drop.id) {
       toast.error('합칠 두 사람을 서로 다르게 골라주세요.');
       return;
     }
     const ok = await confirm({
-      title: drop.lost ? '이 사람이 누구인지 지정' : '같은 사람 합치기',
-      message: drop.lost
-        ? `기록에 '?'로 남은 자리가 '${keep.name}' 님인가요?`
-        : `'${drop.name}' 님의 전적을 '${keep.name}' 님에게 넘길까요?`,
-      detail: drop.lost
-        ? `그 자리로 뛴 지난 경기가 전부 '${keep.name}'의 기록이 됩니다. 되돌릴 수 없어요.`
-        : `'${drop.name}'은(는) 명단에서 사라지고, 그 이름으로 뛴 지난 경기가 전부 '${keep.name}'의 기록이 됩니다. 되돌릴 수 없어요.`,
-      confirmText: drop.lost ? '지정' : '합치기',
+      title: '같은 사람 합치기',
+      message: `'${drop.name}' 님의 전적을 '${keep.name}' 님에게 넘길까요?`,
+      detail: `'${drop.name}'은(는) 명단에서 사라지고, 그 이름으로 뛴 지난 경기가 전부 '${keep.name}'의 기록이 됩니다. 되돌릴 수 없어요.`,
+      confirmText: '합치기',
       danger: true,
     });
     if (!ok) return;
@@ -333,6 +332,25 @@ const Settings = ({ room, members, players, lostIds, titles, myRole, myId, reloa
     setMergeKeep('');
     setMergeDrop('');
     toast.success(`합쳤어요. '${keep.name}' 님 경기가 ${moved}판입니다.`);
+    reload();
+  });
+
+  /* 기록에만 남은 자리가 누구였는지 지정한다. 합치기와 같은 함수를 쓴다 -
+     '그 id로 뛴 경기를 이 사람 것으로 옮긴다'로 하는 일이 똑같다 */
+  const assignLost = guard(async (x) => {
+    const keep = players.find((p) => String(p.id) === lostPick[x.id]);
+    if (!keep) return;
+    const ok = await confirm({
+      title: '이 자리가 누구인지 지정',
+      message: `#${x.id} 자리(${x.games}판)가 '${keep.name}' 님인가요?`,
+      detail: `그 자리로 뛴 지난 경기 ${x.games}판이 전부 '${keep.name}'의 기록이 됩니다. 되돌릴 수 없어요.`,
+      confirmText: '지정',
+      danger: true,
+    });
+    if (!ok) return;
+    await mergeRoomPlayers(keep.id, x.id);
+    setLostPick({ ...lostPick, [x.id]: '' });
+    toast.success(`'${keep.name}' 님의 기록으로 합쳤어요.`);
     reload();
   });
 
@@ -619,19 +637,75 @@ const Settings = ({ room, members, players, lostIds, titles, myRole, myId, reloa
 
           {/* 이름을 고치는 것만으로는 안 되는 경우. 'poop'으로 몇 판 뛰고
               '푸푸'로 다시 들어오면 줄이 둘이 되어 전적이 갈린다 */}
-          {(players.length >= 2 || lostIds.length > 0) && (
+          {/* 옛날에 참가자를 진짜로 지우던 시절의 기록이 가리키는 자리.
+              화면에서 '?'가 되거나 아예 빠져서 5명이 4명으로 보인다.
+              '#23'만 보여주면 그게 누구였는지 알 길이 없으니, 언제 몇 판
+              뛰었고 누구와 같은 팀이었는지를 같이 보여준다 */}
+          {lostPlayers.length > 0 && (
+            <div className="player-lost">
+              <span className="player-merge-head">
+                <FaExclamationTriangle /> 기록에만 남고 이름이 없는 자리
+                <b>{lostPlayers.length}개</b>
+              </span>
+              <p className="rooms-hint">
+                예전에 참가자를 지우면 기록에서 그 자리가 비었습니다. 누구였는지 고르면
+                그 전적이 그 사람에게 합쳐집니다.
+              </p>
+              {lostPlayers.map((x) => (
+                <div className="lost-row" key={x.id}>
+                  <span className="lost-who">
+                    <b>#{x.id}</b>
+                    <em>{x.games}판</em>
+                  </span>
+                  <span className="lost-when">
+                    {dayText(x.first)}
+                    {x.last !== x.first && ` ~ ${dayText(x.last)}`}
+                  </span>
+                  <span className="lost-mates">
+                    {x.mates.length === 0 ? (
+                      '같이 뛴 사람 없음'
+                    ) : (
+                      <>
+                        같은 팀{' '}
+                        {x.mates.slice(0, 4).map((m) => (
+                          <i key={m.name}>
+                            {m.name}
+                            <u>{m.n}</u>
+                          </i>
+                        ))}
+                      </>
+                    )}
+                  </span>
+                  <select
+                    className="rooms-input lost-pick"
+                    value={lostPick[x.id] || ''}
+                    onChange={(e) => setLostPick({ ...lostPick, [x.id]: e.target.value })}
+                    aria-label={`#${x.id}이 누구인지`}
+                  >
+                    <option value="">누구인가요?</option>
+                    {players.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="ghost-btn"
+                    onClick={() => assignLost(x)}
+                    disabled={!lostPick[x.id]}
+                  >
+                    지정
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {players.length >= 2 && (
             <div className="player-merge">
               <span className="player-merge-head">
                 <FaExchangeAlt /> 같은 사람이 두 줄로 나뉘었을 때
               </span>
-              {/* 옛날에 참가자를 진짜로 지우던 시절의 기록. 그 자리가
-                  화면에서 '?'가 되거나 아예 빠져서 5명이 4명으로 보인다 */}
-              {lostIds.length > 0 && (
-                <p className="rooms-hint player-merge-lost">
-                  기록에 이름이 안 남은 자리가 <b>{lostIds.length}개</b> 있어요. 아래
-                  &apos;없앨 이름&apos;에서 골라 누구였는지 지정하면 그 전적이 합쳐집니다.
-                </p>
-              )}
               <div className="rooms-form-row">
                 <select
                   className="rooms-input"
@@ -663,13 +737,6 @@ const Settings = ({ room, members, players, lostIds, titles, myRole, myId, reloa
                         {p.name}
                       </option>
                     ))}
-                  {/* 기록이 가리키는데 명단에 없는 자리. 화면에서 '?'로
-                      보이는 게 이것들이다 */}
-                  {lostIds.map((id) => (
-                    <option key={`lost-${id}`} value={id}>
-                      이름 없음 #{id}
-                    </option>
-                  ))}
                 </select>
                 <button
                   className="ghost-btn"
@@ -854,7 +921,7 @@ const Room = () => {
     error,
     reload,
     allPlayers,
-    lostIds,
+    lostPlayers,
   } = useRoom(roomId, user?.id);
   const { hofRows } = useHallOfFame(roomId);
   /* 탭을 주소(#bet)에 둔다. useState에만 담아두면 새로고침하거나
@@ -1070,7 +1137,7 @@ const Room = () => {
         {tab === 'settings' && (
           <Settings
             room={room}
-            lostIds={lostIds}
+            lostPlayers={lostPlayers}
             members={members}
             players={players}
             titles={titles}

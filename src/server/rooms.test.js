@@ -1781,11 +1781,20 @@ test('또또 화면은 지운 사람 이름까지 받아본다', () => {
   expect(bet).toContain('players={allPlayers}');
 });
 
-test('명단에 없는 id를 찾아 설정에 넘긴다', () => {
+/* '#23' 하나만 보여주면 그게 누구였는지 알 길이 없다. 언제 몇 판 뛰었고
+   누구와 같은 팀이었는지가 있어야 사람이 기억해낸다 */
+test('이름 없는 자리는 단서까지 모아서 넘긴다', () => {
   const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
   const body = src.slice(src.indexOf('const knownIds'), src.indexOf('return {', src.indexOf('const knownIds')));
   /* 지운 사람은 행이 남아 있으므로 '없는 id'가 아니다 */
   expect(body).toContain('allPlayers.map((p) => Number(p.id))');
-  expect(body).toContain('team_a');
-  expect(body).toContain('team_b');
+  /* 몇 판 · 언제부터 언제까지 · 같은 팀이었던 사람 */
+  expect(body).toContain('cur.games += 1');
+  expect(body).toContain('cur.first = Math.min');
+  expect(body).toContain('cur.last = Math.max');
+  expect(body).toContain('cur.mates.set(nm');
+  /* 같이 뛴 사람도 이름이 없으면 단서가 못 된다 */
+  expect(body).toContain('if (nm)');
+  /* 많이 뛴 자리부터 - 그쪽이 알아보기 쉽다 */
+  expect(body).toContain('b.games - a.games');
 });
