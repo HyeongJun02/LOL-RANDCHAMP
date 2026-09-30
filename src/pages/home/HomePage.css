@@ -354,7 +354,8 @@
   padding: 0.42rem 0.55rem;
   border-radius: 8px;
   border: 1px solid var(--gg-panel-border);
-  background: rgba(0, 0, 0, 0.3);
+  /* background 단축으로 쓰면 theme.css가 그려준 화살표가 지워진다 */
+  background-color: rgba(0, 0, 0, 0.3);
   color: var(--gg-text);
   font-family: inherit;
   font-size: 0.82rem;
@@ -371,11 +372,6 @@
 .member-row select {
   cursor: pointer;
   font-weight: 700;
-}
-
-.member-row select option {
-  background: #0b1020;
-  color: var(--gg-text);
 }
 
 .member-div {

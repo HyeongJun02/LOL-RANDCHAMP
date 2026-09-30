@@ -93,7 +93,8 @@
   padding: 0.38rem 0.5rem;
   border-radius: 7px;
   border: 1px solid var(--gg-panel-border);
-  background: rgba(0, 0, 0, 0.3);
+  /* background 단축으로 쓰면 theme.css가 그려준 화살표가 지워진다 */
+  background-color: rgba(0, 0, 0, 0.3);
   color: var(--gg-text);
   font-family: inherit;
   font-size: 0.8rem;
@@ -110,11 +111,6 @@
 .player-row select {
   cursor: pointer;
   font-weight: 700;
-}
-
-.player-row select option {
-  background: #0b1020;
-  color: var(--gg-text);
 }
 
 .row-div {

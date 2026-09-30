@@ -84,16 +84,18 @@ import './Rooms.css';
    홈 | 게임·기록 | 또또·포인트 | 로그 | 설정 */
 const TABS = [
   { key: 'home', group: 0, label: '홈', icon: <FaHome />, desc: '이 방에서 할 수 있는 것들' },
-  { key: 'record', group: 1, label: '게임 시작', icon: <FaPlay />, desc: '팀을 넣고 승패를 기록합니다' },
+  /* wide = 좌우로 나눠 놓는 탭. 나머지는 한 칸으로 쌓이는데, 전체 폭을
+     다 쓰면 한 줄이 너무 길어서 '모바일 화면을 늘려놓은' 느낌이 난다 */
+  { key: 'record', group: 1, label: '게임 시작', icon: <FaPlay />, wide: true, desc: '팀을 넣고 승패를 기록합니다' },
   /* 팀을 넣는 화면과 지난 판을 훑는 화면은 하는 일이 다르다.
      한 판 기록하려고 들어왔다가 목록을 지나쳐야 했고, 지난 판을 보려면
      입력칸부터 스크롤해야 했다 */
   { key: 'history', group: 1, label: '내전 기록', icon: <FaListUl />, desc: '지난 판과 또또 결과' },
-  { key: 'stats', group: 1, label: '통계', icon: <FaChartBar />, desc: '순위·시즌 정산·명예의 전당' },
+  { key: 'stats', group: 1, label: '통계', icon: <FaChartBar />, wide: true, desc: '순위·시즌 정산·명예의 전당' },
   { key: 'bet', group: 2, label: '또또', icon: <FaDice />, desc: '끼꼬를 걸고 결과를 맞힙니다' },
   { key: 'kkiko', group: 2, label: '포인트', icon: <FaCoins />, desc: '끼꼬 잔액과 주고받기' },
   { key: 'feed', group: 3, label: '로그', icon: <FaListUl />, desc: '방에서 일어난 일들' },
-  { key: 'settings', group: 4, label: '설정', icon: <FaCog />, desc: '참가자·멤버·입장 코드' },
+  { key: 'settings', group: 4, label: '설정', icon: <FaCog />, wide: true, desc: '참가자·멤버·입장 코드' },
 ];
 
 /* 이름은 타이핑마다 저장하면 안 된다. 키 하나마다 UPDATE 한 번에
@@ -129,8 +131,10 @@ const PlayerRow = ({ player, onPatch, onDrop }) => {
         style={{ color: tier.color }}
         onChange={(e) => onPatch(player.id, { tier: e.target.value })}
       >
+        {/* 색은 항목마다 스스로 정한다. select에만 주면 펼친 목록 전체가
+            그 색으로 물든다 - 마스터를 고르면 모든 줄이 보라색이 됐다 */}
         {game.tiers.map((t) => (
-          <option key={t.key} value={t.key}>
+          <option key={t.key} value={t.key} style={{ color: t.color }}>
             {t.label}
           </option>
         ))}
@@ -980,7 +984,12 @@ const Room = () => {
       )}
 
       {/* key를 탭으로 주면 탭을 옮길 때마다 새로 마운트되어 fade-in이 다시 돈다 */}
-      <div className="room-panel-wrap fade-in" key={tab}>
+      <div
+        className={`room-panel-wrap fade-in ${
+          TABS.find((t) => t.key === tab)?.wide ? '' : 'is-narrow'
+        }`}
+        key={tab}
+      >
         {tab === 'record' && (
           <ScrimRecord
             matches={matches}

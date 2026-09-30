@@ -167,8 +167,13 @@ export const fetchLedger = async (beforeId) => {
 
 export const FEED_PAGE = 20;
 
-/* 커서 방식. 전체를 다시 받지 않고 마지막 id보다 작은 것만 이어 받는다 */
-export const fetchLogs = async (roomId, beforeId) => {
+/* 커서 방식. 전체를 다시 받지 않고 마지막 id보다 작은 것만 이어 받는다.
+
+   걸러내기는 서버에서 한다. 받아온 20줄에서 화면이 골라내면 페이지마다
+   보이는 줄 수가 달라지고, 운 나쁘면 통째로 빈 페이지가 나온다.
+   방마다 로그는 500줄로 잘려 있고 (room_id, id desc) 인덱스를 그대로
+   타므로, type 조건이 붙어도 부담이 늘지 않는다 */
+export const fetchLogs = async (roomId, beforeId, types = null) => {
   if (!isNeonConfigured) throw new Error(NOT_READY);
   let q = neon
     .from('room_logs')
@@ -177,6 +182,7 @@ export const fetchLogs = async (roomId, beforeId) => {
     .order('id', { ascending: false })
     .limit(FEED_PAGE);
   if (beforeId) q = q.lt('id', beforeId);
+  if (types && types.length > 0) q = q.filter('type', 'in', `(${types.join(',')})`);
   return unwrap(await q);
 };
 
@@ -209,6 +215,19 @@ export const LOG_TAGS = {
   player_merge: { label: '명단', tone: 'blue' },
   member_kicked: { label: '멤버', tone: 'red' },
 };
+
+/* 로그 탭의 걸러내기 단추. 줄에 붙는 라벨이 곧 단추 이름이라, LOG_TAGS에서
+   그대로 만들어낸다 - 종류를 하나 더할 때 여기를 같이 고칠 일이 없다.
+   (또또처럼 라벨 하나에 종류가 여러 개 묶인 것도 한 단추로 모인다) */
+export const FEED_FILTERS = [
+  { label: '전체', types: null },
+  ...Object.entries(LOG_TAGS).reduce((out, [type, tag]) => {
+    const found = out.find((f) => f.label === tag.label);
+    if (found) found.types.push(type);
+    else out.push({ label: tag.label, tone: tag.tone, types: [type] });
+    return out;
+  }, []),
+];
 
 /* 방 기록 종류. 서버가 kind만 보내고 문구는 여기서 만든다 */
 const RECORD_LABEL = {

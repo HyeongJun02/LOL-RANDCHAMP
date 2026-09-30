@@ -1447,3 +1447,54 @@ test('멤버 줄에는 손대는 칸을 두지 않는다', () => {
   expect(list).not.toContain('<select');
   expect(list).toContain('mem-more');
 });
+
+/* ---------- 로그 탭 ---------- */
+
+test('걸러내기 단추는 줄에 붙는 라벨에서 그대로 만들어진다', () => {
+  const { FEED_FILTERS, LOG_TAGS } = require('./rooms');
+  expect(FEED_FILTERS[0]).toEqual({ label: '전체', types: null });
+  /* 라벨 하나에 종류가 여러 개 묶인 것은 한 단추로 모인다 (또또) */
+  const bet = FEED_FILTERS.find((f) => f.label === '또또');
+  expect(bet.types).toEqual(['betting_open', 'betting_locked']);
+  /* 종류를 하나 더하면 단추도 저절로 생긴다 - 빠진 게 없어야 한다 */
+  const covered = FEED_FILTERS.flatMap((f) => f.types || []);
+  expect(covered.sort()).toEqual(Object.keys(LOG_TAGS).sort());
+});
+
+test('걸러내기는 서버에서 한다 (화면에서 골라내면 빈 쪽이 나온다)', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const body = src.slice(src.indexOf('export const fetchLogs'), src.indexOf('const num ='));
+  expect(body).toContain("q.filter('type', 'in'");
+  /* 커서는 그대로. 종류를 걸러도 (room_id, id desc) 인덱스를 탄다 */
+  expect(body).toContain("q.lt('id', beforeId)");
+});
+
+/* 화면 폭을 브라우저가 그리는 것에 맡기면 우리 화면만 검고 펼친 목록은
+   하얗다. 실제로 그랬다 */
+test('브라우저가 그리는 것들도 어둡게 그린다', () => {
+  const theme = fs.readFileSync(path.join(__dirname, '..', 'styles', 'theme.css'), 'utf8');
+  expect(theme).toMatch(/:root\s*\{[^}]*color-scheme:\s*dark/);
+});
+
+/* select에 background 단축을 쓰면 theme.css가 그려준 화살표가 지워진다.
+   화면만 봐서는 '화살표가 왜 없지' 정도로만 보여서 한참 못 찾는다 */
+test('select 배경은 background-color로만 준다', () => {
+  const walk = (dir) =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) return walk(full);
+      return e.name.endsWith('.css') ? [full] : [];
+    });
+
+  const bad = [];
+  walk(path.join(__dirname, '..')).forEach((file) => {
+    const text = fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    /* select가 걸린 규칙 안에서 background 단축을 쓰는지 본다 */
+    (text.match(/[^}]*select[^{]*\{[^}]*\}/g) || []).forEach((rule) => {
+      if (/\n\s*background:\s/.test(rule)) {
+        bad.push(`${path.basename(file)} ${rule.split('{')[0].trim()}`);
+      }
+    });
+  });
+  expect(bad).toEqual([]);
+});

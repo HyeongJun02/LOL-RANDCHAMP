@@ -53,8 +53,10 @@ const RosterEditor = () => {
                 style={{ color: tier.color }}
                 onChange={(e) => updateMember(m.id, { tier: e.target.value })}
               >
+                {/* 색은 항목마다 스스로 정한다. select에만 주면 펼친 목록 전체가
+                    그 색으로 물든다 - 마스터를 고르면 모든 줄이 보라색이 됐다 */}
                 {game.tiers.map((t) => (
-                  <option key={t.key} value={t.key}>
+                  <option key={t.key} value={t.key} style={{ color: t.color }}>
                     {t.label}
                   </option>
                 ))}
