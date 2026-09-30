@@ -2099,7 +2099,8 @@ declare
   r     bigint;
   r2    bigint;
   moved int;
-  both  int;
+  -- both는 예약어라 변수 이름으로 못 쓴다 (trim(both ...))
+  clash int;
 begin
   if p_keep = p_drop then raise exception '같은 줄이에요.'; end if;
 
@@ -2113,12 +2114,12 @@ begin
 
   -- 둘이 서로 상대 팀이었던 판이 있으면 같은 사람일 수 없다. 합치면
   -- 한 사람이 양 팀에 앉아버려서 전적이 조용히 망가진다.
-  select count(*) into both from scrims
+  select count(*) into clash from scrims
    where room_id = r
      and ((p_keep = any(team_a) and p_drop = any(team_b))
        or (p_drop = any(team_a) and p_keep = any(team_b)));
-  if both > 0 then
-    raise exception '두 사람이 서로 맞붙은 경기가 %판 있어요. 같은 사람이 아닙니다.', both;
+  if clash > 0 then
+    raise exception '두 사람이 서로 맞붙은 경기가 %판 있어요. 같은 사람이 아닙니다.', clash;
   end if;
 
   update scrims

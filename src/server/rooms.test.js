@@ -1303,7 +1303,7 @@ test('합치기는 경기가 들고 있는 id까지 갈아끼운다', () => {
 test('서로 맞붙은 적이 있으면 합치기를 막는다 (같은 사람이 아니다)', () => {
   const body = fnBody('merge_room_players');
   expect(body).toContain('p_keep = any(team_a) and p_drop = any(team_b)');
-  expect(body).toMatch(/if both > 0 then[\s\S]{0,40}raise exception/);
+  expect(body).toMatch(/if clash > 0 then[\s\S]{0,40}raise exception/);
 });
 
 test('합치기는 방장·부방장만', () => {
@@ -1321,4 +1321,41 @@ test('마감 전에 나가는 건 이름뿐이다 (무엇에 얼마는 빼고)',
   expect(body).toContain('returns text[]');
   expect(body).not.toMatch(/selection|amount/);
   expect(body).toContain('if not public.is_room_member(r) then');
+});
+
+/* setup.sql은 여기서 실행해볼 수가 없다. 그래서 구문 오류 하나가
+   "DB에 이 기능이 아직 없어요"로만 보이고, 원인을 찾는 데 왕복이 한 번 든다.
+   실제로 있었던 일: 변수를 both로 이름 지었는데 그게 예약어라
+   (trim(both ...)) 함수가 생성되지 않았고, 스크립트가 거기서 멈춰서
+   맨 끝의 grant와 notify pgrst까지 못 돌았다 - 뒤에 붙인 기능이 전부
+   조용히 없는 상태가 됐다. 적어도 이 부류는 여기서 잡는다 */
+const PG_RESERVED = new Set(
+  `all analyse analyze and any array as asc asymmetric both case cast check collate
+   column constraint create current_catalog current_date current_role current_time
+   current_timestamp current_user default deferrable desc distinct do else end except
+   false fetch for foreign from grant group having in initially intersect into lateral
+   leading limit localtime localtimestamp not null offset on only or order placing
+   primary references returning select session_user some symmetric table then to
+   trailing true union unique user using variadic when where window with`.split(/\s+/)
+);
+
+test('plpgsql 변수 이름에 예약어를 쓰지 않는다', () => {
+  const bad = [];
+  /* 함수 본문은 $fn$ ... $fn$ 사이에 있다 */
+  const bodies = sql.split('$fn$').filter((_, i) => i % 2 === 1);
+  bodies.forEach((body) => {
+    const d = body.search(/\bdeclare\b/i);
+    if (d === -1) return;
+    const b = body.toLowerCase().indexOf('begin', d);
+    if (b === -1) return;
+    body
+      .slice(d + 'declare'.length, b)
+      .replace(/--[^\n]*/g, '')
+      .split(';')
+      .forEach((line) => {
+        const name = (line.trim().match(/^([a-z_][\w]*)/i) || [])[1];
+        if (name && PG_RESERVED.has(name.toLowerCase())) bad.push(name);
+      });
+  });
+  expect(bad).toEqual([]);
 });
