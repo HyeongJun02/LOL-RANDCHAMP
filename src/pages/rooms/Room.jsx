@@ -21,6 +21,8 @@ import {
   FaPalette,
   FaExchangeAlt,
   FaUserCheck,
+  FaLock,
+  FaUserShield,
   FaUserPlus,
   FaEllipsisH,
   FaUsers,
@@ -44,6 +46,8 @@ import {
   setMemberRole,
   transferRoom,
   kickMember,
+  transferAccount,
+  setAdminScope,
   setRoomStyle,
   linkRoomPlayer,
   addGhostMember,
@@ -56,6 +60,7 @@ import { GameProvider, useGame, useGameKey } from '../../lib/GameContext';
 import { ACCENTS, EMBLEMS, accentVars } from '../../lib/roomStyle';
 import { titlesOf } from '../../rules/titles';
 import { MAX_ROOM_PLAYERS } from '../../server/limits';
+import { ROLES, CAPS, SCOPES, allows } from '../../rules/permissions';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
 import MatchHistory from './MatchHistory';
@@ -166,7 +171,24 @@ const dayText = (ts) => {
   return `${y}${d.getMonth() + 1}/${d.getDate()}`;
 };
 
-/* 방장·부방장만 보이는 설정 묶음. 멤버에게는 멤버 목록과 나가기만 남는다 */
+/* 권한이 없어도 보이긴 한다. 아예 감춰두면 이 방에서 무엇을 할 수 있는
+   방인지 알 수가 없고, 방장에게 무엇을 부탁해야 하는지도 모른다.
+   fieldset 하나면 안쪽 입력칸·단추를 브라우저가 전부 잠가준다 */
+const Panel = ({ head, locked, children }) => (
+  <section className={`room-panel ${locked ? 'is-locked' : ''}`}>
+    <h3>
+      {head}
+      {locked && (
+        <span className="panel-lock">
+          <FaLock /> 방장만
+        </span>
+      )}
+    </h3>
+    <fieldset disabled={locked}>{children}</fieldset>
+  </section>
+);
+
+/* 설정 묶음. 권한이 없으면 잠긴 채로 보인다 */
 const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, reload, onGone }) => {
   const gameKey = useGameKey();
   const isOwner = myRole === 'owner';
@@ -429,6 +451,36 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
     reload();
   });
 
+  /* 같은 사람인데 계정이 바뀐 경우. 내보내기와 달리 그 계정이 남긴 것이
+     전부 따라온다 - 안 따라오면 지난 또또 기록이 '알 수 없음'이 된다 */
+  const moveAccount = guard(async (m, toId) => {
+    const to = members.find((x) => x.user_id === toId);
+    if (!to) return;
+    const ok = await confirm({
+      title: '계정 옮기기',
+      message: `'${m.nickname}' 님의 기록을 '${to.nickname}' 계정으로 옮길까요?`,
+      detail: `배팅 기록·끼꼬 내역·참가자 연결·지난 달 끼꼬가 전부 따라갑니다. '${m.nickname}' 계정은 이 방에서 빠집니다. 되돌릴 수 없어요.`,
+      confirmText: '옮기기',
+      danger: true,
+    });
+    if (!ok) return;
+    const moved = await transferAccount(room.id, m.user_id, toId);
+    toast.success(
+      moved > 0
+        ? `옮겼어요. 끼꼬 ${Number(moved).toLocaleString()}도 같이 갔습니다.`
+        : '옮겼어요.'
+    );
+    reload();
+  });
+
+  const saveScope = guard(async (scope) => {
+    await setAdminScope(room.id, scope);
+    toast.success(
+      scope === 'full' ? '부방장에게 전체를 맡겼어요.' : '부방장을 기록까지로 제한했어요.'
+    );
+    reload();
+  });
+
   /* to를 주면 그 사람에게 끼꼬를 넘기고 내보낸다. 처음 받은 몫은
      서버가 빼고 넘긴다 - 여기서 계산해서 보내면 두 숫자가 어긋난다 */
   const kick = guard(async (m, to = null) => {
@@ -480,8 +532,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
 
   return (
     <div className="room-settings">
-      {isAdmin && (
-        <section className="room-panel">
+      <section className="room-panel">
           <h3>
             <FaKey /> 입장 코드
           </h3>
@@ -503,14 +554,9 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               </button>
             )}
           </div>
-        </section>
-      )}
+      </section>
 
-      {isAdmin && (
-        <section className="room-panel">
-          <h3>
-            <FaPalette /> 방 꾸미기
-          </h3>
+      <Panel locked={!isAdmin} head={<><FaPalette /> 방 꾸미기</>}>
           <p className="rooms-hint">
             고른 색이 이 방 전체에 돕니다. 방 목록에서도 이 색으로 보여요.
           </p>
@@ -537,12 +583,9 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               </button>
             ))}
           </div>
-        </section>
-      )}
+      </Panel>
 
-      {isAdmin && (
-        <section className="room-panel">
-          <h3>방 이름</h3>
+      <Panel locked={!isAdmin} head={<>방 이름</>}>
           <div className="rooms-form-row">
             <input
               className="rooms-input"
@@ -554,11 +597,9 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               저장
             </button>
           </div>
-        </section>
-      )}
+      </Panel>
 
-      {isAdmin && (
-        <section className="room-panel">
+      <section className={`room-panel ${!isAdmin ? 'is-locked' : ''}`}>
           <div className="room-panel-head">
             <h3>
               <FaUsers /> 참가자<span className="panel-count">{players.length}명</span>
@@ -568,6 +609,7 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               disabled={players.length >= MAX_ROOM_PLAYERS}
             />
           </div>
+        <fieldset disabled={!isAdmin}>
           {/* 아래 '멤버'와 생긴 게 비슷해서 뭐가 뭔지 헷갈렸다.
               '경기에 뛰는 이름'과 '방에 들어온 계정'이라고 못 박아둔다 */}
           <p className="rooms-hint">
@@ -762,8 +804,67 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
               onClose={() => setShowLoader(false)}
             />
           )}
-        </section>
-      )}
+        </fieldset>
+      </section>
+
+      {/* 무엇을 할 수 있는 자리인지 표로 보여준다. 권한이 없는 사람도
+          보게 두는 편이 낫다 - 방장에게 무엇을 부탁해야 하는지 알아야 한다.
+          실제로 막는 건 서버다 (rules/permissions.js 머리말 참고) */}
+      <section className="room-panel">
+        <h3>
+          <FaUserShield /> 역할별 권한
+        </h3>
+
+        {isOwner ? (
+          <>
+            <p className="rooms-hint">부방장을 어디까지 믿을지 고릅니다.</p>
+            <div className="seg-tabs scope-tabs">
+              {SCOPES.map((sc) => (
+                <button
+                  key={sc.key}
+                  className={`seg-tab ${(room.admin_scope || 'full') === sc.key ? 'active' : ''}`}
+                  onClick={() => saveScope(sc.key)}
+                >
+                  부방장 {sc.label}
+                </button>
+              ))}
+            </div>
+            <p className="rooms-hint">
+              {SCOPES.find((x) => x.key === (room.admin_scope || 'full'))?.desc}
+            </p>
+          </>
+        ) : (
+          <p className="rooms-hint">
+            이 방의 부방장은 <b>{SCOPES.find((x) => x.key === (room.admin_scope || 'full'))?.label}</b>
+            까지 할 수 있습니다. 바꾸는 건 방장만 가능해요.
+          </p>
+        )}
+
+        <ul className="perm-table">
+          <li className="perm-head">
+            <span />
+            {ROLES.map((r) => (
+              <span key={r.key}>{r.label}</span>
+            ))}
+          </li>
+          {CAPS.map((c) => (
+            <li key={c.key}>
+              <span className="perm-what">
+                <b>{c.label}</b>
+                <em>{c.desc}</em>
+              </span>
+              {ROLES.map((r) => {
+                const on = allows(r.key, c, room.admin_scope || 'full');
+                return (
+                  <span key={r.key} className={`perm-cell ${on ? 'is-on' : ''}`}>
+                    {on ? '○' : '—'}
+                  </span>
+                );
+              })}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="room-panel">
         <h3>
@@ -859,6 +960,10 @@ const Settings = ({ room, members, players, lostPlayers, titles, myRole, myId, r
             }}
             onDropGhost={async (m) => {
               await dropGhost(m);
+              setOpenMem(null);
+            }}
+            onMoveAccount={async (m, toId) => {
+              await moveAccount(m, toId);
               setOpenMem(null);
             }}
           />

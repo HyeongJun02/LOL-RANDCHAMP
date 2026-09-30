@@ -2114,6 +2114,114 @@ li.day-sep em {
   background: linear-gradient(90deg, var(--live), color-mix(in srgb, var(--live) 50%, #ffffff));
 }
 
+/* 권한이 없으면 잠긴 채로 보인다. 감춰두면 이 방에서 무엇을 할 수 있는
+   방인지 알 수가 없고, 방장에게 무엇을 부탁할지도 모른다 */
+.room-panel.is-locked {
+  opacity: 0.72;
+}
+
+.room-panel fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  /* fieldset은 기본 최소 너비가 내용에 맞춰져서 안쪽 격자가 안 줄어든다 */
+  min-inline-size: 0;
+}
+
+.room-panel fieldset:disabled {
+  cursor: default;
+}
+
+.panel-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #6b7a94;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+/* ---------- 역할별 권한 ---------- */
+
+.scope-tabs {
+  margin: 0.5rem 0;
+}
+
+.scope-tabs .seg-tab {
+  font-size: 0.78rem;
+}
+
+.perm-table {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.perm-table li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3rem 3.6rem 3rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.76rem;
+}
+
+.perm-table .perm-head {
+  background: none;
+  padding-bottom: 0.15rem;
+  color: #6b7a94;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.perm-head span {
+  text-align: center;
+}
+
+.perm-what {
+  display: grid;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.perm-what b {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+/* 권한 이름만으로는 그게 무슨 일인지 모른다 */
+.perm-what em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #6b7a94;
+}
+
+.perm-cell {
+  text-align: center;
+  color: #3f4a5c;
+  font-variant-numeric: tabular-nums;
+}
+
+.perm-cell.is-on {
+  color: var(--gg-green);
+  font-weight: 800;
+}
+
+@media (max-width: 560px) {
+  .perm-table li {
+    grid-template-columns: minmax(0, 1fr) 2.4rem 2.8rem 2.4rem;
+    font-size: 0.72rem;
+  }
+}
+
 /* 같은 사람 합치기. 설정 안에서 자주 쓸 일이 아니라 조용히 둔다 */
 .player-merge {
   margin-top: 0.9rem;

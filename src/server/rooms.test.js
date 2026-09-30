@@ -583,7 +583,7 @@ test('시간이 지나면 status가 betting이어도 더 못 건다', () => {
 
 test('시간이 지난 뒤에는 방장이 아니어도 마감할 수 있다 (방장이 자리를 비워도 배당이 열려야 한다)', () => {
   const body = sql.slice(sql.indexOf('function public.lock_betting'));
-  expect(body).toContain('if not expired and not public.is_room_admin');
+  expect(body).toContain('if not expired and not public.is_room_recorder');
   /* 대신 시간이 안 됐으면 여전히 방장만 */
   expect(body).toContain('expired and not public.is_room_member');
 });
@@ -1462,25 +1462,27 @@ test('jsonb 컬럼에 배열 연산자를 쓰지 않는다', () => {
 /* ---------- 내보내면서 끼꼬 넘기기 ---------- */
 /* 남의 돈이 오가는 길이다. 여기가 틀리면 끼꼬가 사라지거나 늘어난다 */
 
+/* 지갑을 옮기는 규칙은 내보내기와 계정 옮기기가 같이 쓴다 (move_surplus).
+   두 벌로 두면 한쪽만 고쳐서 끼꼬가 새거나 늘어난다 */
 test('처음 받은 몫은 넘기지 않는다 (계정을 새로 만들어 찍어내는 길이 된다)', () => {
   const tuning = require('../rules/tuning');
-  const body = fnBody('kick_member');
-  expect(body).toContain(`greatest(0, points - ${tuning.MONTHLY_KKIKO})`);
+  expect(fnBody('move_surplus')).toContain(`greatest(0, points - ${tuning.MONTHLY_KKIKO})`);
 });
 
 test('잔액을 잠그고 읽는다 (안 잠그면 같은 잔액을 두 번 보고 두 번 넘긴다)', () => {
-  expect(fnBody('kick_member')).toMatch(
-    /from room_wallets where room_id = p_room and user_id = p_user for update/
+  expect(fnBody('move_surplus')).toMatch(
+    /from room_wallets where room_id = p_room and user_id = p_from for update/
   );
 });
 
 test('넘긴 끼꼬는 양쪽 원장에 남는다', () => {
-  const body = fnBody('kick_member');
-  expect(body).toContain("(p_user, p_room, -moved, 'transfer_out', p_to)");
+  const body = fnBody('move_surplus');
+  expect(body).toContain("(p_from, p_room, -moved, 'transfer_out', p_to)");
   /* 위쪽 sql은 공백을 한 칸으로 줄여 읽는다 (SQL의 줄맞춤에 안 매이게) */
-  expect(body).toContain("(p_to, p_room, moved, 'transfer_in', p_user)");
+  expect(body).toContain("(p_to, p_room, moved, 'transfer_in', p_from)");
   /* 피드에도 남는다 - 방장이 조용히 남의 끼꼬를 옮길 수 있으면 안 된다 */
-  expect(body).toContain("log_room(p_room, 'member_kicked'");
+  expect(fnBody('kick_member')).toContain("log_room(p_room, 'member_kicked'");
+  expect(fnBody('transfer_account')).toContain("log_room(p_room, 'account_moved'");
 });
 
 test('받을 사람이 이 방 멤버인지, 자기 자신이 아닌지 본다', () => {
@@ -1827,4 +1829,83 @@ test('시즌이 넘어갈 때 끼꼬를 초기화 전에 박제한다', () => {
   const reset = body.indexOf('update room_wallets set points =');
   expect(snap).toBeGreaterThan(-1);
   expect(snap).toBeLessThan(reset);
+});
+
+/* ---------- 역할별 권한 ---------- */
+
+/* 화면의 권한 표(rules/permissions.js)와 서버의 관문이 어긋나면, 화면은
+   된다고 적어두고 서버가 거절한다. 표의 need가 곧 서버 함수 이름이다 */
+test('권한 표의 관문이 SQL에 그대로 있다', () => {
+  const { CAPS } = require('../rules/permissions');
+  const fn = {
+    owner: 'is_room_owner',
+    admin: 'is_room_admin',
+    recorder: 'is_room_recorder',
+    member: 'is_room_member',
+  };
+  CAPS.forEach((c) => {
+    expect(fn[c.need]).toBeDefined();
+    expect(sql).toContain(`create or replace function public.${fn[c.need]}(`);
+  });
+  /* 설명이 없으면 그 권한이 무슨 일인지 알 수가 없다 */
+  CAPS.forEach((c) => expect(c.desc.length).toBeGreaterThan(5));
+});
+
+/* 부방장을 '기록까지'로 잠가도 경기·또또는 되어야 한다. 그게 그 자리를
+   만든 이유다 */
+test('경기·또또는 부방장 범위와 상관없이 된다', () => {
+  ['record_scrim', 'open_betting', 'lock_betting', 'settle_scrim', 'delete_scrim'].forEach(
+    (name) => {
+      expect(fnBody(name)).toContain('public.is_room_recorder(');
+    }
+  );
+  /* 나머지는 is_room_admin이 막는다 - 그쪽이 admin_scope를 본다 */
+  expect(fnBody('is_room_admin')).toContain("r.admin_scope = 'full'");
+  expect(fnBody('is_room_recorder')).not.toContain('admin_scope');
+});
+
+/* 돈을 되돌리거나 사람을 내보내는 건 범위와 무관하게 방장만 */
+test('되돌리기·권한·방은 방장만', () => {
+  ['adjust_points', 'unsettle_scrim', 'set_member_role', 'reset_join_code',
+   'delete_room', 'transfer_room', 'set_admin_scope'].forEach((name) => {
+    expect(fnBody(name)).toContain('public.is_room_owner(');
+  });
+});
+
+/* 입장 코드는 멤버면 본다. 새로 뽑는 건 여전히 방장만 */
+test('입장 코드는 멤버면 볼 수 있다', () => {
+  expect(fnBody('get_join_code')).toContain('if not public.is_room_member(p_room) then');
+  expect(fnBody('reset_join_code')).toContain('public.is_room_owner(');
+});
+
+/* ---------- 계정 옮기기 ---------- */
+
+/* 내보내기는 끼꼬만 넘기면 되지만, 계정 옮기기는 그 계정이 남긴 것이
+   전부 따라와야 한다. 안 따라오면 지난 또또가 '알 수 없음'으로 뜬다 */
+test('계정을 옮기면 그 계정이 남긴 기록이 전부 따라간다', () => {
+  const body = fnBody('transfer_account');
+  expect(body).toContain('update bets set user_id = p_to');
+  expect(body).toContain('update point_ledger set user_id = p_to');
+  expect(body).toContain('update point_ledger set counterpart_user_id = p_to');
+  expect(body).toContain('update hall_of_fame set user_id = p_to');
+  expect(body).toContain('update room_players set linked_user_id = p_to');
+});
+
+test('같은 판 같은 항목에 둘 다 걸었으면 막는다 (조용히 지우면 안 된다)', () => {
+  const body = fnBody('transfer_account');
+  /* bets에 (scrim_id, user_id, market) 유니크가 걸려 있다 */
+  expect(body).toContain('a.scrim_id = b.scrim_id and a.market = b.market');
+  expect(body).toMatch(/if clash > 0 then[\s\S]{0,60}raise exception/);
+});
+
+/* 처음 받은 10000까지 옮기면 계정을 새로 만들어 들어왔다 넘기는 것만으로
+   끼꼬를 찍어낼 수 있다. 내보내기와 같은 규칙을 같은 함수로 쓴다 */
+test('끼꼬는 벌어들인 몫만 옮긴다 (내보내기와 같은 함수)', () => {
+  const tuning = require('../rules/tuning');
+  expect(fnBody('move_surplus')).toContain(`greatest(0, points - ${tuning.MONTHLY_KKIKO})`);
+  expect(fnBody('move_surplus')).toContain('for update');
+  expect(fnBody('transfer_account')).toContain('public.move_surplus(p_room, p_from, p_to)');
+  expect(fnBody('kick_member')).toContain('public.move_surplus(p_room, p_user, p_to)');
+  /* 남의 지갑을 직접 옮기는 함수다. 클라이언트가 부를 이유가 없다 */
+  expect(sql).toContain('revoke execute on function public.move_surplus(bigint, text, text) from public;');
 });

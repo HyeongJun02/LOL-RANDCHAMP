@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaLink, FaGhost, FaUserSlash, FaCrown, FaUserShield } from 'react-icons/fa';
+import { FaLink, FaGhost, FaUserSlash, FaCrown, FaUserShield, FaExchangeAlt } from 'react-icons/fa';
 import Modal from '../../components/common/Modal';
 import { ROLE_LABEL } from '../../server/rooms';
 import { MONTHLY_KKIKO } from '../../rules/tuning';
@@ -25,14 +25,18 @@ const MemberModal = ({
   onHandOver,
   onKick,
   onDropGhost,
+  onMoveAccount,
 }) => {
   /* 구글 계정을 바꿔 들어온 사람의 옛 계정을 내보낼 때, 거기 쌓인 끼꼬가
      같이 사라지면 억울하다. 받을 사람을 골라두면 넘어간다.
      처음 받은 10000은 안 넘어간다 - 그것까지 넘기면 계정을 새로 만들어
      들어왔다 나가는 것만으로 끼꼬를 찍어낼 수 있다 */
   const [to, setTo] = useState('');
+  /* 계정을 바꿔 들어왔을 때 옮겨받을 계정 */
+  const [moveTo, setMoveTo] = useState('');
   const spare = Math.max(0, (m.points ?? 0) - MONTHLY_KKIKO);
   const canKick = isOwner && !m.is_ghost && !isMe;
+  const others = members.filter((x) => x.user_id !== m.user_id && !x.is_ghost);
 
   return (
     <Modal
@@ -85,6 +89,37 @@ const MemberModal = ({
               </button>
             </div>
             <p className="rooms-hint">부방장은 경기와 또또를 남길 수 있어요.</p>
+          </div>
+        )}
+
+        {/* 내보내기와는 다르다. 내보내기는 '이 사람 나가요'라서 끼꼬만
+            넘기면 되지만, 계정 옮기기는 '같은 사람인데 계정이 바뀌었다'라서
+            그 계정이 남긴 것이 전부 따라와야 한다 */}
+        {isAdmin && !m.is_ghost && others.length > 0 && (
+          <div className="mem-field">
+            <span className="mem-field-label">
+              <FaExchangeAlt /> 계정 옮기기
+            </span>
+            <select className="rooms-input" value={moveTo} onChange={(e) => setMoveTo(e.target.value)}>
+              <option value="">옮겨받을 계정 고르기</option>
+              {others.map((x) => (
+                <option key={x.user_id} value={x.user_id}>
+                  {x.nickname}
+                </option>
+              ))}
+            </select>
+            <p className="rooms-hint">
+              구글 계정을 바꿨을 때 씁니다. <b>{m.nickname}</b> 님이 남긴 배팅 기록·끼꼬
+              내역·참가자 연결·지난 달 끼꼬가 전부 새 계정으로 따라갑니다. 이 계정은
+              방에서 빠집니다.
+            </p>
+            <button
+              className="ghost-btn"
+              onClick={() => onMoveAccount(m, moveTo)}
+              disabled={!moveTo}
+            >
+              <FaExchangeAlt /> 옮기기
+            </button>
           </div>
         )}
 

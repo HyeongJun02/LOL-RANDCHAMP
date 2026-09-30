@@ -238,7 +238,29 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $fn$;
 
+-- 부방장이 어디까지 할 수 있는가. 'full'이면 방장과 거의 같고,
+-- 'record'면 경기와 또또만 남긴다 (끼꼬 조정·명단·멤버·코드는 방장만).
+-- 방마다 다르다 - 친구 방은 다 열어두고, 사람 많은 방은 잠근다.
+alter table public.rooms add column if not exists admin_scope text not null default 'full';
+alter table public.rooms drop constraint if exists rooms_admin_scope_check;
+alter table public.rooms add constraint rooms_admin_scope_check
+  check (admin_scope in ('full', 'record'));
+
+-- '방장과 거의 같은 권한'. 부방장은 방의 admin_scope가 full일 때만 해당한다.
+-- record로 잠가두면 여기서 걸러지고, 경기·또또만 되는 is_room_recorder가
+-- 남는다. 이 함수를 그대로 쓰는 곳은 전부 '방장 몫'이라는 뜻이다.
 create or replace function public.is_room_admin(rid bigint)
+returns boolean language sql stable security definer set search_path = public as $fn$
+  select exists (
+    select 1 from room_members m join rooms r on r.id = m.room_id
+     where m.room_id = rid and m.user_id = auth.user_id()
+       and (m.role = 'owner' or (m.role = 'admin' and r.admin_scope = 'full'))
+  );
+$fn$;
+
+-- 경기·또또를 남길 수 있는가. 부방장은 범위와 상관없이 여기까지는 된다 -
+-- 애초에 그러라고 만든 자리다.
+create or replace function public.is_room_recorder(rid bigint)
 returns boolean language sql stable security definer set search_path = public as $fn$
   select exists (
     select 1 from room_members
@@ -352,7 +374,7 @@ alter table public.hall_of_fame  enable row level security;
 
 -- 입장 코드는 컬럼 단위로 뺀다. 멤버 전원이 코드를 볼 수 있으면
 -- 재발급이 아무 의미가 없다. 방장·부방장은 get_join_code()로 본다.
-grant select (id, name, owner_id, version, created_at, accent, emblem, game) on public.rooms to authenticated;
+grant select (id, name, owner_id, version, created_at, accent, emblem, game, admin_scope) on public.rooms to authenticated;
 grant update (name, accent, emblem) on public.rooms to authenticated;
 grant select on public.room_members to authenticated;
 -- 잔액은 같은 방 사람끼리 서로 본다 (포인트 탭의 순위가 그것이다).
@@ -549,8 +571,11 @@ end; $fn$;
 create or replace function public.get_join_code(p_room bigint)
 returns text language plpgsql security definer set search_path = public as $fn$
 begin
-  if not public.is_room_admin(p_room) then
-    raise exception '방장과 부방장만 입장 코드를 볼 수 있어요.';
+  -- 코드는 멤버면 볼 수 있다. 어차피 이미 들어와 있는 사람이고, 친구를
+  -- 부를 때마다 방장을 찾아야 하는 게 더 번거롭다.
+  -- 새로 뽑는 건 여전히 방장 몫이다 (reset_join_code).
+  if not public.is_room_member(p_room) then
+    raise exception '이 방의 멤버가 아니에요.';
   end if;
   return (select join_code from rooms where id = p_room);
 end; $fn$;
@@ -641,21 +666,7 @@ begin
       raise exception '끼꼬를 받을 사람이 이 방 멤버가 아니에요.';
     end if;
 
-    perform public.ensure_wallet(p_room, p_to);
-    -- 잠그고 읽어야 한다. 안 잠그면 같은 잔액을 두 번 보고 두 번 넘긴다
-    select greatest(0, points - 10000) into moved
-      from room_wallets where room_id = p_room and user_id = p_user for update;
-    moved := coalesce(moved, 0);
-
-    if moved > 0 then
-      update room_wallets set points = points - moved
-       where room_id = p_room and user_id = p_user;
-      update room_wallets set points = points + moved
-       where room_id = p_room and user_id = p_to;
-      insert into point_ledger (user_id, room_id, delta, reason, counterpart_user_id)
-      values (p_user, p_room, -moved, 'transfer_out', p_to),
-             (p_to,   p_room,  moved, 'transfer_in',  p_user);
-    end if;
+    moved := public.move_surplus(p_room, p_user, p_to);
   end if;
 
   select coalesce(nullif(nickname, ''), '이름없음') into who
@@ -675,6 +686,130 @@ begin
     'who', who, 'to', to_name, 'amount', moved));
 
   return moved;
+end; $fn$;
+
+
+-- 벌어들인 몫만 옮긴다. 처음 받은 10000은 안 옮긴다 - 그것까지 옮기면
+-- 계정을 새로 만들어 들어왔다 넘기는 것만으로 끼꼬를 찍어낼 수 있다.
+-- 내보내기(kick_member)와 계정 옮기기(transfer_account)가 같이 쓴다.
+create or replace function public.move_surplus(p_room bigint, p_from text, p_to text)
+returns int language plpgsql security definer set search_path = public as $fn$
+declare moved int;
+begin
+  perform public.ensure_wallet(p_room, p_to);
+  -- 잠그고 읽어야 한다. 안 잠그면 같은 잔액을 두 번 보고 두 번 넘긴다
+  select greatest(0, points - 10000) into moved
+    from room_wallets where room_id = p_room and user_id = p_from for update;
+  moved := coalesce(moved, 0);
+  if moved = 0 then return 0; end if;
+
+  update room_wallets set points = points - moved
+   where room_id = p_room and user_id = p_from;
+  update room_wallets set points = points + moved
+   where room_id = p_room and user_id = p_to;
+  insert into point_ledger (user_id, room_id, delta, reason, counterpart_user_id)
+  values (p_from, p_room, -moved, 'transfer_out', p_to),
+         (p_to, p_room, moved, 'transfer_in', p_from);
+  return moved;
+end; $fn$;
+
+
+-- 계정을 통째로 옮긴다. 구글 계정을 바꿨을 때 쓴다.
+--
+-- 내보내기와는 다르다. 내보내기는 '이 사람 나가요'라서 끼꼬만 넘기면
+-- 되지만, 계정 옮기기는 '같은 사람인데 계정이 바뀌었다'라서 그 계정이
+-- 남긴 것이 전부 따라와야 한다. 안 따라오면 지난 또또 기록이 '알 수
+-- 없음'으로 뜬다 - bets.user_id가 없어진 계정을 가리키기 때문이다.
+--
+-- 따라오는 것: 배팅 기록, 끼꼬 원장, 참가자 연결, 지난 달 끼꼬(명예의 전당).
+-- 안 따라오는 것: 방 로그 (이름을 글자로 박아둬서 그때 이름 그대로 남는다).
+create or replace function public.transfer_account(p_room bigint, p_from text, p_to text)
+returns int language plpgsql security definer set search_path = public as $fn$
+declare
+  moved  int;
+  pid    bigint;
+  clash  int;
+  from_n text;
+  to_n   text;
+begin
+  if not public.is_room_admin(p_room) then
+    raise exception '방장과 부방장만 계정을 옮길 수 있어요.';
+  end if;
+  if p_from = p_to then raise exception '같은 계정이에요.'; end if;
+  if p_from = (select owner_id from rooms where id = p_room) then
+    raise exception '방장 계정은 먼저 방장을 넘긴 뒤에 옮겨주세요.';
+  end if;
+  if not exists (select 1 from room_members where room_id = p_room and user_id = p_from) then
+    raise exception '옮길 계정이 이 방 멤버가 아니에요.';
+  end if;
+  if not exists (select 1 from room_members where room_id = p_room and user_id = p_to) then
+    raise exception '받을 계정이 이 방 멤버가 아니에요. 먼저 방에 들어와야 합니다.';
+  end if;
+
+  -- 같은 판 같은 항목에 둘 다 걸었으면 옮길 수가 없다
+  -- (bets에 scrim_id+user_id+market 유니크가 걸려 있다).
+  -- 조용히 지우면 남의 돈 기록이 사라지므로 막고 알려준다.
+  select count(*) into clash
+    from bets a join bets b
+      on a.scrim_id = b.scrim_id and a.market = b.market
+   where a.room_id = p_room and a.user_id = p_from and b.user_id = p_to;
+  if clash > 0 then
+    raise exception '두 계정이 같은 판 같은 항목에 건 기록이 %건 있어요. 그건 합칠 수 없습니다.', clash;
+  end if;
+
+  select rp.id into pid from room_players rp
+   where rp.room_id = p_room and rp.linked_user_id = p_from;
+
+  update bets set user_id = p_to where room_id = p_room and user_id = p_from;
+  update point_ledger set user_id = p_to where room_id = p_room and user_id = p_from;
+  update point_ledger set counterpart_user_id = p_to
+   where room_id = p_room and counterpart_user_id = p_from;
+
+  -- 지난 달 끼꼬. 같은 달 줄이 둘이면 한 사람 것이었으니 더한다
+  update hall_of_fame h set kkiko_points = h.kkiko_points + o.kkiko_points
+    from hall_of_fame o
+   where h.room_id = p_room and h.user_id = p_to
+     and o.room_id = p_room and o.user_id = p_from and o.month = h.month;
+  delete from hall_of_fame
+   where room_id = p_room and user_id = p_from
+     and exists (select 1 from hall_of_fame x
+                  where x.room_id = p_room and x.user_id = p_to and x.month = month);
+  update hall_of_fame set user_id = p_to
+   where room_id = p_room and user_id = p_from;
+
+  moved := public.move_surplus(p_room, p_from, p_to);
+
+  select coalesce(nullif(nickname, ''), '이름없음') into from_n
+    from profiles where user_id = p_from;
+  select coalesce(nullif(nickname, ''), '이름없음') into to_n
+    from profiles where user_id = p_to;
+
+  delete from room_members where room_id = p_room and user_id = p_from;
+  delete from room_wallets where room_id = p_room and user_id = p_from;
+
+  -- 참가자 연결은 옛 계정이 빠진 뒤에 새 계정으로 다시 건다
+  if pid is not null then
+    update room_players set linked_user_id = p_to where id = pid;
+  end if;
+
+  perform public.log_room(p_room, 'account_moved', jsonb_build_object(
+    'from', from_n, 'to', to_n, 'amount', moved));
+
+  return moved;
+end; $fn$;
+
+
+-- 부방장 권한 범위. 방장만 바꾼다.
+create or replace function public.set_admin_scope(p_room bigint, p_scope text)
+returns void language plpgsql security definer set search_path = public as $fn$
+begin
+  if not public.is_room_owner(p_room) then
+    raise exception '방장만 권한을 바꿀 수 있어요.';
+  end if;
+  if p_scope not in ('full', 'record') then
+    raise exception '알 수 없는 권한 범위예요.';
+  end if;
+  update rooms set admin_scope = p_scope, version = version + 1 where id = p_room;
 end; $fn$;
 
 
@@ -978,6 +1113,8 @@ grant execute on function
   public.set_member_role(bigint, text, text),
   public.transfer_room(bigint, text),
   public.kick_member(bigint, text, text),
+  public.transfer_account(bigint, text, text),
+  public.set_admin_scope(bigint, text),
   public.link_room_player(bigint, text, bigint),
   public.add_ghost_member(bigint, text),
   public.remove_ghost_member(bigint, text),
@@ -1188,7 +1325,7 @@ returns bigint language plpgsql security definer set search_path = public as $fn
 declare sid bigint; n int;
 begin
   perform public.roll_season();
-  if not public.is_room_admin(p_room) then
+  if not public.is_room_recorder(p_room) then
     raise exception '방장과 부방장만 기록을 남길 수 있어요.';
   end if;
   if p_winner not in ('A', 'B') then
@@ -1228,7 +1365,7 @@ returns bigint language plpgsql security definer set search_path = public as $fn
 declare sid bigint; n int; closes timestamptz;
 begin
   perform public.roll_season();
-  if not public.is_room_admin(p_room) then
+  if not public.is_room_recorder(p_room) then
     raise exception '방장과 부방장만 배팅을 열 수 있어요.';
   end if;
   if exists (select 1 from scrims where room_id = p_room and status in ('betting', 'locked')) then
@@ -1463,7 +1600,7 @@ begin
   -- 시간이 다 된 뒤에는 아무 멤버나 닫을 수 있다. 방장만 닫게 두면
   -- 방장이 화면을 안 보고 있을 때 아무도 배당을 못 보는 상태로 멈춘다.
   -- (실제로 닫는 건 시간을 본 첫 사람의 브라우저다)
-  if not expired and not public.is_room_admin(s.room_id) then
+  if not expired and not public.is_room_recorder(s.room_id) then
     raise exception '방장과 부방장만 마감할 수 있어요.';
   end if;
   if expired and not public.is_room_member(s.room_id) then
@@ -1557,7 +1694,7 @@ begin
 
   select * into s from scrims where id = p_scrim;
   if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
-  if not public.is_room_admin(s.room_id) then
+  if not public.is_room_recorder(s.room_id) then
     raise exception '방장과 부방장만 결과를 넣을 수 있어요.';
   end if;
   -- 이미 정산된 경기에 다시 불러도 아무 일이 없어야 한다.
@@ -1698,6 +1835,8 @@ end; $fn$;
 revoke execute on function public.award_participation(bigint) from public;
 -- 지갑 만들기는 다른 함수들이 안에서만 부른다. 밖에서 부를 일이 없다
 revoke execute on function public.ensure_wallet(bigint, text) from public;
+-- 남의 지갑을 직접 옮기는 함수다. 클라이언트가 부를 이유가 없다
+revoke execute on function public.move_surplus(bigint, text, text) from public;
 
 grant execute on function
   public.agree_fairplay(),
@@ -1995,7 +2134,7 @@ begin
     if not public.is_room_owner(s.room_id) then
       raise exception '배팅이 걸린 경기는 방장만 취소할 수 있어요.';
     end if;
-  elsif not public.is_room_admin(s.room_id) then
+  elsif not public.is_room_recorder(s.room_id) then
     raise exception '방장과 부방장만 기록을 지울 수 있어요.';
   end if;
 

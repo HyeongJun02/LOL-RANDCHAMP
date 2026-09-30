@@ -78,6 +78,16 @@ export const transferRoom = (roomId, userId) =>
 export const kickMember = (roomId, userId, toUserId = null) =>
   rpc('kick_member', { p_room: roomId, p_user: userId, p_to: toUserId });
 
+/* 구글 계정을 바꿨을 때. 내보내기와 달리 그 계정이 남긴 것이 전부
+   따라온다 - 배팅 기록·끼꼬 원장·참가자 연결·지난 달 끼꼬.
+   안 따라오면 지난 또또 기록이 '알 수 없음'으로 뜬다 */
+export const transferAccount = (roomId, fromUserId, toUserId) =>
+  rpc('transfer_account', { p_room: roomId, p_from: fromUserId, p_to: toUserId });
+
+/* 부방장이 어디까지 할 수 있는지. 'full' | 'record' */
+export const setAdminScope = (roomId, scope) =>
+  rpc('set_admin_scope', { p_room: roomId, p_scope: scope });
+
 /* 멤버 ↔ 참가자 묶기. playerId가 null이면 연결을 끊는다.
    묶어두면 경기 참여 포인트가 이 계정으로 간다 */
 export const linkRoomPlayer = (roomId, userId, playerId) =>
@@ -214,6 +224,7 @@ export const LOG_TAGS = {
   scrim_cancelled: { label: '취소', tone: 'red' },
   player_merge: { label: '명단', tone: 'blue' },
   member_kicked: { label: '멤버', tone: 'red' },
+  account_moved: { label: '계정', tone: 'blue' },
 };
 
 /* 로그 탭의 걸러내기 단추. 줄에 붙는 라벨이 곧 단추 이름이라, LOG_TAGS에서
@@ -364,6 +375,18 @@ export const feedParts = (log) => {
           nameOf_(p.keep),
           t('에 합쳤어요'),
           ...(p.games ? [t(` · 경기 ${p.games}판`)] : []),
+        ],
+      };
+    /* 같은 사람이 계정을 바꿨다. 그 계정이 남긴 기록이 통째로 옮겨간다 */
+    case 'account_moved':
+      return {
+        tag,
+        parts: [
+          nameOf_(p.from),
+          t(' 님의 기록을 '),
+          nameOf_(p.to),
+          t(' 님 계정으로 옮겼어요'),
+          ...(p.amount > 0 ? [t(' · 끼꼬 '), amountOf(p.amount)] : []),
         ],
       };
     case 'settle_undone':
@@ -709,7 +732,7 @@ export const useMyRooms = (userId, ready = true) => {
    PostgREST가 FK를 따라 한 번에 묶어주므로 방+멤버+참가자+경기는 한 요청이다.
    프로필만 FK가 없어 따로 받는다 (RLS가 같은 방 사람으로 이미 좁혀준다) */
 const ROOM_SELECT =
-  'id,name,owner_id,version,created_at,accent,emblem,game,' +
+  'id,name,owner_id,version,created_at,accent,emblem,game,admin_scope,' +
   'room_members(user_id,role,joined_at,is_ghost),' +
   'room_players(id,name,tier,division,linked_user_id,deleted_at),' +
   'scrims(id,mode,team_a,team_b,winner,played_at,status,total_kills,' +
