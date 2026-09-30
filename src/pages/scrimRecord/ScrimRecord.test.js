@@ -55,11 +55,20 @@ const setValue = (el, value) => {
 const byText = (el, tag, text) =>
   [...el.querySelectorAll(tag)].find((b) => b.textContent.includes(text));
 
-const fill = (el, a, b) => {
-  const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
-  setValue(teamAPanel.querySelectorAll('.sr-row input')[0], a);
-  setValue(teamBPanel.querySelectorAll('.sr-row input')[0], b);
+/* 대기 칸에 이름을 적어 넣는다. 사람이 적은 팀으로 들어가므로
+   a는 1팀, 그 다음 b는 2팀으로 간다 */
+const put = async (el, name) => {
+  setValue(el.querySelector('.sr-pool-add input'), name);
+  await click(byText(el, 'button', '넣기'));
 };
+
+const fill = async (el, a, b) => {
+  await put(el, a);
+  await put(el, b);
+};
+
+const namesIn = (panel) =>
+  [...panel.querySelectorAll('.sr-card-name')].map((n) => n.textContent);
 
 beforeEach(() => {
   localStorage.clear();
@@ -68,7 +77,7 @@ beforeEach(() => {
 
 test('양 팀에 이름을 넣고 승리 팀을 고르면 기록이 남는다', async () => {
   const el = render();
-  fill(el, '철수', '영희');
+  await fill(el, '철수', '영희');
 
   await click(byText(el, 'button', '1팀 승리'));
 
@@ -80,9 +89,27 @@ test('양 팀에 이름을 넣고 승리 팀을 고르면 기록이 남는다', 
   });
 });
 
-test('양 팀에 같은 이름이 있으면 기록하지 않는다', async () => {
+/* 예전에는 양 팀에 같은 이름을 적을 수 있어서 저장 직전에 막아야 했다.
+   이제 한 사람은 카드 하나라, 다른 팀에 넣으면 원래 있던 데서 빠진다 */
+test('같은 사람을 다른 팀에 넣으면 원래 팀에서 빠진다', async () => {
   const el = render();
-  fill(el, '철수', '철수');
+  await fill(el, '철수', '영희');
+
+  const [teamA, teamB] = el.querySelectorAll('.sr-team');
+  expect(namesIn(teamA)).toEqual(['철수']);
+
+  /* 1팀의 철수 카드에서 ⇄를 누르면 2팀으로 건너간다 */
+  await click(teamA.querySelector('.sr-card-act'));
+  expect(namesIn(el.querySelectorAll('.sr-team')[0])).toEqual([]);
+  expect(namesIn(el.querySelectorAll('.sr-team')[1])).toEqual(
+    expect.arrayContaining(['철수', '영희'])
+  );
+  expect(teamB).toBeDefined();
+});
+
+test('양 팀 중 한쪽이 비면 기록하지 않는다', async () => {
+  const el = render();
+  await put(el, '철수');
 
   await click(byText(el, 'button', '1팀 승리'));
 
@@ -96,7 +123,7 @@ test('짜둔 팀이 없으면 가져오기 버튼 자체를 안 보여준다', (
   /* 눌러봐야 '없어요' 소리만 듣는 버튼은 안 띄우는 편이 낫다 */
   const el = render();
   expect(byText(el, 'button', '방금 짠 팀')).toBeUndefined();
-  expect(byText(el, 'button', '내전 팀 짜기')).toBeDefined();
+  expect(byText(el, 'button', '팀 짜기')).toBeDefined();
 });
 
 test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', async () => {
@@ -109,10 +136,8 @@ test('내전 팀 짜기 결과를 불러오면 두 팀에 채워진다', async (
   await click(byText(el, 'button', '방금 짠 팀'));
 
   const [teamAPanel, teamBPanel] = el.querySelectorAll('.sr-team');
-  const aNames = [...teamAPanel.querySelectorAll('.sr-row input')].map((i) => i.value);
-  const bNames = [...teamBPanel.querySelectorAll('.sr-row input')].map((i) => i.value);
-  expect(aNames).toEqual(expect.arrayContaining(['가', '나']));
-  expect(bNames).toEqual(expect.arrayContaining(['다', '라']));
+  expect(namesIn(teamAPanel)).toEqual(['가', '나']);
+  expect(namesIn(teamBPanel)).toEqual(['다', '라']);
 });
 
 /* 게임 시작 탭은 '게임을 시작하는' 화면이다. 전적을 보는 곳이 아니다.
@@ -123,9 +148,7 @@ test('게임 시작 화면에는 순위표를 두지 않는다', () => {
       { id: 'g1', mode: 'normal', teamA: ['철수'], teamB: ['영희'], winner: 'A', playedAt: 1 },
     ],
   });
-  setValue(el.querySelectorAll('.sr-row input')[0], '철수');
-
-  expect(el.querySelector('.sr-row .sr-winrate')).toBeNull();
+  expect(el.querySelector('.sr-winrate')).toBeNull();
   expect(el.querySelector('.rank-list')).toBeNull();
   /* 지난 판 목록도 여기 없다. '내전 기록' 탭이 맡는다 */
   expect(el.querySelector('.history-list')).toBeNull();
@@ -140,7 +163,7 @@ const roster = [{ id: 1, name: 'poop' }, { id: 2, name: '영희' }];
 
 test('명단에 없는 이름이면 물어보고, 취소하면 기록하지 않는다', async () => {
   const el = render({ players: roster });
-  fill(el, '푸푸', '영희');
+  await fill(el, '푸푸', '영희');
 
   await click(byText(el, 'button', '1팀 승리'));
 
@@ -156,7 +179,7 @@ test('명단에 없는 이름이면 물어보고, 취소하면 기록하지 않�
 
 test('넣고 진행을 누르면 그대로 기록한다', async () => {
   const el = render({ players: roster });
-  fill(el, '푸푸', '영희');
+  await fill(el, '푸푸', '영희');
 
   await click(byText(el, 'button', '1팀 승리'));
   await click(byText(document.body, 'button', '넣고 진행'));
@@ -167,7 +190,7 @@ test('넣고 진행을 누르면 그대로 기록한다', async () => {
 
 test('명단에 있는 이름만 쓰면 묻지 않는다', async () => {
   const el = render({ players: roster });
-  fill(el, 'poop', '영희');
+  await fill(el, 'poop', '영희');
 
   await click(byText(el, 'button', '1팀 승리'));
 
@@ -177,7 +200,7 @@ test('명단에 있는 이름만 쓰면 묻지 않는다', async () => {
 
 test('방금 만든 방(명단이 빈 방)에서는 묻지 않는다', async () => {
   const el = render({ players: [] });
-  fill(el, '철수', '영희');
+  await fill(el, '철수', '영희');
 
   await click(byText(el, 'button', '1팀 승리'));
 

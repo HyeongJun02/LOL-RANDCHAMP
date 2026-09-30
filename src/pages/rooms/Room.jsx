@@ -1166,12 +1166,6 @@ const Room = () => {
         />
       )}
 
-      {!can('record') && tab === 'record' && (
-        <p className="rooms-hint room-readonly">
-          이 방에서는 보기만 할 수 있어요. 기록은 권한을 받은 사람이 남깁니다.
-        </p>
-      )}
-
       {/* key를 탭으로 주면 탭을 옮길 때마다 새로 마운트되어 fade-in이 다시 돈다 */}
       {/* 탭마다 폭을 달리 두지 않는다. 몇 개만 좁혀놨더니 탭을 옮길 때마다
           내용 폭이 들쭉날쭉해서 그게 더 눈에 걸렸다. 전부 헤더와 같은 폭 */}
@@ -1180,10 +1174,12 @@ const Room = () => {
           <ScrimRecord
             matches={matches}
             players={players}
+            titles={titles}
+            activeScrim={activeScrim}
             canEdit={can('record')}
             onAdd={record}
-            onRemove={unrecord}
             onOpenBetting={can('bet') ? openBet : undefined}
+            onGoBet={() => setTab('bet')}
           />
         )}
         {tab === 'history' && (
