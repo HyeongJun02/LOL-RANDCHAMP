@@ -744,10 +744,17 @@ const ROOM_SELECT =
   'first_blood_player_id,bet_total,bet_count,undo_count,locked_at,' +
   'betting_closes_at,kill_line)';
 
-/* 탭이 보일 때만, 30초마다. 실시간 구독이 없어 폴링이 불가피한데
-   방 전체를 매번 읽으면 그게 곧 부하다. version 한 컬럼만 보고
-   값이 달라졌을 때만 상세를 다시 받는다 */
+/* 탭이 보일 때만. 실시간 구독이 없어 폴링이 불가피한데 방 전체를 매번
+   읽으면 그게 곧 부하다. version 한 컬럼(기본키 조회)만 보고, 값이
+   달라졌을 때만 상세를 다시 받는다.
+
+   평소 30초는 '누가 경기를 기록했나' 정도에는 충분하지만, 또또가 열려
+   있는 동안에는 다들 화면을 보고 있다. 누가 걸었는지, 마감됐는지,
+   결과가 나왔는지를 30초 뒤에 알면 화면이 멈춘 것처럼 느껴진다.
+   그때만 5초로 당긴다 - 열 명이 보고 있어도 초당 두 번이고, 또또가
+   끝나면 바로 30초로 돌아간다 */
 const POLL_MS = 30000;
+const HOT_MS = 5000;
 
 export const useRoom = (roomId, userId) => {
   const fetcher = useCallback(async () => {
@@ -769,28 +776,46 @@ export const useRoom = (roomId, userId) => {
   const { data, loading, error, reload } = useFetch(fetcher, enabled);
 
   const version = data?.room?.version;
+  /* 또또가 열려 있거나 마감돼 결과를 기다리는 중인가. 그때만 자주 본다 */
+  const hot = Boolean(
+    data?.room?.scrims?.some((s) => s.status === 'betting' || s.status === 'locked')
+  );
+
   useEffect(() => {
     if (!enabled || version === undefined) return undefined;
     let timer;
-    /* 무슨 일이 있어도 다음 차례를 다시 잡는다.
-       reload 뒤에 그냥 return하면, 실패하거나 값이 그대로일 때
-       타이머가 끊겨 폴링이 조용히 죽는다 */
-    const tick = async () => {
-      if (document.visibilityState === 'visible') {
-        try {
-          const row = unwrap(
-            await neon.from('rooms').select('version').eq('id', roomId).maybeSingle()
-          );
-          if (row && row.version !== version) reload();
-        } catch {
-          /* 잠깐 끊긴 것뿐이다. 다음 차례에 다시 본다 */
-        }
+    /* 치운 뒤에 날아온 응답으로 reload를 부르지 않게 */
+    let stopped = false;
+
+    const check = async () => {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const row = unwrap(
+          await neon.from('rooms').select('version').eq('id', roomId).maybeSingle()
+        );
+        if (!stopped && row && row.version !== version) reload();
+      } catch {
+        /* 잠깐 끊긴 것뿐이다. 다음 차례에 다시 본다 */
       }
-      timer = setTimeout(tick, POLL_MS);
     };
-    timer = setTimeout(tick, POLL_MS);
-    return () => clearTimeout(timer);
-  }, [enabled, roomId, version, reload]);
+
+    /* 무슨 일이 있어도 다음 차례를 다시 잡는다. check 뒤에 그냥 return하면,
+       실패하거나 값이 그대로일 때 타이머가 끊겨 폴링이 조용히 죽는다 */
+    const tick = async () => {
+      await check();
+      if (!stopped) timer = setTimeout(tick, hot ? HOT_MS : POLL_MS);
+    };
+    timer = setTimeout(tick, hot ? HOT_MS : POLL_MS);
+
+    /* 탭으로 돌아온 순간이 제일 궁금한 때다. 다음 차례까지 기다리지 않는다.
+       (숨길 때도 불리지만 check가 바로 돌아 나간다) */
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [enabled, roomId, version, reload, hot]);
 
   /* 여기부터는 받아온 것을 화면이 쓰는 모양으로 푸는 일이다. 방이 다시
      그려질 때마다(탭을 옮기거나 팝업을 열 때마다) 전부 다시 돌면, 경기

@@ -1948,3 +1948,38 @@ test('끼꼬는 벌어들인 몫만 옮긴다 (내보내기와 같은 함수)', 
   /* 남의 지갑을 직접 옮기는 함수다. 클라이언트가 부를 이유가 없다 */
   expect(sql).toContain('revoke execute on function public.move_surplus(bigint, text, text) from public;');
 });
+
+/* ---------- 폴링 ---------- */
+
+/* Data API에 실시간 구독이 없어 폴링이 불가피하다. 두 가지를 같이
+   지켜야 한다 - 화면이 멈춘 것처럼 보이지 않을 것, DB를 두들기지 않을 것 */
+describe('방 폴링', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+
+  test('또또가 열려 있을 때만 자주 본다', () => {
+    const idle = Number(src.match(/const POLL_MS = (\d+);/)[1]);
+    const hot = Number(src.match(/const HOT_MS = (\d+);/)[1]);
+    /* 평소는 느긋하게, 또또 중에는 사람이 기다릴 만한 간격으로 */
+    expect(idle).toBeGreaterThanOrEqual(20000);
+    expect(hot).toBeLessThanOrEqual(5000);
+    expect(hot).toBeGreaterThanOrEqual(3000);
+    /* '자주 보는' 조건은 진행 중인 또또가 있을 때뿐이다.
+       늘 5초로 돌면 아무 일도 없는 방이 DB를 계속 두들긴다 */
+    expect(src).toMatch(/const hot = Boolean\(/);
+    expect(src).toMatch(/s\.status === 'betting' \|\| s\.status === 'locked'/);
+    expect(src).toContain('hot ? HOT_MS : POLL_MS');
+  });
+
+  test('한 컬럼만 보고, 달라졌을 때만 상세를 받는다', () => {
+    /* 방 전체를 매번 읽으면 그게 곧 부하다 */
+    expect(src).toContain("from('rooms').select('version')");
+    expect(src).toContain('row.version !== version) reload()');
+  });
+
+  test('안 보이는 탭에서는 묻지 않고, 돌아오면 바로 묻는다', () => {
+    expect(src).toContain("document.visibilityState !== 'visible'");
+    expect(src).toContain("addEventListener('visibilitychange', check)");
+    /* 치우지 않으면 방을 드나들 때마다 리스너가 쌓인다 */
+    expect(src).toContain("removeEventListener('visibilitychange', check)");
+  });
+});
