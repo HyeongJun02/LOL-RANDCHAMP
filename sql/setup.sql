@@ -2048,4 +2048,107 @@ update public.scrims s
  where s.id = x.scrim_id and s.kill_line is null;
 
 
+-- ============================================================
+-- 13. 나중에 붙인 것들
+-- ============================================================
+
+-- 마감 전에는 남의 배팅이 안 보인다 (bets의 RLS). 그래야 마감 직전에
+-- 유리한 쪽으로 몰리는 눈치싸움이 안 된다. 그래도 '누가 걸었는지'는
+-- 알아야 방장이 마감할 때가 됐는지 판단할 수 있다.
+-- 이름만 돌려준다 - 무엇에 얼마를 걸었는지는 여전히 안 나간다.
+-- setof이 아니라 배열 하나로 돌려준다. PostgREST가 스칼라 setof를 어떻게
+-- 감싸는지에 화면이 기대지 않게 - 틀리면 이름이 조용히 '알 수 없음'이 된다.
+create or replace function public.scrim_bettors(p_scrim bigint)
+returns text[] language plpgsql security definer set search_path = public as $fn$
+declare r bigint;
+begin
+  select room_id into r from scrims where id = p_scrim;
+  if r is null then raise exception '경기를 찾을 수 없어요.'; end if;
+  if not public.is_room_member(r) then
+    raise exception '이 방의 멤버가 아니에요.';
+  end if;
+  return coalesce(
+    (select array_agg(distinct b.user_id) from bets b where b.scrim_id = p_scrim),
+    '{}'::text[]);
+end; $fn$;
+
+
+-- 배열에서 한 id를 다른 id로 갈아끼운다. 둘이 같은 팀에 있었으면
+-- 한 명으로 줄어든다. 순서는 지키고 뒤에 나온 중복만 뺀다.
+create or replace function public.merge_ids(a bigint[], p_from bigint, p_to bigint)
+returns bigint[] language sql immutable as $fn$
+  select coalesce(array_agg(v order by rn), '{}'::bigint[])
+    from (
+      select v, min(rn) as rn
+        from (
+          select case when v = p_from then p_to else v end as v, rn
+            from unnest(a) with ordinality as t(v, rn)
+        ) z
+       group by v
+    ) y;
+$fn$;
+
+-- 같은 사람이 이름을 바꿔 가며 두 줄로 쌓인 것을 하나로 합친다
+-- (poop과 푸푸가 같은 사람인데 전적이 갈려 있던 일).
+--
+-- 지난 경기는 room_players.id를 들고 있어서, 이름만 고쳐도 예전 판은
+-- 여전히 옛 줄을 가리킨다. 경기 쪽의 id를 갈아끼워야 전적이 붙는다.
+create or replace function public.merge_room_players(p_keep bigint, p_drop bigint)
+returns int language plpgsql security definer set search_path = public as $fn$
+declare
+  r     bigint;
+  r2    bigint;
+  moved int;
+  both  int;
+begin
+  if p_keep = p_drop then raise exception '같은 줄이에요.'; end if;
+
+  select room_id into r  from room_players where id = p_keep;
+  select room_id into r2 from room_players where id = p_drop;
+  if r is null or r2 is null then raise exception '참가자를 찾을 수 없어요.'; end if;
+  if r <> r2 then raise exception '다른 방의 참가자예요.'; end if;
+  if not public.is_room_admin(r) then
+    raise exception '방장과 부방장만 합칠 수 있어요.';
+  end if;
+
+  -- 둘이 서로 상대 팀이었던 판이 있으면 같은 사람일 수 없다. 합치면
+  -- 한 사람이 양 팀에 앉아버려서 전적이 조용히 망가진다.
+  select count(*) into both from scrims
+   where room_id = r
+     and ((p_keep = any(team_a) and p_drop = any(team_b))
+       or (p_drop = any(team_a) and p_keep = any(team_b)));
+  if both > 0 then
+    raise exception '두 사람이 서로 맞붙은 경기가 %판 있어요. 같은 사람이 아닙니다.', both;
+  end if;
+
+  update scrims
+     set team_a = public.merge_ids(team_a, p_drop, p_keep),
+         team_b = public.merge_ids(team_b, p_drop, p_keep)
+   where room_id = r and (p_drop = any(team_a) or p_drop = any(team_b));
+  moved := coalesce((select count(*) from scrims
+                      where room_id = r and (p_keep = any(team_a) or p_keep = any(team_b))), 0);
+
+  update scrims set first_blood_player_id = p_keep
+   where room_id = r and first_blood_player_id = p_drop;
+
+  -- 명예의 전당은 이름으로 박제돼 있어 손댈 게 없다.
+  -- 없앤 줄은 지우지 않고 감춘다 (다른 데서 아직 id를 볼 수 있다).
+  update room_players set deleted_at = now(), linked_user_id = null
+   where id = p_drop;
+
+  insert into room_logs (room_id, type, payload)
+  values (r, 'player_merge',
+          jsonb_build_object(
+            'keep', (select name from room_players where id = p_keep),
+            'drop', (select name from room_players where id = p_drop),
+            'games', moved));
+
+  return moved;
+end; $fn$;
+
+grant execute on function
+  public.scrim_bettors(bigint),
+  public.merge_room_players(bigint, bigint)
+to authenticated;
+
 notify pgrst, 'reload schema';

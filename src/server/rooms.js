@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
-import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP } from '../rules/tuning';
+import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP, PRIOR_GAMES } from '../rules/tuning';
 import { getGame, getMode, defaultTierOf, fitTier } from '../rules/games';
 
 /* 내전 방. 여기부터는 localStorage가 없다.
@@ -203,6 +203,7 @@ export const LOG_TAGS = {
   adjust: { label: '조정', tone: 'red' },
   record: { label: '신기록', tone: 'gold' },
   scrim_cancelled: { label: '취소', tone: 'red' },
+  player_merge: { label: '명단', tone: 'blue' },
 };
 
 /* 방 기록 종류. 서버가 kind만 보내고 문구는 여기서 만든다 */
@@ -313,6 +314,18 @@ export const feedParts = (log) => {
           t(' '),
           amountOf(p.refund),
           t(' 환불'),
+        ],
+      };
+    /* 전적이 두 줄로 갈려 있던 걸 합쳤다. 남의 전적이 움직이는 일이라 남긴다 */
+    case 'player_merge':
+      return {
+        tag,
+        parts: [
+          nameOf_(p.drop),
+          t(' 을(를) '),
+          nameOf_(p.keep),
+          t('에 합쳤어요'),
+          ...(p.games ? [t(` · 경기 ${p.games}판`)] : []),
         ],
       };
     case 'settle_undone':
@@ -865,10 +878,48 @@ export const unsettleScrim = (scrimId) => rpc('unsettle_scrim', { p_scrim: scrim
 
 /* 배당과 배팅은 방을 열 때마다 통째로 받으면 안 된다. 경기가 1000개까지
    쌓이므로 지금 화면에 띄울 몇 경기 것만 골라 받는다 */
-export const fetchBetting = async (scrimIds) => {
-  if (!isNeonConfigured || scrimIds.length === 0) return { pools: [], bets: [] };
+export const fetchBetting = async (scrimIds, liveId = null) => {
+  if (!isNeonConfigured || scrimIds.length === 0) return { pools: [], bets: [], bettors: [] };
   const list = `(${scrimIds.join(',')})`;
   const pools = unwrap(await neon.from('bet_pools').select('*').filter('scrim_id', 'in', list));
   const bets = unwrap(await neon.from('bets').select('*').filter('scrim_id', 'in', list));
-  return { pools: pools || [], bets: bets || [] };
+  /* 마감 전에는 남의 배팅 줄 자체가 안 보인다. 이름만 따로 받아온다.
+     끝난 판은 bets에 다 들어 있으니 진행 중인 판에만 한 번 더 묻는다 */
+  const bettors = liveId
+    ? await rpc('scrim_bettors', { p_scrim: liveId }).catch(() => [])
+    : [];
+  return { pools: pools || [], bets: bets || [], bettors: bettors || [] };
+};
+
+/* 같은 사람이 이름을 바꿔 가며 두 줄로 쌓인 것을 합친다.
+   지난 경기가 들고 있는 id까지 갈아끼워야 전적이 붙는다 - 서버에서 한다.
+   합쳐진 경기 수를 돌려준다 */
+export const mergeRoomPlayers = (keepId, dropId) =>
+  rpc('merge_room_players', { p_keep: keepId, p_drop: dropId });
+
+/* 사람별 퍼스트 블러드 비율.
+   퍼블이 적힌 판만 센다 - 안 적은 판을 분모에 넣으면 전부 실제보다 낮게 나온다.
+
+   1판 1퍼블을 100%라고 내보내면 그 사람에게 돈이 몰린다. 순위표에서 쓰는
+   것과 같은 베이지안 스무딩으로, 판수가 적으면 '아무나 딸 확률'(10인이면
+   10%) 쪽으로 끌어당긴다. 판이 쌓이면 실제 비율로 수렴한다 */
+export const firstBloodRates = (scrims = []) => {
+  const by = new Map();
+  scrims.forEach((s) => {
+    if (s.status !== 'settled' || !s.first_blood_player_id) return;
+    const roster = [...(s.team_a || []), ...(s.team_b || [])];
+    if (roster.length === 0) return;
+    roster.forEach((id) => {
+      const cur = by.get(Number(id)) || { games: 0, got: 0, expected: 0 };
+      cur.games += 1;
+      cur.expected += 1 / roster.length;
+      if (Number(s.first_blood_player_id) === Number(id)) cur.got += 1;
+      by.set(Number(id), cur);
+    });
+  });
+  by.forEach((v) => {
+    const base = v.expected / v.games;
+    v.rate = (v.got + PRIOR_GAMES * base) / (v.games + PRIOR_GAMES);
+  });
+  return by;
 };

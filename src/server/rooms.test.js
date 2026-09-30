@@ -78,6 +78,7 @@ const {
   winningSelection,
   killLineFor,
   killLineOfScrim,
+  firstBloodRates,
 } = require('./rooms');
 
 beforeEach(() => {
@@ -1240,4 +1241,84 @@ test('탭을 옮기면 맨 위부터 본다', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'Room.jsx'), 'utf8');
   const body = src.slice(src.indexOf('const setTab'), src.indexOf('const editable'));
   expect(body).toContain('window.scrollTo');
+});
+
+/* ---------- 퍼블 확률 ---------- */
+
+const fbGame = (roster, fb, status = 'settled') => ({
+  status,
+  team_a: roster.slice(0, roster.length / 2),
+  team_b: roster.slice(roster.length / 2),
+  first_blood_player_id: fb,
+});
+
+test('퍼블을 안 적은 판은 분모에서 뺀다', () => {
+  /* 넣어두면 모두의 확률이 실제보다 낮게 나온다 */
+  const rates = firstBloodRates([
+    fbGame([1, 2], 1),
+    fbGame([1, 2], null),
+    fbGame([1, 2], 1, 'betting'),
+  ]);
+  expect(rates.get(1).games).toBe(1);
+  expect(rates.get(1).got).toBe(1);
+});
+
+test('한 판 1퍼블을 100%라고 하지 않는다 (판수 보정)', () => {
+  const one = firstBloodRates([fbGame([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 1)]).get(1);
+  expect(one.rate).toBeLessThan(0.5);
+  /* 아무나 딸 확률(10%)보다는 높아야 한다 - 땄으니까 */
+  expect(one.rate).toBeGreaterThan(0.1);
+});
+
+test('판이 쌓이면 실제 비율로 다가간다', () => {
+  const roster = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const many = Array.from({ length: 40 }, (_, i) => fbGame(roster, i % 2 === 0 ? 1 : 2));
+  const r = firstBloodRates(many).get(1);
+  expect(r.games).toBe(40);
+  expect(r.got).toBe(20);
+  expect(r.rate).toBeGreaterThan(0.4);
+  expect(r.rate).toBeLessThan(0.5);
+});
+
+test('한 번도 못 딴 사람은 0보다 낮게 내려가지 않는다', () => {
+  const roster = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const r = firstBloodRates(Array.from({ length: 30 }, () => fbGame(roster, 1))).get(5);
+  expect(r.got).toBe(0);
+  expect(r.rate).toBeGreaterThan(0);
+  expect(r.rate).toBeLessThan(0.05);
+});
+
+/* ---------- 같은 사람 합치기 ---------- */
+
+test('합치기는 경기가 들고 있는 id까지 갈아끼운다', () => {
+  const body = fnBody('merge_room_players');
+  /* 이름만 고치면 지난 경기는 여전히 옛 줄을 가리킨다 */
+  expect(body).toContain('set team_a = public.merge_ids(team_a, p_drop, p_keep)');
+  expect(body).toContain('team_b = public.merge_ids(team_b, p_drop, p_keep)');
+  expect(body).toContain('set first_blood_player_id = p_keep');
+  /* 지우지 않고 감춘다 - 다른 데서 아직 id를 본다 */
+  expect(body).toContain('update room_players set deleted_at = now()');
+});
+
+test('서로 맞붙은 적이 있으면 합치기를 막는다 (같은 사람이 아니다)', () => {
+  const body = fnBody('merge_room_players');
+  expect(body).toContain('p_keep = any(team_a) and p_drop = any(team_b)');
+  expect(body).toMatch(/if both > 0 then[\s\S]{0,40}raise exception/);
+});
+
+test('합치기는 방장·부방장만', () => {
+  expect(fnBody('merge_room_players')).toContain('if not public.is_room_admin(r) then');
+});
+
+/* 배당을 실시간으로 보여주면 마감 직전에 유리한 쪽으로 몰린다.
+   그래서 마감 전에는 남의 배팅 줄 자체가 안 보이는데, '누가 걸었는지'는
+   알아야 방장이 마감할 때를 안다. 이름만 나가야 한다 */
+test('마감 전에 나가는 건 이름뿐이다 (무엇에 얼마는 빼고)', () => {
+  const body = fnBody('scrim_bettors');
+  expect(body).toContain('array_agg(distinct b.user_id) from bets b');
+  /* setof 스칼라를 PostgREST가 어떻게 감싸는지에 기대면 이름이 조용히
+     '알 수 없음'이 된다. 배열 하나로 돌려준다 */
+  expect(body).toContain('returns text[]');
+  expect(body).not.toMatch(/selection|amount/);
+  expect(body).toContain('if not public.is_room_member(r) then');
 });

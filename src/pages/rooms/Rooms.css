@@ -31,6 +31,25 @@
   border-color: rgba(56, 189, 248, 0.6);
 }
 
+/* 입력칸 + 버튼 한 줄. 이 규칙이 없으면 .rooms-input의 flex:1이 아무
+   일도 하지 않아서 칸과 버튼이 그냥 위아래로 붙어버린다 (배팅 금액 넣는
+   줄, 결과 넣는 줄, 방 이름, 참가자 추가 - 다섯 군데가 같이 깨진다) */
+.rooms-form-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  /* 좁은 화면에서 한 줄에 다 못 들어가면 넘치지 말고 접힌다.
+     넉넉할 때는 아무 영향이 없다 */
+  flex-wrap: wrap;
+}
+
+/* 결과 입력 줄은 '총 킬 수 + 퍼스트 블러드 + 정산'이라 폭이 제일 빡빡하다.
+   select는 옵션 글자만큼 최소 폭을 갖고 있어 0까지 줄지 않는다.
+   기준 폭을 줘서 좁아지면 줄바꿈이 먼저 일어나게 한다 */
+.bet-result .rooms-form-row > .rooms-input {
+  flex: 1 1 7.5rem;
+}
+
 .rooms-code-input {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 0.18em;
@@ -1278,6 +1297,55 @@
   color: #6b7a94;
 }
 
+/* 몇 명이 걸었나 아래에 이름을 붙인다. 숫자만 보면 '누가 아직 안
+   걸었지?'를 입으로 물어야 한다. 무엇에 걸었는지는 여전히 안 보인다 */
+.bet-done-who {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: -0.3rem 0 0.7rem;
+}
+
+.bet-done-name {
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  background: rgba(74, 222, 128, 0.1);
+  color: #86efac;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* 퍼블 칸 오른쪽의 확률. 이름을 밀어내지 않게 제일 작게 둔다 */
+.bet-fb-rate {
+  flex: none;
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #94a3b8;
+}
+
+.bet-opt.mine .bet-fb-rate,
+.bet-opt.won .bet-fb-rate {
+  color: inherit;
+  opacity: 0.75;
+}
+
+/* 담은 배팅 줄. 마켓 이름 + 내가 고른 것 */
+.bet-cart-what em {
+  font-style: normal;
+  font-weight: 700;
+  color: #7dd3fc;
+}
+
+.bet-cart-what em::before {
+  content: ' · ';
+  font-weight: 400;
+  color: #64748b;
+}
+
 /* 상태 칩 + 남은 시간을 헤더 오른쪽에 한 덩어리로 */
 .bet-head-live {
   display: flex;
@@ -1358,6 +1426,35 @@
 
 .bet-live .bet-timer-fill {
   background: linear-gradient(90deg, var(--live), color-mix(in srgb, var(--live) 50%, #ffffff));
+}
+
+/* 같은 사람 합치기. 설정 안에서 자주 쓸 일이 아니라 조용히 둔다 */
+.player-merge {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px dashed var(--gg-panel-border);
+  border-radius: 10px;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.player-merge-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.player-merge select.rooms-input {
+  flex: 1 1 7rem;
+}
+
+.player-merge-arrow {
+  flex: none;
+  color: #64748b;
+  font-weight: 700;
 }
 
 /* ---------- 배팅 금액 빠른 입력 ---------- */

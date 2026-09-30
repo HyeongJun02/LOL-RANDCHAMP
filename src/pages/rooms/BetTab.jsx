@@ -14,6 +14,7 @@ import {
   unsettleScrim,
   removeScrim,
   fetchBetting,
+  firstBloodRates,
 } from '../../server/rooms';
 import { useDialog } from '../../components/common/Dialog';
 import Empty from '../../components/common/Empty';
@@ -64,15 +65,24 @@ const BetTab = ({
 
   const [pools, setPools] = useState([]);
   const [bets, setBets] = useState([]);
+  /* 진행 중인 판에 이미 건 사람들. 이름만 온다 (RLS가 남의 배팅 줄은 막는다) */
+  const [bettors, setBettors] = useState([]);
   const [cart, setCart] = useState({});
   const busy = useRef(false);
 
+  const liveId = activeScrim?.id || null;
+
   const load = useCallback(async () => {
     const list = idKey ? idKey.split(',').map(Number) : [];
-    const got = await fetchBetting(list).catch(() => ({ pools: [], bets: [] }));
+    const got = await fetchBetting(list, liveId).catch(() => ({
+      pools: [],
+      bets: [],
+      bettors: [],
+    }));
     setPools(got.pools);
     setBets(got.bets);
-  }, [idKey]);
+    setBettors(got.bettors);
+  }, [idKey, liveId]);
 
   useEffect(() => {
     load();
@@ -89,6 +99,9 @@ const BetTab = ({
       busy.current = false;
     }
   };
+
+  /* 사람마다 퍼블을 얼마나 따는지. 지난 판 기록으로만 센다 */
+  const fbRate = firstBloodRates(scrims);
 
   const poolOf = (scrimId, market, selection) =>
     pools.find((p) => p.scrim_id === scrimId && p.market === market && p.selection === selection);
@@ -201,7 +214,6 @@ const BetTab = ({
   /* 마감이 다가올수록 0 → 1. BetTimer가 1초 단위로 올려준다.
      이 값 하나로 카드 테두리·빛줄·그림자 색이 한꺼번에 옮겨간다 */
   const [heat, setHeat] = useState(0);
-  const liveId = activeScrim?.id;
   useEffect(() => {
     setHeat(0);
   }, [liveId]);
@@ -325,6 +337,18 @@ const BetTab = ({
         >
           <span className="bet-opt-label">
             {label}
+            {/* 이름만 보고 고르면 찍기다. 지난 판에서 얼마나 땄는지를 옆에 붙인다.
+                판수가 적으면 보정된 값이라 실제 횟수는 title로 둔다 */}
+            {market === 'first_blood' &&
+              (() => {
+                const r = fbRate.get(Number(selection));
+                if (!r) return null;
+                return (
+                  <em className="bet-fb-rate" title={`${r.games}판 중 ${r.got}번`}>
+                    {Math.round(r.rate * 100)}%
+                  </em>
+                );
+              })()}
             {/* 라벨은 '내가 어떻게 됐나'만 말한다. 정답 자체는 초록 칸이
                 이미 말해주고 있어서 안 건 칸에까지 적중을 붙일 이유가 없다 */}
             {isMine && won && <em className="bet-win-tag">적중</em>}
@@ -589,6 +613,18 @@ const BetTab = ({
             </span>
           </div>
 
+          {/* 숫자만 보면 '누가 아직 안 걸었지?'를 입으로 물어야 한다.
+              무엇에 걸었는지는 여전히 마감 뒤에만 보인다 */}
+          {bettors.length > 0 && (
+            <div className="bet-done-who">
+              {bettors.map((id) => (
+                <span className="bet-done-name" key={id}>
+                  {memberName.get(id) || '알 수 없음'}
+                </span>
+              ))}
+            </div>
+          )}
+
           {activeScrim.status === 'betting' && !me?.agreed && (
             <div className="bet-consent">
               <p>
@@ -610,7 +646,12 @@ const BetTab = ({
               {cartRows.map(([market, v]) => (
                 <div className="bet-cart-row" key={market}>
                   <div className="rooms-form-row">
-                    <span className="rooms-name">{marketLabel(market)}</span>
+                    {/* 마켓 이름만 적혀 있으면 위로 올라가 다시 확인해야 한다.
+                        무엇에 걸었는지를 여기서 같이 보여준다 */}
+                    <span className="rooms-name bet-cart-what">
+                      {marketLabel(market)}
+                      <em>{selectionLabel(market, v.selection)}</em>
+                    </span>
                     <input
                       className="rooms-input"
                       type="number"

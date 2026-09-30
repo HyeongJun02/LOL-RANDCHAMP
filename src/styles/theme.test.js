@@ -46,3 +46,55 @@ test('선택자 목록이 쉼표로 끝난 채 끊긴 곳이 없다', () => {
 
   expect(bad).toEqual([]);
 });
+
+/* 안 쓰는 CSS를 걷어내다가 실제로 쓰는 규칙을 같이 지운 적이 있다.
+   .rooms-form-row가 사라져서 '배팅 금액 넣는 줄'과 '경기 결과 넣는 줄'의
+   입력칸·버튼이 간격도 없이 위아래로 붙어버렸다. CSS는 없어도 오류를
+   안 내고, 화면은 '좀 이상한데' 정도로만 보여서 한참 지나 발견된다. */
+test('JSX가 쓰는 className에 CSS 규칙이 있다', () => {
+  /* 스타일 없이 이름만 붙여둔 칸들. 지우면 이 목록에서도 빼면 된다 */
+  const bare = new Set([
+    'room-page',
+    'room-panel-wrap',
+    'room-switch-emblem',
+    'page-head-text',
+    'logo-text',
+    'nav-label',
+    'team-blue',
+  ]);
+
+  const src = path.join(__dirname, '..');
+  const walk = (dir) =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const full = path.join(dir, e.name);
+      return e.isDirectory() ? walk(full) : [full];
+    });
+  const files = walk(src);
+
+  const defined = new Set();
+  files
+    .filter((f) => f.endsWith('.css'))
+    .forEach((f) => {
+      const text = fs.readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      (text.match(/\.-?[_a-zA-Z][\w-]*/g) || []).forEach((m) => defined.add(m.slice(1)));
+    });
+
+  const missing = new Map();
+  files
+    .filter((f) => /\.jsx?$/.test(f) && !f.includes('.test.'))
+    .forEach((f) => {
+      const text = fs.readFileSync(f, 'utf8');
+      const re = /className=(?:"([^"]*)"|\{`([^`]*)`\})/g;
+      let m;
+      while ((m = re.exec(text))) {
+        /* ${...} 안은 변수라 클래스 이름이 아니다. 통째로 뺀다 */
+        (m[1] || m[2])
+          .replace(/\$\{[^}]*\}/g, ' ')
+          .split(/\s+/)
+          .filter((c) => /^[a-z][\w]*(-[\w]+)*$/.test(c) && !defined.has(c) && !bare.has(c))
+          .forEach((c) => missing.set(c, path.relative(src, f)));
+      }
+    });
+
+  expect([...missing].map(([c, f]) => `${c} (${f})`)).toEqual([]);
+});

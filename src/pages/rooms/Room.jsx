@@ -30,6 +30,7 @@ import {
   addRoomPlayer,
   updateRoomPlayer,
   removeRoomPlayer,
+  mergeRoomPlayers,
   addScrimByNames,
   openBettingByNames,
   removeScrim,
@@ -159,6 +160,10 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
   const [name, setName] = useState(room.name);
   const [code, setCode] = useState(null);
   const [newName, setNewName] = useState('');
+  /* 같은 사람인데 이름을 바꿔 가며 두 줄로 쌓인 경우. 자주 있는 일이 아니라
+     줄마다 버튼을 달지 않고 아래에 한 줄만 둔다 */
+  const [mergeKeep, setMergeKeep] = useState('');
+  const [mergeDrop, setMergeDrop] = useState('');
   const [ghostName, setGhostName] = useState('');
   const [showLoader, setShowLoader] = useState(false);
   const busy = useRef(false);
@@ -277,6 +282,30 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
     });
     if (!ok) return;
     await removeRoomPlayer(p.id);
+    reload();
+  });
+
+  /* 이름만 고치면 지난 경기는 여전히 옛 줄을 가리킨다 (경기가 id를 들고
+     있다). 전적을 붙이려면 경기 쪽 id까지 갈아끼워야 해서 서버가 한다 */
+  const mergePlayers = guard(async () => {
+    const keep = players.find((p) => String(p.id) === mergeKeep);
+    const drop = players.find((p) => String(p.id) === mergeDrop);
+    if (!keep || !drop || keep.id === drop.id) {
+      toast.error('합칠 두 사람을 서로 다르게 골라주세요.');
+      return;
+    }
+    const ok = await confirm({
+      title: '같은 사람 합치기',
+      message: `'${drop.name}' 님의 전적을 '${keep.name}' 님에게 넘길까요?`,
+      detail: `'${drop.name}'은(는) 명단에서 사라지고, 그 이름으로 뛴 지난 경기가 전부 '${keep.name}'의 기록이 됩니다. 되돌릴 수 없어요.`,
+      confirmText: '합치기',
+      danger: true,
+    });
+    if (!ok) return;
+    const moved = await mergeRoomPlayers(keep.id, drop.id);
+    setMergeKeep('');
+    setMergeDrop('');
+    toast.success(`합쳤어요. '${keep.name}' 님 경기가 ${moved}판입니다.`);
     reload();
   });
 
@@ -530,6 +559,60 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
               <FaPlus /> 추가
             </button>
           </div>
+
+          {/* 이름을 고치는 것만으로는 안 되는 경우. 'poop'으로 몇 판 뛰고
+              '푸푸'로 다시 들어오면 줄이 둘이 되어 전적이 갈린다 */}
+          {players.length >= 2 && (
+            <div className="player-merge">
+              <span className="player-merge-head">
+                <FaExchangeAlt /> 같은 사람이 두 줄로 나뉘었을 때
+              </span>
+              <div className="rooms-form-row">
+                <select
+                  className="rooms-input"
+                  value={mergeKeep}
+                  onChange={(e) => setMergeKeep(e.target.value)}
+                  aria-label="남길 이름"
+                >
+                  <option value="">남길 이름</option>
+                  {players
+                    .filter((p) => String(p.id) !== mergeDrop)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <span className="player-merge-arrow">←</span>
+                <select
+                  className="rooms-input"
+                  value={mergeDrop}
+                  onChange={(e) => setMergeDrop(e.target.value)}
+                  aria-label="없앨 이름"
+                >
+                  <option value="">없앨 이름</option>
+                  {players
+                    .filter((p) => String(p.id) !== mergeKeep)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  className="ghost-btn"
+                  onClick={mergePlayers}
+                  disabled={!mergeKeep || !mergeDrop}
+                >
+                  합치기
+                </button>
+              </div>
+              <p className="rooms-hint">
+                없앨 이름으로 뛴 지난 경기가 남길 이름의 기록이 됩니다. 서로 맞붙은 적이
+                있으면 같은 사람일 수 없어서 막힙니다.
+              </p>
+            </div>
+          )}
 
           {showLoader && (
             <RosterLoader
