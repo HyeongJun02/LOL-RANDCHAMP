@@ -1518,14 +1518,15 @@ test('화살표는 폭이 넉넉한 칸에만 건다', () => {
   expect(rooms).toMatch(/select\.rooms-input \{[^}]*padding-right/);
 });
 
-/* max-width만 걸고 내보냈다가, 좁은 탭은 왼쪽에 붙고 넓은 탭은 전체 폭을
-   써서 탭을 옮길 때마다 정렬이 달라 보였다 */
-test('폭을 줄인 탭은 가운데로 모은다', () => {
+/* 탭 네 개만 폭을 좁혀놨다가, 탭을 옮길 때마다 내용 폭이 들쭉날쭉해서
+   그게 더 눈에 걸렸다. 전부 헤더·탭 막대와 같은 폭을 쓴다 */
+test('탭마다 폭을 달리 두지 않는다', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'Rooms.css'), 'utf8');
-  const rule = css.slice(css.indexOf('.room-panel-wrap.is-narrow {'));
-  const body = rule.slice(0, rule.indexOf('}'));
-  expect(body).toMatch(/max-width/);
-  expect(body).toMatch(/margin-inline:\s*auto/);
+  expect(css).not.toContain('is-narrow');
+  const jsx = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'Room.jsx'), 'utf8');
+  expect(jsx).not.toContain('is-narrow');
+  /* 방 페이지에 폭을 따로 박아두면 헤더까지 같이 줄어든다 */
+  expect(css).not.toMatch(/\.room-page\s*\{[^}]*--page-width/);
 });
 
 /* 로그·내전 기록 탭만 패널 없이 맨몸이라, 탭을 옮기면 그 둘만 허전해
