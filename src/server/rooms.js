@@ -792,92 +792,98 @@ export const useRoom = (roomId, userId) => {
     return () => clearTimeout(timer);
   }, [enabled, roomId, version, reload]);
 
-  const room = data?.room || null;
-  const members = room?.room_members || [];
-  /* 지운 사람도 들고 있는다. 지난 경기의 이름을 붙이려면 필요하다 */
-  const allPlayers = room?.room_players || [];
-  const players = allPlayers.filter((p) => !p.deleted_at);
-  const profileOf = new Map((data?.profiles || []).map((p) => [p.user_id, p]));
-  const walletOf = new Map((data?.wallets || []).map((w) => [w.user_id, w.points]));
+  /* 여기부터는 받아온 것을 화면이 쓰는 모양으로 푸는 일이다. 방이 다시
+     그려질 때마다(탭을 옮기거나 팝업을 열 때마다) 전부 다시 돌면, 경기
+     전체를 훑는 toMatches와 '없는 id 찾기'가 매번 같이 돈다.
+     받아온 것이 바뀔 때만 푼다 - 결과가 같은 객체로 유지되니 아래쪽
+     화면들의 useMemo도 같이 살아난다 */
+  const derived = useMemo(() => {
+    const room = data?.room || null;
+    const members = room?.room_members || [];
+    /* 지운 사람도 들고 있는다. 지난 경기의 이름을 붙이려면 필요하다 */
+    const allPlayers = room?.room_players || [];
+    const players = allPlayers.filter((p) => !p.deleted_at);
+    const profileOf = new Map((data?.profiles || []).map((p) => [p.user_id, p]));
+    const walletOf = new Map((data?.wallets || []).map((w) => [w.user_id, w.points]));
 
-  const scrims = room?.scrims || [];
+    const scrims = room?.scrims || [];
 
-  /* 경기가 가리키는데 명단에 아예 없는 id.
+    /* 경기가 가리키는데 명단에 아예 없는 id.
 
-     참가자를 지워도 행은 남기지만(deleted_at), 그 장치가 생기기 전에는
-     진짜로 지웠다. 그 시절 기록이 남아 있으면 그 자리가 화면에서 '?'가
-     되거나 아예 빠져서 5명이 4명으로 보인다.
+       참가자를 지워도 행은 남기지만(deleted_at), 그 장치가 생기기 전에는
+       진짜로 지웠다. 그 시절 기록이 남아 있으면 그 자리가 화면에서 '?'가
+       되거나 아예 빠져서 5명이 4명으로 보인다.
 
-     '#23' 하나만 보여주면 그게 누구였는지 알 길이 없다. 언제 몇 판
-     뛰었는지, 누구와 같은 팀이었는지를 같이 모아서 넘긴다 - 사람은
-     그걸 보고 기억해낸다. */
-  const knownIds = new Set(allPlayers.map((p) => Number(p.id)));
-  const nameOfId = new Map(allPlayers.map((p) => [Number(p.id), p.name]));
-  const lost = new Map();
+       '#23' 하나만 보여주면 그게 누구였는지 알 길이 없다. 언제 몇 판
+       뛰었는지, 누구와 같은 팀이었는지를 같이 모아서 넘긴다 - 사람은
+       그걸 보고 기억해낸다. */
+    const knownIds = new Set(allPlayers.map((p) => Number(p.id)));
+    const nameOfId = new Map(allPlayers.map((p) => [Number(p.id), p.name]));
+    const lost = new Map();
 
-  scrims.forEach((s) => {
-    const at = new Date(s.played_at).getTime();
-    [s.team_a || [], s.team_b || []].forEach((team) => {
-      const ids = team.map(Number).filter(Number.isFinite);
-      ids.forEach((id) => {
-        if (knownIds.has(id)) return;
-        const cur = lost.get(id) || {
-          id,
-          games: 0,
-          first: at,
-          last: at,
-          mates: new Map(),
-        };
-        cur.games += 1;
-        cur.first = Math.min(cur.first, at);
-        cur.last = Math.max(cur.last, at);
-        /* 같은 팀이었던 사람. 이름이 있는 쪽만 센다 */
-        ids.forEach((other) => {
-          const nm = other === id ? null : nameOfId.get(other);
-          if (nm) cur.mates.set(nm, (cur.mates.get(nm) || 0) + 1);
+    scrims.forEach((s) => {
+      const at = new Date(s.played_at).getTime();
+      [s.team_a || [], s.team_b || []].forEach((team) => {
+        const ids = team.map(Number).filter(Number.isFinite);
+        ids.forEach((id) => {
+          if (knownIds.has(id)) return;
+          const cur = lost.get(id) || {
+            id,
+            games: 0,
+            first: at,
+            last: at,
+            mates: new Map(),
+          };
+          cur.games += 1;
+          cur.first = Math.min(cur.first, at);
+          cur.last = Math.max(cur.last, at);
+          /* 같은 팀이었던 사람. 이름이 있는 쪽만 센다 */
+          ids.forEach((other) => {
+            const nm = other === id ? null : nameOfId.get(other);
+            if (nm) cur.mates.set(nm, (cur.mates.get(nm) || 0) + 1);
+          });
+          lost.set(id, cur);
         });
-        lost.set(id, cur);
       });
     });
-  });
 
-  const lostPlayers = [...lost.values()]
-    .map((x) => ({
-      ...x,
-      mates: [...x.mates.entries()]
-        .map(([name, n]) => ({ name, n }))
-        .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ko')),
-    }))
-    .sort((a, b) => b.games - a.games || a.id - b.id);
-
-  return {
-    room,
-    loading,
-    error,
-    reload,
-    scrims,
-    /* 아직 안 끝난 배팅 경기는 방에 하나뿐이다 (open_betting이 막는다) */
-    activeScrim: scrims.find((s) => s.status === 'betting' || s.status === 'locked') || null,
-    players: [...players].sort((a, b) => a.name.localeCompare(b.name, 'ko')),
-    /* 지운 사람까지. 지난 경기의 이름을 붙이려면 이쪽을 봐야 한다 */
-    allPlayers,
-    lostPlayers,
-    matches: toMatches(room?.scrims, allPlayers, room?.game),
-    members: members
-      .map((m) => ({
-        ...m,
-        nickname: profileOf.get(m.user_id)?.nickname || '이름 없음',
-        points: walletOf.get(m.user_id) ?? 0,
-        agreed: Boolean(profileOf.get(m.user_id)?.agreed_fairplay_at),
-        /* 이 계정이 명단의 누구인지. 연결이 없으면 null */
-        player: players.find((p) => p.linked_user_id === m.user_id) || null,
+    const lostPlayers = [...lost.values()]
+      .map((x) => ({
+        ...x,
+        mates: [...x.mates.entries()]
+          .map(([name, n]) => ({ name, n }))
+          .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ko')),
       }))
-      .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]),
-    myRole: members.find((m) => m.user_id === userId)?.role || null,
-    /* 이름을 정했는지. members의 nickname은 '이름 없음'으로 채워져 있어
-       안 정한 것과 구분이 안 된다. 원본 프로필을 그대로 본다 */
-    myNickname: profileOf.get(userId)?.nickname || null,
-  };
+      .sort((a, b) => b.games - a.games || a.id - b.id);
+
+    return {
+      room,
+      scrims,
+      /* 아직 안 끝난 배팅 경기는 방에 하나뿐이다 (open_betting이 막는다) */
+      activeScrim: scrims.find((s) => s.status === 'betting' || s.status === 'locked') || null,
+      players: [...players].sort((a, b) => a.name.localeCompare(b.name, 'ko')),
+      /* 지운 사람까지. 지난 경기의 이름을 붙이려면 이쪽을 봐야 한다 */
+      allPlayers,
+      lostPlayers,
+      matches: toMatches(room?.scrims, allPlayers, room?.game),
+      members: members
+        .map((m) => ({
+          ...m,
+          nickname: profileOf.get(m.user_id)?.nickname || '이름 없음',
+          points: walletOf.get(m.user_id) ?? 0,
+          agreed: Boolean(profileOf.get(m.user_id)?.agreed_fairplay_at),
+          /* 이 계정이 명단의 누구인지. 연결이 없으면 null */
+          player: players.find((p) => p.linked_user_id === m.user_id) || null,
+        }))
+        .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]),
+      myRole: members.find((m) => m.user_id === userId)?.role || null,
+      /* 이름을 정했는지. members의 nickname은 '이름 없음'으로 채워져 있어
+         안 정한 것과 구분이 안 된다. 원본 프로필을 그대로 본다 */
+      myNickname: profileOf.get(userId)?.nickname || null,
+    };
+  }, [data, userId]);
+
+  return { loading, error, reload, ...derived };
 };
 
 const ROLE_ORDER = { owner: 0, admin: 1, staff: 2, member: 3 };

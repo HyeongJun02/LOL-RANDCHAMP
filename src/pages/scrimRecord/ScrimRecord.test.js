@@ -242,3 +242,63 @@ test('대기 칸은 스크롤 상자가 아니다', () => {
   expect(rule).not.toMatch(/overflow/);
   expect(rule).not.toMatch(/max-height/);
 });
+
+/* 브라우저가 주는 HTML5 드래그를 쓰다가, drop도 dragend도 안 오는 상태에
+   빠져서 커서가 '쥔 모양'으로 굳고 페이지 전체가 클릭을 안 먹는 일이
+   있었다. 시작도 끝도 우리가 쥐고 있는다 */
+describe('카드 끌어 넣기', () => {
+  const pointer = async (el, type, x, y) =>
+    act(async () => {
+      const e = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+      Object.defineProperty(e, 'isPrimary', { value: true });
+      Object.defineProperty(e, 'pointerId', { value: 1 });
+      el.dispatchEvent(e);
+    });
+
+  const cardFor = (el, name) =>
+    [...el.querySelectorAll('.sr-pool-cards .sr-card')].find((c) =>
+      c.querySelector('.sr-card-name').textContent === name
+    );
+
+  test('끌어다 놓으면 그 팀으로 간다', async () => {
+    const el = render({ players: [{ id: 1, name: '철수' }, { id: 2, name: '영희' }] });
+    const teamB = el.querySelectorAll('.sr-team')[1];
+    document.elementFromPoint = () => teamB;
+
+    const card = cardFor(el, '철수');
+    await pointer(card, 'pointerdown', 0, 0);
+    await pointer(card, 'pointermove', 60, 40);
+    await pointer(card, 'pointerup', 60, 40);
+
+    /* 눌렀으면 1팀(사람이 적은 쪽)으로 갔을 것이다. 끌었으니 2팀이다 */
+    expect(namesIn(el.querySelectorAll('.sr-team')[1])).toEqual(['철수']);
+    expect(namesIn(el.querySelectorAll('.sr-team')[0])).toEqual([]);
+  });
+
+  test('안 움직이고 떼면 누른 것으로 친다', async () => {
+    const el = render({ players: [{ id: 1, name: '철수' }] });
+    document.elementFromPoint = () => null;
+
+    const card = cardFor(el, '철수');
+    await pointer(card, 'pointerdown', 10, 10);
+    await pointer(card, 'pointerup', 12, 11);
+
+    expect(namesIn(el.querySelectorAll('.sr-team')[0])).toEqual(['철수']);
+  });
+
+  test('끌다가 취소되면 카드가 제자리로 돌아온다', async () => {
+    const el = render({ players: [{ id: 1, name: '철수' }] });
+    document.elementFromPoint = () => null;
+
+    const card = cardFor(el, '철수');
+    await pointer(card, 'pointerdown', 0, 0);
+    await pointer(card, 'pointermove', 60, 40);
+    expect(card.className).toContain('is-dragging');
+
+    await pointer(card, 'pointercancel', 60, 40);
+    expect(card.className).not.toContain('is-dragging');
+    expect(card.style.transform).toBe('');
+    /* 팀으로 들어가지도 않았다 */
+    expect(namesIn(el.querySelectorAll('.sr-team')[0])).toEqual([]);
+  });
+});

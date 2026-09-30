@@ -50,20 +50,21 @@ const SORTS = [
 
    카드가 높아지면 열 명이 화면을 다 먹는다. 두 줄로 묶는다 -
    위는 이름과 티어, 아래는 칭호·전적·최근 폼. */
-const PlayerCard = ({ name, game, player, title, stat, form, onTap, onMove, onRemove, onDrag }) => {
+const PlayerCard = ({ name, game, player, title, stat, form, onTap, onMove, onRemove, grab }) => {
   const tier = player ? getTier(game, player.tier) : null;
   return (
     <div
       className={`sr-card ${onTap ? 'is-tappable' : ''}`}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', name);
-        e.dataTransfer.effectAllowed = 'move';
-        onDrag(name);
+      {...grab}
+      onKeyDown={(e) => {
+        if (!onTap) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onTap();
+        }
       }}
-      onDragEnd={() => onDrag(null)}
-      onClick={onTap}
       role={onTap ? 'button' : undefined}
+      tabIndex={onTap ? 0 : undefined}
       title={onTap ? `${name} — 눌러서 넣기 (끌어다 놓아도 됩니다)` : name}
     >
       <span className="sr-card-body">
@@ -241,26 +242,70 @@ const ScrimRecord = ({
     overBox.current = box;
   };
 
-  const dropOn = (side) => (e) => {
-    e.preventDefault();
-    const name = e.dataTransfer.getData('text/plain') || dragging.current;
+  /* 포인터 아래에 어느 칸이 있나. 끌고 있는 카드는 pointer-events를 꺼둬서
+     이 검사에 안 걸린다 (setPointerCapture 덕에 이벤트는 계속 받는다) */
+  const zoneAt = (x, y) => document.elementFromPoint(x, y)?.closest('[data-drop]') || null;
+
+  const stop = () => {
+    const d = dragging.current;
     dragging.current = null;
     mark(null);
-    place(name, side);
+    if (!d) return null;
+    d.el.classList.remove('is-dragging');
+    d.el.style.transform = '';
+    return d;
   };
 
-  const dragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    mark(e.currentTarget);
-  };
-
-  /* dragleave는 안쪽 카드를 지날 때마다 터진다. 칸 밖으로 정말 나갔을
-     때만 끈다 */
-  const dragLeave = (e) => {
-    if (e.currentTarget.contains(e.relatedTarget)) return;
-    if (overBox.current === e.currentTarget) mark(null);
-  };
+  /* 브라우저가 주는 HTML5 드래그를 쓰지 않는다. 그걸 쓰면 drop도 dragend도
+     안 오는 상태에 빠지는 일이 있어서, 커서가 '쥔 모양'으로 굳고 페이지
+     전체가 클릭을 안 먹었다. 시작도 끝도 우리가 쥐고 있는다.
+     setPointerCapture를 걸어두면 포인터가 카드 밖으로 나가도 up이 반드시
+     이쪽으로 오므로 세션이 떠 있는 채로 남을 수가 없다 */
+  const grabProps = (name, onTap) => ({
+    onPointerDown: (e) => {
+      /* ⇄ / ✕ 는 제 할 일을 하게 둔다 */
+      if (e.button !== 0 || !e.isPrimary || e.target.closest('button')) return;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+      dragging.current = {
+        name,
+        el: e.currentTarget,
+        x: e.clientX,
+        y: e.clientY,
+        moved: false,
+        onTap,
+      };
+    },
+    onPointerMove: (e) => {
+      const d = dragging.current;
+      if (!d) return;
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
+      /* 손이 흔들린 것과 끄는 것을 가른다. 이 문턱이 없으면 누를 때마다
+         카드가 들썩인다 */
+      if (!d.moved) {
+        if (Math.abs(dx) + Math.abs(dy) < 8) return;
+        d.moved = true;
+        d.el.classList.add('is-dragging');
+      }
+      d.el.style.transform = `translate(${dx}px, ${dy}px)`;
+      mark(zoneAt(e.clientX, e.clientY));
+    },
+    onPointerUp: (e) => {
+      const zone = dragging.current?.moved ? zoneAt(e.clientX, e.clientY) : null;
+      const d = stop();
+      if (!d) return;
+      d.el.releasePointerCapture?.(e.pointerId);
+      /* 안 움직였으면 끈 게 아니라 누른 것이다 */
+      if (!d.moved) {
+        d.onTap?.();
+        return;
+      }
+      if (zone) place(d.name, zone.dataset.drop === 'pool' ? null : zone.dataset.drop);
+    },
+    /* 화면이 스크롤을 가져가거나 창이 바뀌면 여기로 온다. 반드시 치운다 */
+    onPointerCancel: stop,
+    onLostPointerCapture: stop,
+  });
 
   const addTyped = () => {
     const name = typed.trim();
@@ -399,10 +444,7 @@ const ScrimRecord = ({
       title={titles?.get(name)}
       stat={statOf(stats, name)}
       form={forms.get(name)}
-      onDrag={(n) => {
-        dragging.current = n;
-        if (!n) mark(null);
-      }}
+      grab={grabProps(name, side ? undefined : () => tapIn(name))}
       onTap={side ? undefined : () => tapIn(name)}
       onMove={side ? () => place(name, side === 'A' ? 'B' : 'A') : undefined}
       onRemove={side ? () => place(name, null) : undefined}
@@ -414,9 +456,7 @@ const ScrimRecord = ({
     return (
       <div
         className={`sr-team ${accent}`}
-        onDragOver={dragOver}
-        onDragLeave={dragLeave}
-        onDrop={dropOn(side)}
+        data-drop={side}
       >
         <div className="sr-team-head">
           <h3>{label}</h3>
@@ -559,9 +599,7 @@ const ScrimRecord = ({
         {/* 아직 어느 팀도 아닌 사람들. 끌어다 넣거나 눌러서 넣는다 */}
         <div
           className="sr-pool"
-          onDragOver={dragOver}
-          onDragLeave={dragLeave}
-          onDrop={dropOn(null)}
+          data-drop="pool"
         >
           <div className="sr-pool-head">
             <span className="sr-pool-title">

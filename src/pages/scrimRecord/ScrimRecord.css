@@ -81,12 +81,12 @@
    위는 이름과 티어, 아래는 칭호·전적·최근 폼 */
 
 .sr-card {
-  /* 사파리는 이게 없으면 div를 못 끈다. 그리고 글자 위에서 누르면
-     텍스트 선택이 드래그를 가로채는 일이 있어 선택을 막아둔다 */
-  -webkit-user-drag: element;
+  /* 글자 위에서 누르면 텍스트 선택이 끌기를 가로챈다 */
   user-select: none;
   -webkit-user-select: none;
-  touch-action: manipulation;
+  /* 세로로 쓸어내리는 건 화면 스크롤에 양보한다. 안 그러면 모바일에서
+     목록을 내릴 수가 없다 - 손가락으로는 눌러서 넣으면 된다 */
+  touch-action: pan-y;
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -100,6 +100,18 @@
 
 .sr-card:active {
   cursor: grabbing;
+}
+
+/* 끌고 있는 카드. pointer-events를 꺼야 포인터 밑에 무엇이 있는지
+   볼 수 있다 (setPointerCapture가 이벤트는 계속 보내준다) */
+.sr-card.is-dragging {
+  position: relative;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.92;
+  cursor: grabbing;
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.8);
+  transition: none;
 }
 
 .sr-card.is-tappable:hover {
