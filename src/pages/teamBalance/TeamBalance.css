@@ -150,6 +150,17 @@
   color: #06111f;
 }
 
+/* 아직 비어 있는 줄은 뒤로 물린다. 열 줄이 똑같은 무게로 서 있으면
+   누가 들어와 있는지가 한눈에 안 들어온다 */
+.player-row.is-empty {
+  opacity: 0.55;
+}
+
+.player-row.is-empty:focus-within,
+.player-row.is-empty:hover {
+  opacity: 1;
+}
+
 .panel-actions {
   display: flex;
   gap: 0.5rem;
@@ -211,26 +222,84 @@
   filter: brightness(1.08);
 }
 
-/* ---------- 결과 ---------- */
-
-.tb-result {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
+/* 눌린 느낌이 없으면 '눌리긴 한 건가' 싶어진다 */
+.build-btn:active {
+  transform: scale(0.97);
 }
 
-.result-summary {
+/* ---------- 결과 ---------- */
+
+/* 참가자 칸 위, 가로 전체. 팀 카드 둘을 나란히 세워 세로를 반으로 줄인다 */
+.tb-outcome {
+  margin-bottom: 1.1rem;
+  padding: 0.9rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--gg-gold) 25%, transparent);
+  background: rgba(200, 170, 110, 0.05);
+  animation: outcome-in 0.3s ease;
+}
+
+/* 같은 조합이 나와도 칸이 통째로 다시 들어온다. 눌렀는데 화면이 그대로면
+   섞이고 있는지 알 수가 없다 */
+@keyframes outcome-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.outcome-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+
+.outcome-diff {
   font-size: 0.8rem;
+  font-weight: 700;
   color: #93a5c4;
 }
 
-.result-summary strong {
-  font-size: 0.9rem;
+.outcome-diff strong {
+  font-size: 0.95rem;
   color: var(--gg-gold);
+}
+
+.outcome-diff em {
+  margin-left: 0.35rem;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #6b7a94;
+}
+
+.outcome-reroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 170, 110, 0.45);
+  background: rgba(200, 170, 110, 0.12);
+  color: var(--gg-gold-light);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.outcome-reroll:hover {
+  background: rgba(200, 170, 110, 0.22);
+}
+
+.outcome-reroll:active {
+  transform: scale(0.96);
+}
+
+.outcome-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
 }
 
 .result-cands {
@@ -349,6 +418,12 @@
 
 /* ---------- 반응형 ---------- */
 
+@media (max-width: 560px) {
+  .outcome-teams {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .tb-layout {
     grid-template-columns: 1fr;
@@ -409,7 +484,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .team-list li {
+  .team-list li,
+  .tb-outcome {
     animation: none;
   }
 }
@@ -710,30 +786,11 @@
   margin-left: 0.3rem;
 }
 
-/* 결과는 설정 칸 아래 통째로. 그냥 늘어놓으면 카드가 세로로 쌓여
-   가로는 텅 비고 세로만 길어진다 */
-.tb-embedded .tb-result {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
+/* 팀 카드를 나란히 세우는 건 이제 페이지에서도 똑같이 한다(.outcome-teams).
+   여기서는 여백만 조금 줄인다 */
+.tb-embedded .tb-outcome {
   padding: 0.8rem;
-  border: 1px solid color-mix(in srgb, var(--gg-gold) 25%, transparent);
-  border-radius: 14px;
-  background: rgba(200, 170, 110, 0.05);
-}
-
-/* 요약·승률·버튼은 한 줄을 다 쓰고, 팀 카드 둘만 나란히 선다 */
-.tb-embedded .result-summary,
-.tb-embedded .win-odds,
-.tb-embedded .tb-use-teams {
-  grid-column: 1 / -1;
-  margin: 0;
-}
-
-/* DOM에서는 버튼이 맨 위에 있다. 결과를 보고 나서 누르는 것이니 맨 아래로 */
-.tb-embedded .tb-use-teams {
-  order: 4;
+  margin-bottom: 0.8rem;
 }
 
 .tb-embedded .team-card {
@@ -757,8 +814,7 @@
 
 /* 좁아지면 두 칸을 한 칸으로 */
 @media (max-width: 560px) {
-  .tb-embedded .tb-side,
-  .tb-embedded .tb-result {
+  .tb-embedded .tb-side {
     grid-template-columns: 1fr;
   }
 

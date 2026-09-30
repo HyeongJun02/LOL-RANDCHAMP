@@ -220,3 +220,26 @@ test('직접 입력한 이름은 팝업이 건드리지 않는다', () => {
   expect(names).toContain('지나가던행인');
   expect(names).toContain('철수');
 });
+
+/* 결과를 사이드바 맨 아래에 두었더니 좁은 화면에서는 참가자 열 줄 아래,
+   넓은 화면에서도 접힌 자리에 나와서 '팀 짜기'를 눌러도 아무 반응이
+   없는 것처럼 보였다. 참가자 칸보다 앞에 그린다 */
+test('짜고 나면 결과가 참가자 칸보다 위에 온다', () => {
+  const el = buildWith(['가', '나', '다', '라']);
+
+  const outcome = el.querySelector('.tb-outcome');
+  const layout = el.querySelector('.tb-layout');
+  expect(outcome).not.toBeNull();
+  expect(outcome.compareDocumentPosition(layout) & Node.DOCUMENT_POSITION_FOLLOWING)
+    .toBeTruthy();
+
+  /* 두 팀이 나란히 한 칸 안에 있다 (세로로 쌓으면 화면이 두 배로 길어진다) */
+  expect(outcome.querySelectorAll('.outcome-teams .team-card')).toHaveLength(2);
+});
+
+/* 같은 조합이 다시 나와도 칸이 통째로 다시 들어와야 눌린 게 보인다 */
+test('다시 섞기를 눌러도 결과가 남아 있다', () => {
+  const el = buildWith(['가', '나', '다', '라']);
+  click(el.querySelector('.outcome-reroll'));
+  expect(el.querySelectorAll('.outcome-teams .team-card')).toHaveLength(2);
+});

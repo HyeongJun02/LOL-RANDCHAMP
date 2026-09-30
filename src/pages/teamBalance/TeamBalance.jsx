@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { FaPlus, FaTimes, FaUsers, FaBookmark, FaRandom, FaRedo } from 'react-icons/fa';
 import { getTier, ratingOf, tierName, defaultTierOf } from '../../rules/games';
@@ -68,6 +68,12 @@ const TeamBalance = ({
   );
   const [randomness, setRandomness] = useState(0);
   const [result, setResult] = useState(null);
+  /* 누를 때마다 1씩. 결과 칸의 key로 써서 같은 조합이 나와도 카드가 다시
+     날아 들어온다 - 안 그러면 눌렀는데 아무 일도 안 일어난 것처럼 보인다 */
+  const [spin, setSpin] = useState(0);
+  const outcomeRef = useRef(null);
+  /* '다시 섞기'가 직전에 누른 것과 같은 방식으로 뽑게 */
+  const lastIgnore = useRef(false);
   const [showCandidates, setShowCandidates] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [ratingMode, setRatingMode] = useState('tier');
@@ -93,6 +99,13 @@ const TeamBalance = ({
     if (!result) return;
     saveLastSplit(result.teamA.map((p) => p.name), result.teamB.map((p) => p.name));
   }, [result]);
+
+  /* 결과는 화면 맨 위에 그린다. 단추는 아래쪽에 있으니, 눌렀으면 거기까지
+     데려다줘야 한다 (block: nearest라 이미 보이면 아무 일도 안 한다) */
+  useEffect(() => {
+    if (spin === 0) return;
+    outcomeRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+  }, [spin]);
 
   const update = (id, patch) =>
     setPlayers((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
@@ -192,6 +205,8 @@ const TeamBalance = ({
       return;
     }
     setResult(split);
+    lastIgnore.current = ignoreRating;
+    setSpin((n) => n + 1);
     setShowCandidates(false);
   };
 
@@ -249,6 +264,77 @@ const TeamBalance = ({
         </PageHeader>
       )}
 
+      {/* 결과가 먼저다. 사이드바 맨 아래에 두었더니 좁은 화면에서는 참가자
+          열 줄 아래, 넓은 화면에서도 접힌 자리에 나와서 '섞이고 있는지'
+          자체를 알 수 없었다. key={spin}이라 누를 때마다 다시 날아 들어온다 */}
+      {result && (
+        <section className="tb-outcome" key={spin} ref={outcomeRef}>
+          <header className="outcome-head">
+            <span className="outcome-diff">
+              평점 차이 <strong>{result.diff}</strong>
+              {result.diff !== result.bestDiff && <em>최적 {result.bestDiff}</em>}
+            </span>
+            <button
+              className="result-cands"
+              onClick={() => setShowCandidates(true)}
+              disabled={result.count < 2}
+              title="가능한 조합 모두 보기"
+            >
+              후보 {result.count}가지
+            </button>
+            {/* 단추는 저 아래 설정 칸에 있다. 결과를 보고 다시 뽑고 싶을 때
+                거기까지 내려갔다 올라오게 두지 않는다 */}
+            <button className="outcome-reroll" onClick={() => build(lastIgnore.current)}>
+              <FaRandom /> 다시 섞기
+            </button>
+          </header>
+
+          {(() => {
+            const win = winChance(
+              result.sumA,
+              result.teamA.length,
+              result.sumB,
+              result.teamB.length
+            );
+            return (
+              <div className="win-odds">
+                <div className="win-bar">
+                  <span className="win-fill" style={{ width: `${win}%` }} />
+                </div>
+                <div className="win-legend">
+                  <span className="win-blue">1팀 {win}%</span>
+                  <span className="win-red">{100 - win}% 2팀</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="outcome-teams">
+            {renderTeam(result.teamA, '1팀', result.sumA, 'team-blue')}
+            {renderTeam(result.teamB, '2팀', result.sumB, 'team-red')}
+          </div>
+
+          <p className="win-note">
+            승률은 티어 평점과 인원 수만 넣고 계산한 재미용 수치입니다. 실제 승패와는
+            관계 없어요.
+          </p>
+
+          {onUseTeams && (
+            <button
+              className="tb-use-teams"
+              onClick={() =>
+                onUseTeams(
+                  result.teamA.map((p) => p.name),
+                  result.teamB.map((p) => p.name)
+                )
+              }
+            >
+              이 팀으로 내전 진행하기
+            </button>
+          )}
+        </section>
+      )}
+
       <div className="tb-layout">
         <section className="tb-panel">
           <div className="panel-head">
@@ -273,7 +359,7 @@ const TeamBalance = ({
             {players.map((p, i) => {
               const tier = getTier(gameKey, p.tier);
               return (
-                <div className="player-row" key={p.id}>
+                <div className={`player-row ${p.name.trim() ? '' : 'is-empty'}`} key={p.id}>
                   <span className="row-no">{i + 1}</span>
                   <div className="row-name">
                     <span className="input-with-clear">
@@ -429,62 +515,6 @@ const TeamBalance = ({
             </p>
           </div>
 
-          {result && (
-            <div className="tb-result">
-              {onUseTeams && (
-                <button
-                  className="tb-use-teams"
-                  onClick={() =>
-                    onUseTeams(
-                      result.teamA.map((p) => p.name),
-                      result.teamB.map((p) => p.name)
-                    )
-                  }
-                >
-                  이 팀으로 내전 진행하기
-                </button>
-              )}
-              <div className="result-summary">
-                평점 차이 <strong>{result.diff}</strong>
-                {result.diff !== result.bestDiff && (
-                  <span> (최적 {result.bestDiff})</span>
-                )}
-                <button
-                  className="result-cands"
-                  onClick={() => setShowCandidates(true)}
-                  disabled={result.count < 2}
-                  title="가능한 조합 모두 보기"
-                >
-                  후보 {result.count}가지
-                </button>
-              </div>
-              {(() => {
-                const win = winChance(
-                  result.sumA,
-                  result.teamA.length,
-                  result.sumB,
-                  result.teamB.length
-                );
-                return (
-                  <div className="win-odds">
-                    <div className="win-bar">
-                      <span className="win-fill" style={{ width: `${win}%` }} />
-                    </div>
-                    <div className="win-legend">
-                      <span className="win-blue">1팀 {win}%</span>
-                      <span className="win-red">{100 - win}% 2팀</span>
-                    </div>
-                    <p className="win-note">
-                      티어 평점과 인원 수만 넣고 계산한 재미용 수치입니다. 실제 승패와는 관계 없어요.
-                    </p>
-                  </div>
-                );
-              })()}
-
-              {renderTeam(result.teamA, '1팀', result.sumA, 'team-blue')}
-              {renderTeam(result.teamB, '2팀', result.sumB, 'team-red')}
-            </div>
-          )}
         </aside>
       </div>
 
