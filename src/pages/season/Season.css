@@ -253,6 +253,22 @@
   }
 }
 
+/* 승률 / 끼꼬. 목록 바로 위에 작게 둔다 - 달 고르는 줄과 섞이면
+   무엇을 고르는 건지 헷갈린다 */
+.season-view {
+  margin-bottom: 0.7rem;
+}
+
+.season-view .seg-tab {
+  flex: none;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.76rem;
+}
+
+.season-kkiko-note {
+  margin-top: 0.6rem;
+}
+
 .season-col {
   min-width: 0;
 }

@@ -1106,7 +1106,14 @@ const Room = () => {
         {tab === 'stats' && (
           <>
             <HallOfFame rows={hofRows} matches={matches} members={members} />
-            <Season matches={matches} players={players} />
+            {/* 달별 끼꼬는 시즌이 넘어갈 때 박제해둔 값(hofRows)에 있고,
+                이번 달은 아직 박제 전이라 지갑(members)을 봐야 한다 */}
+            <Season
+              matches={matches}
+              players={players}
+              hofRows={hofRows}
+              members={members}
+            />
           </>
         )}
         {/* BetTab의 players는 이름을 붙이는 데만 쓴다. 지운 사람까지

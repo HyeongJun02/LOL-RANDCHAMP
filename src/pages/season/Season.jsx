@@ -25,9 +25,13 @@ const ALL = 'all';
 
 /* 방의 '정산' 탭.
    matches: rooms.js가 이름을 붙여 넘겨준 경기 목록
-   players: 방 참가자 명단 (티어 배지용) */
-const Season = ({ matches = [], players = [] }) => {
+   players: 방 참가자 명단 (티어 배지용)
+   hofRows: 달이 넘어갈 때 박제해둔 달별 끼꼬 (hall_of_fame)
+   members: 이 방 계정들. 이번 달은 아직 박제 전이라 지갑을 그대로 본다 */
+const Season = ({ matches = [], players = [], hofRows = [], members = [] }) => {
   const gameKey = useGameKey();
+  /* 순위를 무엇으로 볼지. 승률이 기본 */
+  const [view, setView] = useState('rate');
 
   /* 난투(1대1·2대2)를 5대5 전적과 한 표에 올리면 둘 다 못 읽는다.
      게임에 묶음이 둘 이상일 때만 고르는 칸이 뜬다 */
@@ -75,6 +79,38 @@ const Season = ({ matches = [], players = [] }) => {
   const played = monthMatches.length;
 
   const insights = useMemo(() => buildInsights(monthMatches), [monthMatches]);
+
+  /* 그 달을 몇 끼꼬로 마무리했나.
+
+     지난 달은 시즌이 넘어갈 때 박제해둔 값을 본다 (roll_season이
+     초기화 직전에 hall_of_fame에 넣는다). 이번 달은 아직 진행 중이라
+     박제된 게 없으니 지갑의 지금 잔액을 본다.
+
+     끼꼬는 계정에 붙고 승률은 참가자 이름에 붙는다. 그래서 두 목록에
+     서로 없는 사람이 있다 - 계정 없이 뛴 손님은 끼꼬가 없고, 한 판도
+     안 뛴 사람도 끼꼬는 있다. 섞지 않고 각자 자기 목록을 보여준다. */
+  const thisMonth = monthKeyOf(Date.now());
+  const kkiko = useMemo(() => {
+    if (isAll) return [];
+    const rows =
+      active === thisMonth
+        ? members.map((m) => ({ key: m.user_id, name: m.nickname, points: m.points }))
+        : hofRows
+            .filter((r) => r.month === active)
+            .map((r) => ({
+              key: r.user_id,
+              /* 그때 쓰던 이름 그대로. 나중에 바꿔도 기록은 안 흔들린다 */
+              name: r.display_name,
+              points: r.kkiko_points,
+            }));
+    return rows.sort((a, b) => b.points - a.points);
+  }, [isAll, active, thisMonth, members, hofRows]);
+
+  /* 달을 옮기다 보면 끼꼬가 없는 달에 닿는다. 그때 빈 목록을 보여주는
+     대신 조용히 승률로 돌아간다 */
+  const canKkiko = !isAll && kkiko.length > 0;
+  const mode = view === 'kkiko' && canKkiko ? 'kkiko' : 'rate';
+  const topKkiko = kkiko[0]?.points || 0;
 
   const periodLabel = isAll ? '전체 기간' : monthLabel(active);
 
@@ -175,6 +211,48 @@ const Season = ({ matches = [], players = [] }) => {
 
           <div className="season-cols">
           <div className="season-col">
+          {/* 승률 / 끼꼬. 전체 기간에는 안 띄운다 - 끼꼬는 달마다 0에서
+              다시 시작해서 여러 달을 합치면 아무 뜻이 없다 */}
+          {canKkiko && (
+            <div className="seg-tabs season-view">
+              <button
+                className={`seg-tab ${mode === 'rate' ? 'active' : ''}`}
+                onClick={() => setView('rate')}
+              >
+                승률
+              </button>
+              <button
+                className={`seg-tab ${mode === 'kkiko' ? 'active' : ''}`}
+                onClick={() => setView('kkiko')}
+              >
+                끼꼬
+              </button>
+            </div>
+          )}
+
+          {mode === 'kkiko' ? (
+            <>
+              <RankList
+                empty="이 달의 끼꼬 기록이 없습니다."
+                rows={kkiko.map((r) => ({
+                  key: r.key,
+                  name: r.name,
+                  value: (
+                    <>
+                      {r.points.toLocaleString()}
+                      <i className="rank-unit">끼꼬</i>
+                    </>
+                  ),
+                  ratio: topKkiko > 0 ? r.points / topKkiko : 0,
+                }))}
+              />
+              <p className="rooms-hint season-kkiko-note">
+                {active === thisMonth
+                  ? '이번 달은 아직 진행 중이라 지금 잔액입니다. 매월 1일 모두 10,000으로 돌아갑니다.'
+                  : `${monthLabel(active)}을 마칠 때의 잔액입니다.`}
+              </p>
+            </>
+          ) : (
           <RankList
             empty={`${isAll ? '전체 기간에' : `${monthLabel(active)}에는`} 내전 기록이 없습니다.`}
             rows={ranking.map((r) => {
@@ -197,8 +275,9 @@ const Season = ({ matches = [], players = [] }) => {
               };
             })}
           />
+          )}
 
-          <ScrimPointsHelp />
+          {mode === 'rate' && <ScrimPointsHelp />}
           </div>
 
           {/* 넓은 화면에서는 순위 옆에 붙인다. 세로로만 쌓으면 순위를

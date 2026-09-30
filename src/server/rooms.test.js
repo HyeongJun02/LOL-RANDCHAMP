@@ -1798,3 +1798,33 @@ test('이름 없는 자리는 단서까지 모아서 넘긴다', () => {
   /* 많이 뛴 자리부터 - 그쪽이 알아보기 쉽다 */
   expect(body).toContain('b.games - a.games');
 });
+
+/* ---------- 통계: 승률 / 끼꼬 ---------- */
+
+/* 끼꼬는 달마다 0에서 다시 시작한다. 여러 달을 합치면 아무 뜻이 없어서
+   '전체 기간'에는 토글 자체를 안 띄운다 */
+test('달별 끼꼬는 박제해둔 값과 이번 달 지갑을 갈라 본다', () => {
+  const src = fs.readFileSync(
+    path.join(__dirname, '..', 'pages', 'season', 'Season.jsx'),
+    'utf8'
+  );
+  const body = src.slice(src.indexOf('const kkiko = useMemo'), src.indexOf('const canKkiko'));
+  /* 이번 달은 아직 박제 전이라 지갑을 본다 */
+  expect(body).toContain('active === thisMonth');
+  expect(body).toContain('members.map');
+  /* 지난 달은 시즌이 넘어갈 때 박제한 값 */
+  expect(body).toContain('r.kkiko_points');
+  /* 그때 쓰던 이름 그대로. 나중에 바꿔도 기록이 안 흔들린다 */
+  expect(body).toContain('r.display_name');
+
+  expect(src).toContain("const canKkiko = !isAll && kkiko.length > 0;");
+});
+
+/* roll_season이 초기화 직전에 박제하지 않으면 달별 끼꼬가 전부 10000이 된다 */
+test('시즌이 넘어갈 때 끼꼬를 초기화 전에 박제한다', () => {
+  const body = fnBody('roll_season');
+  const snap = body.indexOf('insert into hall_of_fame');
+  const reset = body.indexOf('update room_wallets set points =');
+  expect(snap).toBeGreaterThan(-1);
+  expect(snap).toBeLessThan(reset);
+});
