@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { defaultTierOf } from '../rules/games';
+import { KILLS_ODDS, KILLS_SHADE, KILLS_ODDS_RANGE } from '../rules/tuning';
 import path from 'path';
 
 /* Data API 클라이언트를 가짜로 세운다. 실제 요청 대신 어떤 표에 무엇을
@@ -350,10 +351,38 @@ test('승리팀 배당은 패리뮤추얼이다', () => {
   expect(body).toContain('case when total_amount = 0 then null');
 });
 
-test('퍼블은 인원 × 0.85, 언더오버는 1.98 고정', () => {
+test('퍼블은 인원 × 0.85', () => {
+  expect(fnBody('lock_betting')).toContain('round(n * 0.85, 2)');
+});
+
+/* 기준·지수·상하한이 tuning.js와 어긋나면 화면은 '1.98배쯤'이라고 적고
+   서버는 다른 값을 지급한다. 숫자를 한쪽만 고치는 걸 여기서 잡는다 */
+test('언더오버는 기준 배당에서 몰린 만큼만 움직인다', () => {
   const body = fnBody('lock_betting');
-  expect(body).toContain('round(n * 0.85, 2)');
-  expect(body).toContain('set odds = 1.98');
+  expect(body).toContain(
+    `round(${KILLS_ODDS} * power(0.5 / (bp.total_amount::numeric / pool), ${KILLS_SHADE}), 2)`
+  );
+  expect(body).toContain(
+    `greatest(${KILLS_ODDS_RANGE.min.toFixed(2)}, least(${KILLS_ODDS_RANGE.max.toFixed(2)},`
+  );
+  /* 아무도 안 걸린 쪽은 기준값 그대로 (0으로 나누면 터진다) */
+  expect(body).toContain(`when pool = 0 or bp.total_amount = 0 then ${KILLS_ODDS}`);
+});
+
+/* 굴려보면 이렇게 나온다. 수식을 고치면 여기가 먼저 깨진다 */
+test('반반이면 기준값, 몰리면 내려가고 반대쪽은 올라간다', () => {
+  const odds = (share) =>
+    Math.min(
+      KILLS_ODDS_RANGE.max,
+      Math.max(KILLS_ODDS_RANGE.min, Math.round(KILLS_ODDS * (0.5 / share) ** KILLS_SHADE * 100) / 100)
+    );
+  expect(odds(0.5)).toBe(KILLS_ODDS);
+  expect(odds(0.8)).toBeCloseTo(1.57, 2);
+  expect(odds(0.2)).toBe(KILLS_ODDS_RANGE.max);
+  /* 한쪽에만 걸렸어도 상한·하한 안에 있다 */
+  expect(odds(1)).toBeCloseTo(1.4, 2);
+  expect(odds(0.5)).toBeLessThan(odds(0.35));
+  expect(odds(0.65)).toBeLessThan(odds(0.5));
 });
 
 /* 네트워크 재시도로 두 번 불려도 두 번 지급되면 안 된다 */
@@ -949,7 +978,8 @@ test('배당이 tuning.js와 DB에서 같다', () => {
   const body = fnBody('lock_betting');
   expect(body).toContain(`n * ${tuning.FIRST_BLOOD_RATE}`);
   expect(body).toContain(`* ${tuning.FIRST_BLOOD_TIER_BONUS}`);
-  expect(body).toContain(`odds = ${tuning.KILLS_ODDS}`);
+  /* 언더오버 쪽은 바로 위 '몰린 만큼만 움직인다' 테스트가 대조한다 */
+  expect(body).toContain(`then ${tuning.KILLS_ODDS}`);
 });
 
 test('참여 보상과 시즌 초기화 값이 tuning.js와 DB에서 같다', () => {

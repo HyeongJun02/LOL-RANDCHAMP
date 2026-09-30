@@ -14,7 +14,8 @@
 --
 --   place_bets       … 마켓별 1인 상한 (퍼블 2000 / 언더오버 3000)
 --                      → tuning.js BET_CAP
---   lock_betting     … 퍼블 배당 n * 0.85, 티어당 +2%, 언더오버 1.98
+--   lock_betting     … 퍼블 배당 n * 0.85, 티어당 +2%, 언더오버 1.98 기준에
+--                        몰린 만큼 1.30~3.00 사이로
 --                      → tuning.js FIRST_BLOOD_RATE / TIER_BONUS / KILLS_ODDS
 --   award_participation … 경기 참여 보상 (승 1500 / 패 1000)
 --                      → tuning.js SCRIM_REWARD
@@ -1367,8 +1368,27 @@ begin
   update bet_pools set odds = round(n * 0.85, 2)
    where scrim_id = p_scrim and market = 'first_blood' and odds is null;
 
-  update bet_pools set odds = 1.98
-   where scrim_id = p_scrim and market like 'kills%';
+  -- 언더/오버도 몰리면 배당이 움직인다. 안 움직이면 뻔한 쪽에 다 걸고
+  -- 끝이라 고를 이유가 없다. 다만 승리팀처럼 걸린 돈을 100% 나눠 갖는
+  -- 방식은 아니다 - 1.98을 기준으로 두고 몰린 만큼만 지수로 눌러준다.
+  --   배당 = 1.98 × (0.5 / 그쪽 비중) ^ 0.5
+  -- 반반이면 정확히 1.98. 8:2면 몰린 쪽 1.57, 반대쪽은 상한 3.00.
+  -- 한쪽에만 걸렸으면 1.40.
+  --
+  -- 지급을 시스템이 책임지는 마켓이라(제로섬이 아니다) 위아래를 묶어둔다.
+  -- 상한이 없으면 한 명이 반대쪽에 조금 걸어두는 것만으로 배당이 튄다.
+  -- src/rules/tuning.js의 KILLS_ODDS · KILLS_SHADE · KILLS_ODDS_RANGE와
+  -- 같은 숫자여야 한다 (테스트가 대조한다).
+  select coalesce(sum(total_amount), 0) into pool
+    from bet_pools where scrim_id = p_scrim and market like 'kills%';
+
+  update bet_pools bp
+     set odds = case
+          when pool = 0 or bp.total_amount = 0 then 1.98
+          else greatest(1.30, least(3.00,
+                 round(1.98 * power(0.5 / (bp.total_amount::numeric / pool), 0.5), 2)))
+         end
+   where bp.scrim_id = p_scrim and bp.market like 'kills%';
 
   -- 그 판에 실제로 쓴 킬 기준선을 여기서 박아둔다.
   -- 방장이 직접 안 정하면 kill_line이 비어 있었고, 나중에 화면에서

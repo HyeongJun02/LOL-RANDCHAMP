@@ -324,6 +324,7 @@ const BetTab = ({
     const lost = settled && answer != null && answer !== selection;
     const isMine = mine?.selection === selection;
     const on = bettorsOn(scrim, market, selection);
+    const fbShown = market === 'first_blood' ? fbRate.get(Number(selection)) || null : null;
 
     return (
       <div className={`bet-opt-wrap ${settled ? 'is-settled' : ''}`} key={key}>
@@ -336,28 +337,31 @@ const BetTab = ({
           onClick={() => pick(market, selection)}
         >
           <span className="bet-opt-label">
-            {label}
-            {/* 이름만 보고 고르면 찍기다. 지난 판에서 얼마나 땄는지를 옆에 붙인다.
-                판수가 적으면 보정된 값이라 실제 횟수는 title로 둔다 */}
-            {market === 'first_blood' &&
-              (() => {
-                const r = fbRate.get(Number(selection));
-                if (!r) return null;
-                return (
-                  <em className="bet-fb-rate" title={`${r.games}판 중 ${r.got}번`}>
-                    {Math.round(r.rate * 100)}%
-                  </em>
-                );
-              })()}
+            {/* 이름이 길면 칸을 밀어내는 대신 잘린다. 퍼블 칸은 폭이 좁아서
+                안 잘라두면 확률과 배당이 칸 밖으로 넘친다 */}
+            <span className="bet-opt-text">{label}</span>
             {/* 라벨은 '내가 어떻게 됐나'만 말한다. 정답 자체는 초록 칸이
                 이미 말해주고 있어서 안 건 칸에까지 적중을 붙일 이유가 없다 */}
             {isMine && won && <em className="bet-win-tag">적중</em>}
             {isMine && lost && <em className="bet-lost-tag">낙첨</em>}
             {isMine && !won && !lost && <em className="bet-mine-tag">내 배팅</em>}
           </span>
-          {/* 마감 뒤에는 내가 고른 것만이 아니라 전부 보여준다.
-              다른 쪽이 얼마였는지 모르면 내 배당이 좋은 건지도 모른다 */}
-          {p?.odds != null && <em className="bet-odds">{Number(p.odds).toFixed(2)}배</em>}
+          {/* 숫자는 한 덩어리로 묶는다. 퍼블 칸에서는 이 덩어리가 통째로
+              이름 아래 줄로 내려가고, 나머지 마켓에서는 오른쪽에 붙는다 */}
+          {(fbShown || p?.odds != null) && (
+            <span className="bet-opt-meta">
+              {/* 이름만 보고 고르면 찍기다. 지난 판에서 얼마나 땄는지를 붙인다.
+                  판수가 적으면 보정된 값이라 실제 횟수는 title로 둔다 */}
+              {fbShown && (
+                <em className="bet-fb-rate" title={`${fbShown.games}판 중 ${fbShown.got}번`}>
+                  {Math.round(fbShown.rate * 100)}%
+                </em>
+              )}
+              {/* 마감 뒤에는 내가 고른 것만이 아니라 전부 보여준다.
+                  다른 쪽이 얼마였는지 모르면 내 배당이 좋은 건지도 모른다 */}
+              {p?.odds != null && <em className="bet-odds">{Number(p.odds).toFixed(2)}배</em>}
+            </span>
+          )}
         </button>
 
         {settled && on.length > 0 && (
@@ -422,13 +426,16 @@ const BetTab = ({
             <div className="bet-market" key={market}>
               <h4>
                 총 킬 <strong className="bet-line">{line}</strong>
-                <em>고정 {KILLS_ODDS}배</em>
+                <em>기준 {KILLS_ODDS}배</em>
               </h4>
               <div className="bet-opts">
                 {renderOption({ scrim, market, selection: 'over', label: `오버 · ${line} 초과` })}
                 {renderOption({ scrim, market, selection: 'under', label: `언더 · ${line} 미만` })}
               </div>
-              <p className="rooms-hint">둘 중 하나만 고를 수 있어요.</p>
+              <p className="rooms-hint">
+                둘 중 하나만 고를 수 있어요. 한쪽에 몰리면 그쪽 배당이 내려가고 반대쪽이
+                올라갑니다 — 확정된 배당은 마감 때 나옵니다.
+              </p>
             </div>
           );
         })}
