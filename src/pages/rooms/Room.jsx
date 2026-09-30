@@ -20,6 +20,10 @@ import {
   FaRegCopy,
   FaPalette,
   FaExchangeAlt,
+  FaUserCheck,
+  FaUserPlus,
+  FaEllipsisH,
+  FaUsers,
 } from 'react-icons/fa';
 import { useAuth } from '../../auth/AuthContext';
 import {
@@ -57,6 +61,7 @@ import Season from '../season/Season';
 import MatchHistory from './MatchHistory';
 import RoomSwitch from './RoomSwitch';
 import HallOfFame from './HallOfFame';
+import MemberModal from './MemberModal';
 import BetTab from './BetTab';
 import KkikoTab from './KkikoTab';
 import FeedTab from './FeedTab';
@@ -166,9 +171,19 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
   const [mergeDrop, setMergeDrop] = useState('');
   const [ghostName, setGhostName] = useState('');
   const [showLoader, setShowLoader] = useState(false);
+  /* 관리 팝업을 띄운 멤버의 user_id. 객체로 들고 있으면 폴링이 한 번 돌 때
+     옛 값이 화면에 남아 끼꼬가 갱신되지 않는다 */
+  const [openMem, setOpenMem] = useState(null);
   const busy = useRef(false);
   const { confirm } = useDialog();
   const roster = useRoster(gameKey);
+
+  /* 내 팀원 명단에 있는 사람과 없는 사람. 내전에 매번 오는 사람은 내
+     명단에 들어 있고, 어쩌다 한 번 낀 사람은 없다. 섞어두면 '이 사람 내
+     명단에 넣어뒀나'를 매번 헷갈린다 */
+  const inRoster = (p) => roster.some((m) => m.name.trim() === p.name.trim());
+  const known = players.filter(inRoster);
+  const guests = players.filter((p) => !inRoster(p));
 
   /* 같은 사람인데 방 명단과 내 팀원 명단의 티어가 다른 경우.
      한쪽만 고치고 잊으면 팀 짜기가 엉뚱한 평점으로 돌아간다 */
@@ -384,16 +399,26 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
     reload();
   });
 
-  const kick = guard(async (m) => {
+  /* to를 주면 그 사람에게 끼꼬를 넘기고 내보낸다. 처음 받은 몫은
+     서버가 빼고 넘긴다 - 여기서 계산해서 보내면 두 숫자가 어긋난다 */
+  const kick = guard(async (m, to = null) => {
+    const toName = to ? members.find((x) => x.user_id === to)?.nickname : null;
     const ok = await confirm({
       title: '멤버 내보내기',
       message: `'${m.nickname}' 님을 내보낼까요?`,
-      detail: '입장 코드를 알면 다시 들어올 수 있어요.',
+      detail: toName
+        ? `남은 끼꼬는 '${toName}' 님에게 넘어갑니다 (처음 받은 몫은 빠집니다). 입장 코드를 알면 다시 들어올 수 있어요.`
+        : '이 계정 몫의 끼꼬는 그대로 남습니다. 입장 코드를 알면 다시 들어올 수 있어요.',
       confirmText: '내보내기',
       danger: true,
     });
     if (!ok) return;
-    await kickMember(room.id, m.user_id);
+    const moved = await kickMember(room.id, m.user_id, to);
+    toast.success(
+      moved > 0
+        ? `내보냈어요. ${Number(moved).toLocaleString()} 끼꼬를 ${toName} 님에게 넘겼습니다.`
+        : '내보냈어요.'
+    );
     reload();
   });
 
@@ -506,16 +531,19 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
         <section className="room-panel">
           <div className="room-panel-head">
             <h3>
-              참가자 명단<span className="panel-count">{players.length}명</span>
+              <FaUsers /> 참가자<span className="panel-count">{players.length}명</span>
             </h3>
             <RosterLoadButton
               onClick={() => setShowLoader(true)}
               disabled={players.length >= MAX_ROOM_PLAYERS}
             />
           </div>
+          {/* 아래 '멤버'와 생긴 게 비슷해서 뭐가 뭔지 헷갈렸다.
+              '경기에 뛰는 이름'과 '방에 들어온 계정'이라고 못 박아둔다 */}
           <p className="rooms-hint">
-            게임 시작 탭에서 새 이름을 적으면 여기에 자동으로 추가됩니다. 이름을 고쳐도, 지웠다
-            다시 넣어도 지난 전적은 그대로 따라옵니다.
+            <b>경기에 뛰는 이름</b>입니다. 계정과는 상관없어요 — 사이트를 안 쓰는 친구도
+            여기 있습니다. 게임 시작 탭에서 새 이름을 적으면 자동으로 추가되고, 이름을
+            고쳐도 지웠다 다시 넣어도 지난 전적은 그대로 따라옵니다.
           </p>
 
           {/* 같은 사람인데 두 명단의 티어가 다르면 팀 짜기가 엉뚱한 평점으로 돈다 */}
@@ -536,9 +564,26 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
             </div>
           )}
 
-          <div className="room-player-list">
-            {players.map((p) => (
-              <PlayerRow key={p.id} player={p} onPatch={patchPlayer} onDrop={dropPlayer} />
+          <div className="player-cols">
+            {[
+              { key: 'known', icon: <FaUserCheck />, label: '내 명단에 있는 사람', list: known },
+              { key: 'guests', icon: <FaUserPlus />, label: '내 명단에 없는 사람', list: guests },
+            ].map((col) => (
+              <div className="player-col" key={col.key}>
+                <span className="player-col-head">
+                  {col.icon} {col.label}
+                  <b>{col.list.length}</b>
+                </span>
+                {col.list.length === 0 ? (
+                  <p className="player-col-empty">없음</p>
+                ) : (
+                  <div className="room-player-list">
+                    {col.list.map((p) => (
+                      <PlayerRow key={p.id} player={p} onPatch={patchPlayer} onDrop={dropPlayer} />
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
 
@@ -628,15 +673,13 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
 
       <section className="room-panel">
         <h3>
-          멤버<span className="panel-count">{members.length}명</span>
+          <FaLink /> 멤버<span className="panel-count">{members.length}명</span>
         </h3>
-        {isAdmin && (
-          <p className="rooms-hint">
-            멤버를 참가자 명단의 이름과 이어두면, 그 사람이 뛴 경기의 참여 포인트가
-            자동으로 들어갑니다. 사이트를 안 쓰는 친구는 <b>유령 멤버</b>로 만들어
-            이어주면 됩니다.
-          </p>
-        )}
+        <p className="rooms-hint">
+          <b>이 방에 들어온 구글 계정</b>입니다. 끼꼬 지갑과 권한이 계정에 붙어요.
+          위 참가자 이름과 이어두면 그 이름으로 뛴 경기의 참여 끼꼬가 이 계정으로
+          들어갑니다.
+        </p>
 
         {/* 조용히 안 되고 있으면 아무도 모른다. 끼꼬가 전부 0인데
             이유를 못 찾는 일이 실제로 있었다 */}
@@ -651,19 +694,20 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
             </button>
           </div>
         )}
-        {/* 한 줄에 대여섯 개를 flex-wrap으로 흘려보내고 있어서, 배지가
-            있고 없고에 따라 줄 높이와 칸 위치가 사람마다 달랐다.
-            위는 '누구인가', 아래는 '무엇과 이어져 있나'로 고정한다 */}
+        {/* 줄에는 '누구인가'만 남긴다. 손대는 건 [관리] 팝업으로 모았다 -
+            참가자 셀렉트와 버튼 셋이 줄마다 붙어 있어서 열 명이면 설정
+            탭이 가로로도 세로로도 늘어졌다 */}
         <ul className="room-members">
           {members.map((m) => {
             const title = m.player && titles.get(m.player.name);
+            const mine = m.user_id === myId;
             return (
               <li key={m.user_id} className={m.player ? '' : 'is-unlinked'}>
                 <div className="mem-top">
                   <span className="mem-name">
                     {m.is_ghost && <FaGhost className="member-ghost-icon" title="유령 멤버" />}
                     {m.nickname}
-                    {m.user_id === myId && <em>(나)</em>}
+                    {mine && <em>(나)</em>}
                   </span>
                   <span className={`rooms-role role-${m.role}`}>
                     {m.is_ghost ? '유령' : ROLE_LABEL[m.role]}
@@ -673,68 +717,61 @@ const Settings = ({ room, members, players, titles, myRole, myId, reload, onGone
                       {title.icon} {title.label}
                     </span>
                   )}
-                  <span className="mem-points">{m.points.toLocaleString()} 끼꼬</span>
                 </div>
 
                 <div className="mem-bottom">
-                  {/* 연결은 방장·부방장만 건드린다. 멤버에게는 결과만 보인다 */}
-                  {isAdmin ? (
-                    <label className="mem-link">
-                      <FaLink />
-                      <select
-                        value={m.player?.id ?? ''}
-                        onChange={(e) => link(m, e.target.value ? Number(e.target.value) : null)}
-                        aria-label={`${m.nickname} 참가자 연결`}
-                      >
-                        <option value="">참가자 안 이어짐</option>
-                        {players.map((p) => {
-                          const taken = p.linked_user_id && p.linked_user_id !== m.user_id;
-                          return (
-                            <option key={p.id} value={p.id} disabled={taken}>
-                              {p.name}
-                              {taken ? ' (이미 이어짐)' : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </label>
-                  ) : (
-                    <span className={`mem-linked ${m.player ? '' : 'is-none'}`}>
-                      <FaLink /> {m.player ? m.player.name : '참가자 안 이어짐'}
-                    </span>
-                  )}
-
-                  {isAdmin && m.is_ghost && (
-                    <span className="mem-acts">
-                      <button className="ghost-btn" onClick={() => dropGhost(m)}>
-                        삭제
-                      </button>
-                    </span>
-                  )}
-                  {isOwner && !m.is_ghost && m.user_id !== myId && (
-                    <span className="mem-acts">
-                      <button
-                        className="ghost-btn"
-                        onClick={() => changeRole(m, m.role === 'admin' ? 'member' : 'admin')}
-                      >
-                        {m.role === 'admin' ? '부방장 해제' : '부방장'}
-                      </button>
-                      <button className="ghost-btn" onClick={() => handOver(m)}>
-                        방장 넘기기
-                      </button>
-                      <button className="ghost-btn" onClick={() => kick(m)}>
-                        내보내기
-                      </button>
-                    </span>
-                  )}
+                  <span className={`mem-linked ${m.player ? '' : 'is-none'}`}>
+                    <FaLink />
+                    {/* 카드가 좁아지면 이름이 잘려야 한다. 텍스트를 그냥 두면
+                        flex 안에서 잘리지 않고 끼꼬와 버튼을 밀어낸다 */}
+                    <b>{m.player ? m.player.name : '참가자 안 이어짐'}</b>
+                  </span>
+                  <span className="mem-points">{m.points.toLocaleString()} 끼꼬</span>
+                  {/* 멤버도 남의 연결은 볼 수 있어야 하니 팝업 자체는 열어준다.
+                      안에서 고칠 수 있는 건 권한에 따라 갈린다 */}
+                  <button
+                    className="icon-btn mem-more"
+                    onClick={() => setOpenMem(m.user_id)}
+                    aria-label={`${m.nickname} 관리`}
+                    title="관리"
+                  >
+                    <FaEllipsisH />
+                  </button>
                 </div>
               </li>
             );
           })}
         </ul>
 
+        {/* 폴링이 돌아도 열린 팝업이 최신 끼꼬를 보게, id로 다시 찾는다 */}
+        {openMem && members.some((m) => m.user_id === openMem) && (
+          <MemberModal
+            member={members.find((m) => m.user_id === openMem)}
+            members={members}
+            players={players}
+            isOwner={isOwner}
+            isAdmin={isAdmin}
+            isMe={openMem === myId}
+            onClose={() => setOpenMem(null)}
+            onLink={link}
+            onRole={changeRole}
+            onHandOver={async (m) => {
+              await handOver(m);
+              setOpenMem(null);
+            }}
+            onKick={async (m, to) => {
+              await kick(m, to);
+              setOpenMem(null);
+            }}
+            onDropGhost={async (m) => {
+              await dropGhost(m);
+              setOpenMem(null);
+            }}
+          />
+        )}
+
         {isAdmin && (
-          <div className="rooms-form-row">
+          <div className="rooms-form-row member-add">
             <input
               className="rooms-input"
               value={ghostName}

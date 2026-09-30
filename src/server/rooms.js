@@ -72,8 +72,11 @@ export const setMemberRole = (roomId, userId, role) =>
   rpc('set_member_role', { p_room: roomId, p_user: userId, p_role: role });
 export const transferRoom = (roomId, userId) =>
   rpc('transfer_room', { p_room: roomId, p_user: userId });
-export const kickMember = (roomId, userId) =>
-  rpc('kick_member', { p_room: roomId, p_user: userId });
+/* 계정을 바꿔 들어온 사람의 옛 계정을 내보낼 때, 거기 쌓인 끼꼬를
+   남겨줄 사람을 지정할 수 있다 (처음 받은 10000은 빼고 넘어간다).
+   넘긴 액수를 돌려준다 */
+export const kickMember = (roomId, userId, toUserId = null) =>
+  rpc('kick_member', { p_room: roomId, p_user: userId, p_to: toUserId });
 
 /* 멤버 ↔ 참가자 묶기. playerId가 null이면 연결을 끊는다.
    묶어두면 경기 참여 포인트가 이 계정으로 간다 */
@@ -204,6 +207,7 @@ export const LOG_TAGS = {
   record: { label: '신기록', tone: 'gold' },
   scrim_cancelled: { label: '취소', tone: 'red' },
   player_merge: { label: '명단', tone: 'blue' },
+  member_kicked: { label: '멤버', tone: 'red' },
 };
 
 /* 방 기록 종류. 서버가 kind만 보내고 문구는 여기서 만든다 */
@@ -314,6 +318,21 @@ export const feedParts = (log) => {
           t(' '),
           amountOf(p.refund),
           t(' 환불'),
+        ],
+      };
+    /* 계정을 바꿔 들어온 사람의 옛 계정을 내보낼 때, 거기 쌓인 끼꼬가
+       남에게 넘어간다. 남의 돈이 움직이는 일이라 반드시 남긴다 */
+    case 'member_kicked':
+      return {
+        tag,
+        parts: [
+          t('방장이 '),
+          nameOf_(p.who),
+          t(' 님을 '),
+          bad('내보냈어요'),
+          ...(p.amount > 0
+            ? [t(' · 끼꼬 '), amountOf(p.amount), t('를 '), nameOf_(p.to), t(' 님에게 넘김')]
+            : []),
         ],
       };
     /* 전적이 두 줄로 갈려 있던 걸 합쳤다. 남의 전적이 움직이는 일이라 남긴다 */

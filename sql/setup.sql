@@ -609,8 +609,16 @@ begin
 end; $fn$;
 
 
-create or replace function public.kick_member(p_room bigint, p_user text)
-returns void language plpgsql security definer set search_path = public as $fn$
+-- 인자를 늘리면 옛 함수가 남아 오버로드가 된다. PostgREST가 어느 것을
+-- 부를지 못 골라서 ambiguous 오류를 낸다. 먼저 지운다.
+drop function if exists public.kick_member(bigint, text);
+create or replace function public.kick_member(
+  p_room bigint, p_user text, p_to text default null)
+returns int language plpgsql security definer set search_path = public as $fn$
+declare
+  moved    int := 0;
+  who      text;
+  to_name  text;
 begin
   if not public.is_room_admin(p_room) then
     raise exception '방장과 부방장만 내보낼 수 있어요.';
@@ -618,11 +626,55 @@ begin
   if p_user = (select owner_id from rooms where id = p_room) then
     raise exception '방장은 내보낼 수 없어요.';
   end if;
+
+  -- 구글 계정을 바꿔 들어온 사람의 옛 계정을 내보낼 때, 거기 쌓인 끼꼬가
+  -- 같이 사라지면 억울하다. 받을 사람을 지정하면 넘겨준다.
+  --
+  -- 처음 받은 10000은 넘기지 않는다. 그걸 같이 넘기면 계정만 새로 만들어
+  -- 들어왔다 나가는 것만으로 10000씩 찍어낼 수 있다. 벌어들인 몫만 간다.
+  -- (숫자는 room_wallets.points의 기본값 = tuning.js MONTHLY_KKIKO)
+  if p_to is not null then
+    if p_to = p_user then
+      raise exception '내보내는 사람에게 넘길 수는 없어요.';
+    end if;
+    if not exists (select 1 from room_members where room_id = p_room and user_id = p_to) then
+      raise exception '끼꼬를 받을 사람이 이 방 멤버가 아니에요.';
+    end if;
+
+    perform public.ensure_wallet(p_room, p_to);
+    -- 잠그고 읽어야 한다. 안 잠그면 같은 잔액을 두 번 보고 두 번 넘긴다
+    select greatest(0, points - 10000) into moved
+      from room_wallets where room_id = p_room and user_id = p_user for update;
+    moved := coalesce(moved, 0);
+
+    if moved > 0 then
+      update room_wallets set points = points - moved
+       where room_id = p_room and user_id = p_user;
+      update room_wallets set points = points + moved
+       where room_id = p_room and user_id = p_to;
+      insert into point_ledger (user_id, room_id, delta, reason, counterpart_user_id)
+      values (p_user, p_room, -moved, 'transfer_out', p_to),
+             (p_to,   p_room,  moved, 'transfer_in',  p_user);
+    end if;
+  end if;
+
+  select coalesce(nullif(nickname, ''), '이름없음') into who
+    from profiles where user_id = p_user;
+  if p_to is not null then
+    select coalesce(nullif(nickname, ''), '이름없음') into to_name
+      from profiles where user_id = p_to;
+  end if;
+
   -- 나간 사람이 참가자에 묶인 채로 남으면, 그 참가자는 없는 계정을
   -- 가리키게 되고 참여 포인트가 허공으로 나간다
   update room_players set linked_user_id = null
    where room_id = p_room and linked_user_id = p_user;
   delete from room_members where room_id = p_room and user_id = p_user;
+
+  perform public.log_room(p_room, 'member_kicked', jsonb_build_object(
+    'who', who, 'to', to_name, 'amount', moved));
+
+  return moved;
 end; $fn$;
 
 
@@ -925,7 +977,7 @@ grant execute on function
   public.reset_join_code(bigint),
   public.set_member_role(bigint, text, text),
   public.transfer_room(bigint, text),
-  public.kick_member(bigint, text),
+  public.kick_member(bigint, text, text),
   public.link_room_player(bigint, text, bigint),
   public.add_ghost_member(bigint, text),
   public.remove_ghost_member(bigint, text),

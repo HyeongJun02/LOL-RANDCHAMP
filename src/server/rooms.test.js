@@ -1401,3 +1401,49 @@ test('jsonb 컬럼에 배열 연산자를 쓰지 않는다', () => {
   /* 꺼내 쓰는 방식은 이 둘뿐이다 */
   expect(bare).toMatch(/jsonb_array_elements_text\(\s*(coalesce\(a|s\.team_a)/);
 });
+
+/* ---------- 내보내면서 끼꼬 넘기기 ---------- */
+/* 남의 돈이 오가는 길이다. 여기가 틀리면 끼꼬가 사라지거나 늘어난다 */
+
+test('처음 받은 몫은 넘기지 않는다 (계정을 새로 만들어 찍어내는 길이 된다)', () => {
+  const tuning = require('../rules/tuning');
+  const body = fnBody('kick_member');
+  expect(body).toContain(`greatest(0, points - ${tuning.MONTHLY_KKIKO})`);
+});
+
+test('잔액을 잠그고 읽는다 (안 잠그면 같은 잔액을 두 번 보고 두 번 넘긴다)', () => {
+  expect(fnBody('kick_member')).toMatch(
+    /from room_wallets where room_id = p_room and user_id = p_user for update/
+  );
+});
+
+test('넘긴 끼꼬는 양쪽 원장에 남는다', () => {
+  const body = fnBody('kick_member');
+  expect(body).toContain("(p_user, p_room, -moved, 'transfer_out', p_to)");
+  /* 위쪽 sql은 공백을 한 칸으로 줄여 읽는다 (SQL의 줄맞춤에 안 매이게) */
+  expect(body).toContain("(p_to, p_room, moved, 'transfer_in', p_user)");
+  /* 피드에도 남는다 - 방장이 조용히 남의 끼꼬를 옮길 수 있으면 안 된다 */
+  expect(body).toContain("log_room(p_room, 'member_kicked'");
+});
+
+test('받을 사람이 이 방 멤버인지, 자기 자신이 아닌지 본다', () => {
+  const body = fnBody('kick_member');
+  expect(body).toContain('if p_to = p_user then');
+  expect(body).toMatch(/where room_id = p_room and user_id = p_to\) then\s*\n\s*raise exception/);
+});
+
+test('끼꼬를 안 넘겨도 내보내진다 (p_to는 없어도 된다)', () => {
+  expect(sql).toContain('p_room bigint, p_user text, p_to text default null');
+  /* 인자를 늘리면 옛 함수가 남아 PostgREST가 어느 쪽을 부를지 못 고른다 */
+  expect(sql).toContain('drop function if exists public.kick_member(bigint, text);');
+  expect(sql).toContain('public.kick_member(bigint, text, text),');
+});
+
+/* 목록 줄에 참가자 셀렉트와 버튼 셋을 늘어놓으니 열 명이면 설정 탭이
+   가로로도 세로로도 늘어졌다. 손대는 건 팝업 하나로 모았다 */
+test('멤버 줄에는 손대는 칸을 두지 않는다', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pages', 'rooms', 'Room.jsx'), 'utf8');
+  const list = src.slice(src.indexOf('<ul className="room-members">'), src.indexOf('</ul>', src.indexOf('<ul className="room-members">')));
+  expect(list).not.toContain('<select');
+  expect(list).toContain('mem-more');
+});
