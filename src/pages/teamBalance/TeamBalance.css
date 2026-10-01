@@ -809,3 +809,34 @@
     margin-left: 0;
   }
 }
+
+/* ---------- 모바일 ---------- */
+@media (max-width: 640px) {
+  /* 팝업 자체가 스크롤되는데 참가자 칸도 따로 스크롤되면, 손가락이 어느
+     쪽을 굴리는지 매번 헷갈린다. 좁은 화면에서는 안쪽 스크롤을 푼다 */
+  .player-rows,
+  .tb-embedded .player-rows {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .panel-head {
+    flex-wrap: wrap;
+  }
+
+  .panel-head-actions {
+    flex-wrap: wrap;
+  }
+
+  /* 팀 카드 둘을 나란히 두면 이름이 두 글자만 남는다 */
+  .tb-embedded .outcome-teams {
+    grid-template-columns: 1fr;
+  }
+
+  .tb-use-teams {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    min-height: 2.8rem;
+  }
+}

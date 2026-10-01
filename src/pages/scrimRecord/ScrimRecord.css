@@ -734,3 +734,44 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* ---------- 모바일 ---------- */
+@media (max-width: 640px) {
+  /* 또또 열기와 설명이 한 줄이면 설명이 세로로 길게 눌린다 */
+  .sr-bet-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sr-bet-btn {
+    justify-content: center;
+    min-height: 2.6rem;
+  }
+
+  .sr-pool-head {
+    align-items: flex-start;
+  }
+
+  .sr-sorts {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sr-sort {
+    flex: 1;
+  }
+
+  /* 카드 단추를 손가락으로 누를 수 있게 */
+  .sr-card-act {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+
+  .win-btn {
+    min-height: 2.8rem;
+  }
+
+  .sr-live-foot {
+    flex-wrap: wrap;
+  }
+}

@@ -4257,3 +4257,68 @@ li.day-sep em {
     padding-top: 0;
   }
 }
+
+/* ---------- 모바일: 또또 · 팝업 안쪽 ---------- */
+@media (max-width: 640px) {
+  /* 금액 단추 여섯 개가 한 줄을 넘는다. 고르게 나눠 두 줄로 */
+  .bet-chips .bet-chip {
+    flex: 1 0 calc(33% - 0.25rem);
+    min-height: 2.1rem;
+  }
+
+  .bet-cap,
+  .bet-if {
+    flex-basis: 100%;
+    margin-left: 0;
+    text-align: right;
+  }
+
+  .bet-cart-foot {
+    flex-wrap: wrap;
+  }
+
+  .bet-cart-foot .primary-btn {
+    flex: 1 1 100%;
+    min-height: 2.7rem;
+  }
+
+  /* 첫 킬 표는 두 칸을 유지하되 글자를 줄인다. 한 칸으로 풀면
+     '우리 탑 ↔ 상대 탑'이 마주 보는 의미가 사라진다 */
+  .fb-table .bet-opt {
+    font-size: 0.74rem;
+    padding: 0.45rem 0.5rem;
+  }
+
+  .fb-table .fb-lane {
+    margin-left: 0.2rem;
+  }
+
+  .casual-quick .ghost-btn {
+    flex: 1 1 calc(50% - 0.35rem);
+    justify-content: center;
+  }
+
+  .casual-pool .casual-chip {
+    min-height: 2.2rem;
+  }
+
+  .casual-lane {
+    padding: 0.35rem 0.45rem;
+  }
+
+  .result-chip {
+    min-height: 2.2rem;
+  }
+
+  .line-picker {
+    justify-content: center;
+  }
+
+  .history-kind {
+    display: flex;
+  }
+
+  .history-kind .seg-tab {
+    flex: 1;
+  }
+}
