@@ -873,3 +873,33 @@ select option {
     font-size: 16px;
   }
 }
+
+/* ---------- 방 엠블럼 (components/common/Emblem.jsx) ---------- */
+/* 페이지를 나눠 받게 되면서 이 파일이 방 목록과 방 화면에 서로 다른 순서로
+   실려 CSS 순서 경고가 났다. 어디서나 쓰는 조각이라 전역에 둔다 */
+/* 글자 수에 따라 칸에 맞춰 줄인다. em이라 부르는 쪽의 크기를 따라간다 -
+   방 머리(34px)든 방 목록 카드든 같은 규칙이 먹는다 */
+.emblem {
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.emblem[data-glyphs='2'] {
+  font-size: 0.72em;
+  letter-spacing: -0.01em;
+}
+
+.emblem[data-glyphs='3'] {
+  font-size: 0.55em;
+  letter-spacing: -0.02em;
+}
+
+/* 세 글자까지만 받지만, 예전 방이나 콘솔로 직접 넣은 값이 더 길 수 있다.
+   그래도 칸을 안 뚫게 */
+.emblem[data-glyphs='4'] {
+  font-size: 0.42em;
+  letter-spacing: -0.03em;
+}

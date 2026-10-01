@@ -1,6 +1,5 @@
 import React from 'react';
 import { DEFAULT_EMBLEM, glyphsOf } from '../../lib/roomStyle';
-import './Emblem.css';
 
 /* 방 엠블럼. 고른 이모지일 수도 있고 직접 적은 글자일 수도 있다.
 
