@@ -4032,3 +4032,19 @@ li.day-sep em {
   color: #e6ecf7;
   font-variant-numeric: tabular-nums;
 }
+
+/* 여는 팝업의 한 번에 채우기 단추들 */
+.casual-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+
+.casual-quick a.ghost-btn {
+  text-decoration: none;
+}
+
+.casual-quick svg {
+  font-size: 0.7em;
+}

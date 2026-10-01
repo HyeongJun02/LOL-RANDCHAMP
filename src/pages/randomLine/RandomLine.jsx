@@ -12,6 +12,7 @@ import { randomQuote } from '../../rules/lines';
 import { GAMES, DEFAULT_GAME, getGame, getRole, roleNamesOf } from '../../rules/games';
 import { GameProvider } from '../../lib/GameContext';
 import { usePageMeta, PAGE_META } from '../../lib/seo';
+import { saveLastLines } from '../../lib/lastLines';
 import styles from './RandomLine.module.css';
 
 const SUBTITLES = [
@@ -124,6 +125,10 @@ export default function RandomLinePage() {
 
   const checkCelebrate = (arr) => {
     if (arr.every(Boolean)) {
+      /* 방의 일반 게임 또또가 이어받는다 (롤만 - 라인이 다섯이라 그대로 맞는다) */
+      if (gameKey === 'lol') {
+        saveLastLines(players.map((p, i) => ({ name: p.name.trim(), lane: arr[i] })));
+      }
       setCelebrate(true);
       setTimeout(() => setCelebrate(false), 3200);
     }

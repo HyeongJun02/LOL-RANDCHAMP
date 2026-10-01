@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { FaDice, FaTimes } from 'react-icons/fa';
+import toast from 'react-hot-toast';
+import { FaDice, FaTimes, FaRedo, FaRandom, FaExternalLinkAlt } from 'react-icons/fa';
+import { loadLastLines } from '../../lib/lastLines';
 import Modal from '../../components/common/Modal';
 import KillLinePicker from './KillLinePicker';
 import { ClosePresets, LINE_HINT } from './BetOpenModal';
@@ -19,7 +21,7 @@ import {
    모른다. 그래서 '누가 뛰나'와 '어느 라인인가'만 고른다.
    라인을 받는 건 첫 킬 배당 때문이다 - 서포터가 따기 제일 어렵다.
    칼바람은 라인이 없어서 사람만 고른다. */
-const CasualOpenModal = ({ players, onClose, onOpen }) => {
+const CasualOpenModal = ({ players, recent = null, onClose, onOpen }) => {
   const [mode, setMode] = useState('normal');
   /* 고른 순서대로. [{ id, lane }] */
   const [team, setTeam] = useState([]);
@@ -60,6 +62,41 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
         if (x.lane === lane) return { ...x, lane: mine };
         return x;
       });
+    });
+
+  /* 매번 다섯 명과 포지션을 손으로 넣는 게 제일 번거로웠다 */
+  const alive = new Set(players.map((p) => p.id));
+
+  /* 직전 일반 게임을 그대로. 같은 사람들끼리 연달아 돌리는 게 보통이다 */
+  const fillRecent = () => {
+    if (!recent) return;
+    const ids = (recent.team_a || []).map(Number).filter((id) => alive.has(id));
+    setTeam(ids.slice(0, CASUAL_TEAM_SIZE).map((id) => ({ id, lane: recent.lanes?.[id] || null })));
+    if (recent.mode && recent.mode !== mode) pickMode(recent.mode);
+  };
+
+  /* 라인 정하기에서 마지막으로 뽑은 결과. 이름이 명단과 같아야 들어온다 */
+  const lastLines = loadLastLines();
+  const fillFromLines = () => {
+    if (!lastLines) return;
+    const byName = new Map(players.map((p) => [p.name.trim(), p.id]));
+    const keyOf = (label) => LANES.find((l) => l.label === label)?.key || null;
+    const rows = lastLines.rows.filter((r) => byName.has(r.name));
+    const missed = lastLines.rows.filter((r) => r.name && !byName.has(r.name));
+    setTeam(rows.slice(0, CASUAL_TEAM_SIZE).map((r) => ({ id: byName.get(r.name), lane: keyOf(r.lane) })));
+    if (mode !== 'normal') pickMode('normal');
+    if (missed.length) toast.error(`명단에 없는 이름은 뺐어요: ${missed.map((r) => r.name).join(', ')}`);
+  };
+
+  /* 아직 라인이 없는 사람에게 남은 라인을 무작위로 */
+  const randomRest = () =>
+    setTeam((prev) => {
+      const free = LANES.map((l) => l.key).filter((k) => !prev.some((x) => x.lane === k));
+      for (let i = free.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [free[i], free[j]] = [free[j], free[i]];
+      }
+      return prev.map((x) => (x.lane ? x : { ...x, lane: free.shift() || null }));
     });
 
   const start = async () => {
@@ -108,6 +145,28 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
       <p className="bet-open-label" style={{ marginTop: '1rem' }}>
         뛰는 사람 <b>{team.length}</b>/{CASUAL_TEAM_SIZE}
       </p>
+
+      <div className="casual-quick">
+        {recent && (
+          <button className="ghost-btn" onClick={fillRecent}>
+            <FaRedo /> 직전 일반 게임 그대로
+          </button>
+        )}
+        {lastLines && (
+          <button className="ghost-btn" onClick={fillFromLines}>
+            <FaDice /> 라인 정하기 결과
+          </button>
+        )}
+        {hasLanes(mode) && team.some((x) => !x.lane) && (
+          <button className="ghost-btn" onClick={randomRest}>
+            <FaRandom /> 남은 라인 랜덤
+          </button>
+        )}
+        {/* 새 탭으로 연다. 여기서 뽑고 돌아오면 '라인 정하기 결과'가 생긴다 */}
+        <a className="ghost-btn" href="/random-line" target="_blank" rel="noreferrer">
+          라인 정하기 열기 <FaExternalLinkAlt />
+        </a>
+      </div>
 
       {/* 사람 칩은 고른 뒤에도 그 자리에 남는다. 고른 사람을 칩 목록에서
           빼거나 위에 쌓으면, 누를 때마다 남은 칩들이 밀려서 다음 사람을

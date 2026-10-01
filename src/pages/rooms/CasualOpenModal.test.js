@@ -145,3 +145,28 @@ test('일반이면 정한 라인만 보낸다 (미정은 안 보낸다)', async 
   expect(opened.lanes).toEqual({ 1: 'SUPPORT' });
   expect(opened.killLine).toBe(44.5);
 });
+
+/* 매번 다섯 명과 포지션을 손으로 넣는 게 제일 번거로웠다 */
+test('라인 정하기 결과를 한 번에 불러온다', async () => {
+  localStorage.setItem(
+    'lrc.lastLines',
+    JSON.stringify({ rows: [{ name: '철수', lane: '서폿' }, { name: '모르는사람', lane: '탑' }] })
+  );
+  await render();
+  await click(byText('.ghost-btn', '라인 정하기 결과'));
+  expect(laneOf('철수')).toBe('서폿');
+  /* 명단에 없는 이름은 빠진다 */
+  expect(document.querySelectorAll('.casual-team li')).toHaveLength(1);
+  localStorage.clear();
+});
+
+test('남은 라인 랜덤은 비어 있는 라인만 채운다', async () => {
+  await render();
+  await click(byText('.casual-chip', '철수'));
+  await click(byText('.casual-chip', '영희'));
+  await pickLane('철수', '탑');
+  await click(byText('.ghost-btn', '남은 라인 랜덤'));
+  expect(laneOf('철수')).toBe('탑');
+  expect(laneOf('영희')).toBeDefined();
+  expect(laneOf('영희')).not.toBe('탑');
+});

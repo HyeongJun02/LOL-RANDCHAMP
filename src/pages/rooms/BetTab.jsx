@@ -1611,6 +1611,11 @@ const BetTab = ({
       {openCasual && (
         <CasualOpenModal
           players={players.filter((p) => !p.deleted_at)}
+          recent={
+            [...scrims]
+              .filter((s) => s.kind === 'casual')
+              .sort((a, b) => new Date(b.played_at) - new Date(a.played_at))[0] || null
+          }
           onClose={() => setOpenCasual(false)}
           onOpen={(opts) =>
             guard(async () => {
