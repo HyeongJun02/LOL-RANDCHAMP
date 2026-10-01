@@ -149,7 +149,7 @@ describe('팀 킬 · 상대 라인 · 묶음', () => {
      미정이면 남은 줄에 차례로 */
   test('정한 라인은 그 줄에, 미정은 남은 줄에', () => {
     const rows = fbRows([1, 2, 3], { 2: 'SUPPORT' }, 'normal');
-    expect(rows.map((r) => r.lane)).toEqual(['TOP', 'JUNGLE', 'MID', 'SUPPORT', 'ADC']);
+    expect(rows.map((r) => r.lane)).toEqual(['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']);
     expect(rows.find((r) => r.lane === 'SUPPORT').id).toBe(2);
     expect(rows.find((r) => r.lane === 'TOP').id).toBe(1);
     expect(rows.find((r) => r.lane === 'JUNGLE').id).toBe(3);

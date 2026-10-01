@@ -14,6 +14,7 @@ import {
   hasLanes,
   laneLabel,
   firstBloodOdds,
+  byLane,
 } from '../../rules/casual';
 
 /* 일반 게임 또또를 열기 전에 정하는 것들.
@@ -192,7 +193,9 @@ const CasualOpenModal = ({ players, recent = null, onClose, onOpen }) => {
       {/* 고른 사람. 라인은 칼바람이면 안 그린다 */}
       {team.length > 0 && (
         <ul className="casual-team" style={{ marginTop: '0.6rem' }}>
-          {team.map((x) => (
+          {byLane(team.map((x) => x.id), Object.fromEntries(team.map((x) => [x.id, x.lane])))
+            .map((id) => team.find((x) => x.id === id))
+            .map((x) => (
             <li key={x.id}>
               <span className="casual-name">{nameOf.get(x.id) || '?'}</span>
               {hasLanes(mode) && (

@@ -93,8 +93,17 @@ export const enemyPick = (lane) => `them_${lane}`;
 export const enemyLaneOf = (sel) =>
   typeof sel === 'string' && sel.startsWith('them_') ? sel.slice(5) : null;
 
-/* 첫 킬 표의 줄 순서. 탑 · 정글 · 미드 · 서폿 · 원딜 */
-export const FB_ROW_ORDER = ['TOP', 'JUNGLE', 'MID', 'SUPPORT', 'ADC'];
+/* 라인 순서는 어디서나 탑 · 정글 · 미드 · 원딜 · 서폿 */
+export const FB_ROW_ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
+
+/* 사람들을 라인 순서로. 라인 미정은 맨 뒤 (고른 순서 그대로) */
+export const byLane = (ids, lanes = {}) => {
+  const rank = (id) => {
+    const i = FB_ROW_ORDER.indexOf(lanes?.[id]);
+    return i < 0 ? 9 : i;
+  };
+  return [...ids].sort((a, b) => rank(a) - rank(b));
+};
 
 /* 우리 다섯을 첫 킬 표의 줄에 앉힌다. 라인이 있으면 그 줄에, 미정이면
    남은 줄에 차례대로. 칼바람은 라인이 없으니 고른 순서대로 */

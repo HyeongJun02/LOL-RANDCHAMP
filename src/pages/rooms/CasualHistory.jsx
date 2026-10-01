@@ -11,6 +11,7 @@ import {
   CASUAL_MODES,
   hasLanes,
   hasDragon,
+  byLane,
   dragonIcon,
   dragonLabel,
 } from '../../rules/casual';
@@ -101,13 +102,6 @@ const CasualHistory = ({
     days.get(k).push(s);
   });
 
-  /* 탑 · 정글 · 미드 · 원딜 · 서폿, 미정은 맨 뒤 */
-  const LANE_ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
-  const laneRank = (s, id) => {
-    const i = LANE_ORDER.indexOf(s.lanes?.[id]);
-    return i < 0 ? 9 : i;
-  };
-
   const row = (s) => {
     const laned = hasLanes(s.mode);
     const fb =
@@ -133,8 +127,7 @@ const CasualHistory = ({
             맞았다. 세로로 길어지더라도 탑 · 정글 · 미드 · 원딜 · 서폿 순서로
             한 줄에 한 명 */}
         <span className="casual-row-team">
-          {[...(s.team_a || [])]
-            .sort((a, b) => laneRank(s, a) - laneRank(s, b))
+          {byLane(s.team_a || [], s.lanes)
             .map((id) => (
               <span key={id} className="casual-member">
                 {laned && s.lanes?.[id] ? (

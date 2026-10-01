@@ -20,6 +20,7 @@ import TeamBalance from '../teamBalance/TeamBalance';
 import BetOpenModal from '../rooms/BetOpenModal';
 import BetTimer from '../rooms/BetTimer';
 import LaneTag from '../rooms/LaneTag';
+import { byLane } from '../../rules/casual';
 import { useDialog } from '../../components/common/Dialog';
 import { timeAgo } from '../../lib/timeAgo';
 import {
@@ -496,7 +497,7 @@ const ScrimRecord = ({
       <div className="sr-live-teams">
         {/* 일반 게임은 우리 다섯뿐이다. 빈 2팀 칸을 그리면 뭔가 빠진 것처럼 보인다 */}
         {(activeScrim.kind === 'casual'
-          ? [{ ids: activeScrim.team_a || [], label: '우리 팀', accent: 'team-blue' }]
+          ? [{ ids: byLane(activeScrim.team_a || [], activeScrim.lanes), label: '우리 팀', accent: 'team-blue' }]
           : [
               { ids: activeScrim.team_a || [], label: '1팀', accent: 'team-blue' },
               { ids: activeScrim.team_b || [], label: '2팀', accent: 'team-red' },

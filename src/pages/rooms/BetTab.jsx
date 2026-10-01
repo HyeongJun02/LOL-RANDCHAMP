@@ -56,6 +56,7 @@ import {
   parlayOdds,
   casualOutcome,
   FB_ROW_ORDER,
+  byLane,
 } from '../../rules/casual';
 import { timeAgo } from '../../lib/timeAgo';
 import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS, PARLAY_MAX_WIN } from '../../rules/tuning';
@@ -557,7 +558,7 @@ const BetTab = ({
       <div className="bet-team">
         <strong>우리 팀</strong>
         <span className="casual-team-names">
-          {(scrim.team_a || []).map((id) => {
+          {byLane(scrim.team_a || [], scrim.lanes).map((id) => {
             const lane = hasLanes(scrim.mode) && scrim.lanes?.[id];
             return (
               <span key={id} className="casual-team-name">
@@ -1512,7 +1513,7 @@ const BetTab = ({
                       </div>
                       {fbSide === 'us' && (
                         <div className="result-chips">
-                          {(activeScrim.team_a || []).map((id) => (
+                          {byLane(activeScrim.team_a || [], activeScrim.lanes).map((id) => (
                             <button
                               key={id}
                               className={`result-chip ${String(fb) === String(id) ? 'is-on' : ''}`}
