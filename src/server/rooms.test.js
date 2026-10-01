@@ -436,10 +436,10 @@ test('반반이면 기준값, 몰리면 내려가고 반대쪽은 올라간다',
       Math.max(KILLS_ODDS_RANGE.min, Math.round(KILLS_ODDS * (0.5 / share) ** KILLS_SHADE * 100) / 100)
     );
   expect(odds(0.5)).toBe(KILLS_ODDS);
-  expect(odds(0.8)).toBeCloseTo(1.57, 2);
+  expect(odds(0.8)).toBeCloseTo(1.55, 2);
   expect(odds(0.2)).toBe(KILLS_ODDS_RANGE.max);
   /* 한쪽에만 걸렸어도 상한·하한 안에 있다 */
-  expect(odds(1)).toBeCloseTo(1.4, 2);
+  expect(odds(1)).toBeCloseTo(1.39, 2);
   expect(odds(0.5)).toBeLessThan(odds(0.35));
   expect(odds(0.65)).toBeLessThan(odds(0.5));
 });
@@ -2182,4 +2182,16 @@ describe('배팅 묶기 (SQL)', () => {
     expect(body).toContain("mult := mult * (l->>'odds')::numeric;");
     expect(body).not.toMatch(/exp\(|ln\(/);
   });
+});
+
+/* 팀 킬·상대 라인을 안 받아와서 결과 화면에 우리 팀·상대 팀 언더오버
+   적중이 안 칠해졌다 (저장은 되는데 안 읽는 것) */
+test('일반 게임 결과 컬럼을 전부 받아온다', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const sel = src.slice(src.indexOf('const ROOM_SELECT'), src.indexOf(';', src.indexOf('const ROOM_SELECT')));
+  ['our_kills', 'opp_kills', 'fb_enemy_lane', 'fb_side', 'first_dragon', 'lanes'].forEach((c) =>
+    expect(sel).toContain(c)
+  );
+  const { CASUAL_FB_RATE } = require('../rules/tuning');
+  expect(fnBody('casual_fb_odds')).toContain(`round(${CASUAL_FB_RATE} / (0.5 *`);
 });

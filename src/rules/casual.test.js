@@ -31,10 +31,11 @@ test('라인 몫을 다 더하면 1이다', () => {
   );
 });
 
-/* 평균 몫(0.2)이면 내전의 10인 첫 킬 배당(10 × 0.85)과 같은 자리여야 한다.
-   상대팀이 딸 절반을 떼고 남은 절반을 다섯이 나누니 결국 10분의 1이다 */
-test('평균 라인은 내전 10인 첫 킬과 같은 배당이다', () => {
-  expect(firstBloodOdds('ANY', 'aram')).toBeCloseTo(8.5, 2);
+/* 미정·칼바람은 다섯 중 하나(0.2). 0.7 / (0.5 × 0.2) = 7배.
+   서포터가 14배를 넘던 걸 내린 값이다 */
+test('라인 미정은 7배, 서포터도 10배를 안 넘는다', () => {
+  expect(firstBloodOdds('ANY', 'aram')).toBeCloseTo(7, 2);
+  expect(firstBloodOdds('SUPPORT', 'normal')).toBeLessThan(10);
 });
 
 test('칼바람은 라인도 용도 없다', () => {

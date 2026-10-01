@@ -200,10 +200,10 @@ test('배팅 묶기를 켜면 배당이 곱해지고 한 칸에만 적는다', a
   await click(el.querySelector('.casual-dragons .bet-opt'));
   await click(el.querySelector('.parlay-toggle'));
 
-  /* 1.98 × 5.5 = 10.89 */
-  expect(el.querySelector('.parlay-sum strong').textContent).toBe('10.89배');
-  /* 버는 끼꼬 35000을 넘지 않게: floor(35000 / 9.89) = 3538 */
-  expect(el.querySelector('.parlay-sum em').textContent).toContain('3,538');
+  /* 1.96 × 5.5 = 10.78 */
+  expect(el.querySelector('.parlay-sum strong').textContent).toBe('10.78배');
+  /* 버는 끼꼬 35000을 넘지 않게: floor(35000 / 9.78) = 3578 */
+  expect(el.querySelector('.parlay-sum em').textContent).toContain('3,578');
   /* 금액 칸은 하나뿐 */
   expect(el.querySelectorAll('.bet-cart .bet-amount')).toHaveLength(1);
 });
@@ -236,7 +236,7 @@ test('낱개로 담아도 배당과 적중 금액이 보인다', async () => {
 
   const rates = [...el.querySelectorAll('.bet-cart-rate')].map((n) => n.textContent);
   /* 일반 게임은 전부 고정 배당이라 '약'이 안 붙는다 */
-  expect(rates).toEqual(['1.98배', '5.50배']);
+  expect(rates).toEqual(['1.96배', '5.50배']);
 
   const input = el.querySelectorAll('.bet-cart .bet-amount')[1];
   await act(async () => {
@@ -264,4 +264,33 @@ test('묶음이 상한을 넘으면 적중 금액이 빨개지고 이유를 말�
   expect(
     [...el.querySelectorAll('.bet-cart button')].find((b) => b.textContent === '묶어서 걸기').disabled
   ).toBe(true);
+});
+
+/* 결과 화면: 팀 킬 언더오버도 적중이 칠해지고, 실제 킬 수가 보인다 */
+test('끝난 일반 게임은 칸마다 실제 킬과 적중이 보인다', async () => {
+  const done = casual({ status: 'settled', our_kills: 16, opp_kills: 9, total_kills: 25 });
+  const el = await render({ active: null });
+  document.body.innerHTML = '';
+  const React2 = require('react');
+  const { createRoot } = require('react-dom/client');
+  const BetTab = require('./BetTab').default;
+  const { DialogProvider } = require('../../components/common/Dialog');
+  const c = document.createElement('div');
+  document.body.appendChild(c);
+  await act(async () =>
+    createRoot(c).render(
+      React2.createElement(DialogProvider, null,
+        React2.createElement(BetTab, {
+          roomId: 1, scrims: [done], activeScrim: null, single: done, players: PLAYERS,
+          members: [{ user_id: 'me', nickname: '나', points: 1, agreed: true }],
+          myId: 'me', canEdit: false, isOwner: false, version: 1, onChanged: () => {},
+        }))
+    )
+  );
+  expect(el).toBeDefined();
+  const cols = [...c.querySelectorAll('.kill-trio .kill-col')];
+  expect(cols.map((k) => k.querySelector('.kill-col-result').textContent)).toEqual(['16킬', '25킬', '9킬']);
+  /* 우리 16 > 14.5 → 오버 적중, 상대 9 < 14.5 → 언더 적중 */
+  expect(cols[0].querySelector('.is-over').className).toContain('won');
+  expect(cols[2].querySelector('.is-under').className).toContain('won');
 });

@@ -271,11 +271,33 @@ const BetTab = ({
 
   const bumpParlay = (n) => setParlayAmt(String(Math.min(parlayNum + n, comboCap)));
 
-  /* 묶음에 든 것들을 한 줄로. 내 배팅·정산 펼치기 두 곳이 같은 말을 쓴다 */
-  const legsText = (b) =>
-    (b.legs || [])
-      .map((l) => `${marketLabel(l.market)} ${selectionLabel(l.market, l.selection)}`)
-      .join(' × ');
+  /* 묶음의 다리 하나가 어떻게 됐나. 하나만 틀려도 0이라 어디서 틀렸는지가
+     제일 궁금하다 */
+  const legOutcome = (scrim, l) => {
+    if (!scrim || scrim.status !== 'settled') return null;
+    if (scrim.kind === 'casual') return casualOutcome(scrim, l.market, l.selection);
+    const ans = winningSelection(scrim, l.market);
+    if (ans == null) return 'void';
+    return ans === l.selection ? 'win' : 'lose';
+  };
+
+  const renderLegs = (scrim, b) => (
+    <span className="parlay-legs">
+      {(b.legs || []).map((l) => {
+        const o = legOutcome(scrim, l);
+        return (
+          <span key={l.market} className={`parlay-leg ${o ? `is-${o}` : ''}`}>
+            {o === 'win' && <FaCheck />}
+            {o === 'lose' && <FaTimes />}
+            {marketLabel(l.market)} {selectionLabel(l.market, l.selection)}
+            <i>{Number(l.odds).toFixed(2)}</i>
+            {o === 'void' && <em>환불</em>}
+          </span>
+        );
+      })}
+    </span>
+  );
+
   const cartTotal = cartRows.reduce((sum, [, v]) => sum + (Number(v.amount) || 0), 0);
   const overBalance = cartTotal > (me?.points ?? 0);
 
@@ -649,6 +671,12 @@ const BetTab = ({
     );
   };
 
+  const killsOf = (scrim, market) => {
+    if (market.startsWith('ourkills_')) return scrim.our_kills ?? null;
+    if (market.startsWith('oppkills_')) return scrim.opp_kills ?? null;
+    return scrim.total_kills ?? null;
+  };
+
   /* 언더오버 한 칸. 위에서부터 오버 · 기준선 · 언더.
      '오버 · 29.5 초과' 같은 글자를 버튼마다 붙이면 기준선이 두 번 나오고,
      눈은 숫자보다 화살표를 먼저 본다 */
@@ -670,6 +698,11 @@ const BetTab = ({
       <div className="kill-col-line">
         <em>{label}</em>
         <strong>{line}</strong>
+        {/* 끝난 판이면 실제로 몇 킬이었는지. 기준선만 있으면 오버였는지
+            언더였는지를 칸 색으로만 짐작해야 한다 */}
+        {scrim.status === 'settled' && killsOf(scrim, key) != null && (
+          <b className="kill-col-result">{killsOf(scrim, key)}킬</b>
+        )}
       </div>
       {renderOption({
         scrim,
@@ -901,7 +934,9 @@ const BetTab = ({
                 {marketLabel(b.market)}
                 <em>
                   {' · '}
-                  {b.market === 'parlay' ? legsText(b) : selectionLabel(b.market, b.selection)}
+                  {b.market === 'parlay'
+                    ? `${(b.legs || []).length}개`
+                    : selectionLabel(b.market, b.selection)}
                 </em>
               </span>
               <span className="kkiko-when">{num(b.amount)} 끼꼬</span>
@@ -916,6 +951,7 @@ const BetTab = ({
                   {b.payout > 0 ? `+${num(b.payout - b.amount)}` : `-${num(b.amount)}`}
                 </span>
               )}
+              {b.market === 'parlay' && renderLegs(scrim, b)}
             </li>
           ))}
         </ul>
@@ -986,9 +1022,10 @@ const BetTab = ({
                               {marketLabel(b.market)}
                               <em>
                                 {b.market === 'parlay'
-                                  ? legsText(b)
+                                  ? `${(b.legs || []).length}개`
                                   : selectionLabel(b.market, b.selection)}
                               </em>
+                              {b.market === 'parlay' && renderLegs(scrim, b)}
                             </span>
                             <span className="bet-line-amt">
                               {num(b.amount)}

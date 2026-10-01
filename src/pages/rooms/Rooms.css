@@ -3948,3 +3948,70 @@ li.day-sep em {
 .bet-cart-total.is-too-much strong {
   color: #f97362;
 }
+
+/* 묶음의 다리마다 맞았나 틀렸나 */
+.parlay-legs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  flex-basis: 100%;
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.parlay-leg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #a8b4c8;
+}
+
+.parlay-leg i {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: #6b7a94;
+}
+
+.parlay-leg em {
+  font-style: normal;
+  color: #8b98ae;
+}
+
+.parlay-leg svg {
+  font-size: 0.62rem;
+}
+
+.parlay-leg.is-win {
+  border-color: rgba(74, 222, 128, 0.45);
+  background: rgba(74, 222, 128, 0.1);
+  color: #86efac;
+}
+
+.parlay-leg.is-lose {
+  border-color: rgba(249, 115, 98, 0.45);
+  background: rgba(249, 115, 98, 0.1);
+  color: #fca5a5;
+  text-decoration: line-through;
+}
+
+.parlay-leg.is-void {
+  opacity: 0.7;
+}
+
+/* 끝난 판의 실제 킬 수 */
+.kill-col-result {
+  margin-top: 0.1rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #e6ecf7;
+  font-variant-numeric: tabular-nums;
+}

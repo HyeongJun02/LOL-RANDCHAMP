@@ -3,7 +3,7 @@ import {
   CASUAL_KILL_LINES,
   FIRST_BLOOD_LANE_SHARE,
   FIRST_DRAGON_ODDS,
-  FIRST_BLOOD_RATE,
+  CASUAL_FB_RATE,
   KILLS_ODDS,
 } from './tuning';
 
@@ -131,7 +131,7 @@ export const firstBloodOdds = (lane, mode) => {
     ? FIRST_BLOOD_LANE_SHARE[enemyLaneOf(lane) || lane] ?? 1 / CASUAL_TEAM_SIZE
     : 1 / CASUAL_TEAM_SIZE;
   if (!(share > 0)) return null;
-  return Math.round((FIRST_BLOOD_RATE / (0.5 * share)) * 100) / 100;
+  return Math.round((CASUAL_FB_RATE / (0.5 * share)) * 100) / 100;
 };
 
 /* 반반인 마켓(짝홀·우리팀/상대팀)은 언더오버와 같은 기준 배당을 쓴다 */

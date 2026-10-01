@@ -14,7 +14,7 @@
 --
 --   place_bets       … 마켓별 1인 상한 (퍼블 2000 / 언더오버 3000)
 --                      → tuning.js BET_CAP
---   lock_betting     … 퍼블 배당 n * 0.85, 티어당 +2%, 언더오버 1.98 기준에
+--   lock_betting     … 퍼블 배당 n * 0.85, 티어당 +2%, 언더오버 1.96 기준에
 --                        몰린 만큼 1.30~3.00 사이로
 --                      → tuning.js FIRST_BLOOD_RATE / TIER_BONUS / KILLS_ODDS
 --   award_participation … 경기 참여 보상 (승 1500 / 패 1000)
@@ -1470,12 +1470,14 @@ begin
   else
     lane := s.lanes ->> sel;
   end if;
-  return round(0.85 / (0.5 * case lane
-    when 'TOP'     then 0.22
-    when 'JUNGLE'  then 0.18
-    when 'MID'     then 0.24
-    when 'ADC'     then 0.24
-    when 'SUPPORT' then 0.12
+  -- 0.7은 tuning.js의 CASUAL_FB_RATE. 내전(0.85)보다 많이 깎는다 -
+  -- 0.85에 서포터 몫 0.12였을 때 서포터가 14배가 넘었다
+  return round(0.7 / (0.5 * case lane
+    when 'TOP'     then 0.21
+    when 'JUNGLE'  then 0.19
+    when 'MID'     then 0.225
+    when 'ADC'     then 0.225
+    when 'SUPPORT' then 0.15
     else 0.2
   end), 2);
 end; $fn$;
@@ -1547,7 +1549,7 @@ end; $fn$;
 
 -- 묶음에 넣을 때의 배당. 묶음은 마감 전에 걸므로 그때 배당을 박아둔다.
 -- 두 갈래 항목(언더오버·짝홀·어느 팀)은 낱개라면 몰린 만큼 움직이지만,
--- 묶음은 기준값(1.98)으로 본다. 승리팀은 마감 때까지 배당을 모르니 못 묶는다.
+-- 묶음은 기준값(1.96)으로 본다. 승리팀은 마감 때까지 배당을 모르니 못 묶는다.
 create or replace function public.base_odds(s scrims, m text, sel text)
 returns numeric language plpgsql stable security definer set search_path = public as $fn$
 declare o numeric;
@@ -1561,7 +1563,7 @@ begin
     select f.odds into o from public.fb_odds(s.id) f where f.player_id = sel::bigint;
     return coalesce(o, round((jsonb_array_length(s.team_a) + jsonb_array_length(s.team_b)) * 0.85, 2));
   end if;
-  return 1.98;
+  return 1.96;
 end; $fn$;
 
 
@@ -2280,10 +2282,10 @@ begin
 
   -- 언더/오버도 몰리면 배당이 움직인다. 안 움직이면 뻔한 쪽에 다 걸고
   -- 끝이라 고를 이유가 없다. 다만 승리팀처럼 걸린 돈을 100% 나눠 갖는
-  -- 방식은 아니다 - 1.98을 기준으로 두고 몰린 만큼만 지수로 눌러준다.
-  --   배당 = 1.98 × (0.5 / 그쪽 비중) ^ 0.5
-  -- 반반이면 정확히 1.98. 8:2면 몰린 쪽 1.57, 반대쪽은 상한 3.00.
-  -- 한쪽에만 걸렸으면 1.40.
+  -- 방식은 아니다 - 1.96을 기준으로 두고 몰린 만큼만 지수로 눌러준다.
+  --   배당 = 1.96 × (0.5 / 그쪽 비중) ^ 0.5
+  -- 반반이면 정확히 1.96. 8:2면 몰린 쪽 1.55, 반대쪽은 상한 3.00.
+  -- 한쪽에만 걸렸으면 1.39.
   --
   -- 지급을 시스템이 책임지는 마켓이라(제로섬이 아니다) 위아래를 묶어둔다.
   -- 상한이 없으면 한 명이 반대쪽에 조금 걸어두는 것만으로 배당이 튄다.
@@ -2304,9 +2306,9 @@ begin
   )
   update bet_pools bp
      set odds = case
-          when t.pool = 0 or bp.total_amount = 0 then 1.98
+          when t.pool = 0 or bp.total_amount = 0 then 1.96
           else greatest(1.30, least(3.00,
-                 round(1.98 * power(0.5 / (bp.total_amount::numeric / t.pool), 0.5), 2)))
+                 round(1.96 * power(0.5 / (bp.total_amount::numeric / t.pool), 0.5), 2)))
          end
     from tot t
    where bp.scrim_id = p_scrim and bp.market = t.market;
@@ -2316,11 +2318,11 @@ begin
   --   첫 용      여섯 종류라 본전은 6.0인데 조금 깎는다
   -- src/rules/tuning.js의 FIRST_DRAGON_ODDS와 같은 숫자여야 한다
   if s.kind = 'casual' then
-    -- 일반 게임은 두 갈래 항목도 1.98 고정. 걸 때 본 배당이 곧 받는 배당이라
+    -- 일반 게임은 두 갈래 항목도 1.96 고정. 걸 때 본 배당이 곧 받는 배당이라
     -- 한눈에 읽히고, 내전처럼 판을 짜서 주작하기도 어려워 몰림을 막을
     -- 이유가 적다. 배당이 안 움직이니 '반대쪽에 조금 걸어 배당을 띄우는'
     -- 수도 없다
-    update bet_pools set odds = 1.98
+    update bet_pools set odds = 1.96
      where scrim_id = p_scrim
        and (market like 'kills%' or market like 'ourkills%'
             or market like 'oppkills%' or market = 'fb_side');
