@@ -49,9 +49,31 @@ export const AuthProvider = ({ children }) => {
     await refresh();
   };
 
+  /* 로그인 쪽은 res.error를 보는데 여기는 안 봤다. Neon Auth의 vanilla
+     클라이언트는 실패를 던지지 않고 { error }로 돌려주므로, 로그아웃이
+     실패해도 아무 일 없이 지나가고 화면만 로그아웃된 척했다. 새로고침하면
+     다시 로그인 상태로 돌아온다.
+
+     게다가 signOut이 실패하면 SDK 안의 세션 캐시가 '무효' 상태로 굳어서
+     getSession이 매번 서버로 나가고, 서버에는 세션이 그대로 있으니
+     예전 사용자를 계속 돌려준다. 그래서 정말 지워졌는지 직접 확인한다. */
   const signOut = async () => {
-    await neon.auth.signOut();
-    await refresh();
+    const res = await neon.auth.signOut();
+    if (res?.error) throw new Error(res.error.message || '로그아웃에 실패했어요.');
+
+    let left = null;
+    try {
+      const now = await neon.auth.getSession();
+      left = now?.data?.user ?? null;
+    } catch {
+      /* 세션을 못 읽는 건 로그아웃된 쪽에 가깝다 */
+    }
+    if (left) throw new Error('로그아웃이 되지 않았어요. 잠시 뒤에 다시 시도해 주세요.');
+
+    setUser(null);
+    /* 방 폴링이나 들고 있던 토큰이 남지 않게 통째로 새로 띄운다.
+       로그아웃하면 어차피 첫 화면으로 돌아가는 게 맞다 */
+    window.location.assign('/');
   };
 
   return (
