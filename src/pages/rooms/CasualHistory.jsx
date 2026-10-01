@@ -101,6 +101,13 @@ const CasualHistory = ({
     days.get(k).push(s);
   });
 
+  /* 탑 · 정글 · 미드 · 원딜 · 서폿, 미정은 맨 뒤 */
+  const LANE_ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
+  const laneRank = (s, id) => {
+    const i = LANE_ORDER.indexOf(s.lanes?.[id]);
+    return i < 0 ? 9 : i;
+  };
+
   const row = (s) => {
     const laned = hasLanes(s.mode);
     const fb =
@@ -122,13 +129,22 @@ const CasualHistory = ({
           </span>
         </span>
 
+        {/* 한 줄에 다섯을 늘어놓으면 이름이 줄마다 다르게 접혀서 열이 안
+            맞았다. 세로로 길어지더라도 탑 · 정글 · 미드 · 원딜 · 서폿 순서로
+            한 줄에 한 명 */}
         <span className="casual-row-team">
-          {(s.team_a || []).map((id) => (
-            <span key={id} className="hist-name">
-              {nameOf.get(Number(id)) || '?'}
-              {laned && s.lanes?.[id] && <LaneTag lane={s.lanes[id]} className="fb-lane" />}
-            </span>
-          ))}
+          {[...(s.team_a || [])]
+            .sort((a, b) => laneRank(s, a) - laneRank(s, b))
+            .map((id) => (
+              <span key={id} className="casual-member">
+                {laned && s.lanes?.[id] ? (
+                  <LaneTag lane={s.lanes[id]} className="is-icon-only" />
+                ) : (
+                  laned && <i className="casual-member-blank" />
+                )}
+                {nameOf.get(Number(id)) || '?'}
+              </span>
+            ))}
         </span>
 
         {/* 이긴 팀이 없는 판이라 킬 수가 결과다 */}

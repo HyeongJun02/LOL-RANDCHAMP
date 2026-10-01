@@ -4065,7 +4065,10 @@ li.day-sep em {
    칸이 밀리지 않게 */
 .casual-row {
   display: grid;
-  grid-template-columns: 5.4rem minmax(0, 1fr) 6.4rem minmax(0, auto) auto;
+  /* 내전 줄(.hist-side 0.82rem)과 같은 글자 크기. 안 주면 본문 크기로
+     커져서 두 탭을 오갈 때 글씨가 들쭉날쭉했다 */
+  font-size: 0.82rem;
+  grid-template-columns: 3.6rem minmax(0, 1fr) 6.4rem minmax(0, auto) auto;
   grid-template-areas: 'meta team score facts del';
   align-items: center;
   gap: 0.6rem;
@@ -4073,8 +4076,38 @@ li.day-sep em {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.casual-row-meta { grid-area: meta; display: flex; align-items: center; gap: 0.35rem; }
-.casual-row-team { grid-area: team; display: flex; flex-wrap: wrap; gap: 0.15rem 0.45rem; min-width: 0; }
+.casual-row-meta {
+  grid-area: meta;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+.casual-row-team {
+  grid-area: team;
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  color: #cbd5e5;
+}
+
+.casual-member {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 라인 미정인 사람도 이름 시작점이 맞게 아이콘 자리를 비워둔다 */
+.casual-member-blank {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+}
 .casual-row .hist-facts { grid-area: facts; }
 .casual-row .hist-del { grid-area: del; }
 
