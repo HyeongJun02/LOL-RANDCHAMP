@@ -4068,7 +4068,9 @@ li.day-sep em {
   /* 내전 줄(.hist-side 0.82rem)과 같은 글자 크기. 안 주면 본문 크기로
      커져서 두 탭을 오갈 때 글씨가 들쭉날쭉했다 */
   font-size: 0.82rem;
-  grid-template-columns: 3.6rem minmax(0, 1fr) 6.4rem minmax(0, auto) auto;
+  /* 줄마다 따로 그리는 격자라 auto 칸이 있으면 줄마다 폭이 달라져 열이
+     어긋났다. 이름 칸(1fr) 말고는 전부 고정 폭 */
+  grid-template-columns: 3.6rem minmax(0, 1fr) 6rem 15rem 1.8rem;
   grid-template-areas: 'meta team score facts del';
   align-items: center;
   gap: 0.6rem;
@@ -4396,4 +4398,19 @@ li.day-sep em {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* 일반 게임 줄의 사실 칸: 고정 폭 안에서 오른쪽 정렬, 넘치면 줄바꿈 */
+.casual-row .hist-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .casual-row .hist-facts {
+    justify-content: flex-start;
+  }
 }

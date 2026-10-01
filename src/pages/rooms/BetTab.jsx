@@ -1682,7 +1682,14 @@ const BetTab = ({
                     ? <LaneTag lane={s.fb_enemy_lane} prefix="상대 " />
                     : '상대 팀'
                   : s.first_blood_player_id
-                    ? nameOf.get(s.first_blood_player_id) || '?'
+                    ? (
+                        <>
+                          {hasLanes(s.mode) && s.lanes?.[s.first_blood_player_id] && (
+                            <LaneTag lane={s.lanes[s.first_blood_player_id]} className="is-icon-only" />
+                          )}
+                          {nameOf.get(s.first_blood_player_id) || '?'}
+                        </>
+                      )
                     : '-'}
                 {hasDragon(s.mode) && ` · 첫 용 ${s.first_dragon ? dragonLabel(s.first_dragon) : '-'}`}
                 {' · '}또또 {num(s.bet_total)} 끼꼬
