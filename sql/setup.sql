@@ -1244,6 +1244,12 @@ alter table public.scrims add column if not exists first_dragon text;
 -- 첫 킬 배당이 라인마다 다르다 - 서포터가 제일 어렵다
 alter table public.scrims add column if not exists lanes jsonb not null default '{}'::jsonb;
 
+-- 일반 게임은 킬을 팀별로 받는다 (우리 팀·상대 팀 언더오버). total_kills는
+-- 둘의 합이다. 첫 킬을 상대가 땄을 때 어느 라인이었는지도 받는다.
+alter table public.scrims add column if not exists our_kills int;
+alter table public.scrims add column if not exists opp_kills int;
+alter table public.scrims add column if not exists fb_enemy_lane text;
+
 alter table public.scrims drop constraint if exists scrims_status_chk;
 alter table public.scrims add constraint scrims_status_chk
   check (status in ('betting', 'locked', 'settled'));
@@ -1291,6 +1297,11 @@ create table if not exists public.bets (
   unique (scrim_id, user_id, market)
 );
 create index if not exists bets_scrim on public.bets (scrim_id);
+
+-- 배팅 묶기. market='parlay'인 줄의 다리들 [{market, selection, odds}].
+-- 묶음을 따로 표로 두지 않고 bets 한 줄로 넣는다 - 판 취소(cascade)·정산
+-- 되돌리기·계정 옮기기·'한 판에 하나' 제한이 낱개와 같은 길로 따라온다.
+alter table public.bets add column if not exists legs jsonb;
 create index if not exists bets_user on public.bets (user_id, created_at desc);
 
 alter table public.bet_pools enable row level security;
@@ -1429,6 +1440,325 @@ drop function if exists public.open_betting(bigint, text, jsonb, jsonb);
 -- 시계가 몇 초씩 어긋난 사람들 사이에서 '누구는 됐고 누구는 안 되는' 일이 생긴다.
 drop function if exists public.open_betting(bigint, text, jsonb, jsonb, int);
 -- ============================================================
+-- 또또 판단 함수들
+-- ============================================================
+-- 무엇을 걸 수 있나, 지금 배당이 얼마인가, 결과가 맞았나.
+-- 낱개 배팅과 묶음 배팅이 같은 기준을 봐야 해서 여기 한 군데에만 둔다.
+-- 두 군데서 따로 판단하면 언젠가 어긋나고, 그 차이만큼 끼꼬가 샌다.
+
+-- 우리 팀·상대 팀 킬 기준선. 총 기준선의 절반을 .5로 맞춘다 (29.5 → 14.5)
+-- src/rules/casual.js의 teamKillLine과 같아야 한다
+create or replace function public.team_kill_line(total numeric)
+returns numeric language sql immutable as $fn$
+  select floor(total / 2) + 0.5;
+$fn$;
+
+
+-- 일반 게임 첫 킬(사람) 배당.
+-- 상대 팀이 딸 확률 절반을 먼저 떼고, 남은 절반을 라인 몫으로 가른다.
+-- 우리 쪽은 참가자 id, 상대 쪽은 'them_TOP'처럼 라인으로 고른다.
+-- 라인 미정·칼바람은 다섯 중 하나(0.2)로 본다.
+-- src/rules/tuning.js의 FIRST_BLOOD_LANE_SHARE와 같아야 한다 (테스트가 대조한다)
+create or replace function public.casual_fb_odds(s scrims, sel text)
+returns numeric language plpgsql immutable as $fn$
+declare lane text;
+begin
+  if s.mode = 'aram' then
+    lane := null;
+  elsif sel like 'them\_%' then
+    lane := substr(sel, 6);
+  else
+    lane := s.lanes ->> sel;
+  end if;
+  return round(0.85 / (0.5 * case lane
+    when 'TOP'     then 0.22
+    when 'JUNGLE'  then 0.18
+    when 'MID'     then 0.24
+    when 'ADC'     then 0.24
+    when 'SUPPORT' then 0.12
+    else 0.2
+  end), 2);
+end; $fn$;
+
+
+-- 이 판에 이 항목·선택지가 있는가. 없는 이름이 들어오면 정산 때 아무 가지에도
+-- 안 걸려서 그 돈이 환불도 지급도 없이 사라진다.
+create or replace function public.check_bet_pick(s scrims, m text, sel text)
+returns void language plpgsql stable as $fn$
+declare line numeric;
+begin
+  if m is null or sel is null then raise exception '없는 항목이에요.'; end if;
+
+  if m = 'winner' then
+    if s.kind = 'casual' then raise exception '일반 게임에는 승리팀이 없어요.'; end if;
+    if sel not in ('A', 'B') then raise exception '없는 선택지예요.'; end if;
+    return;
+  end if;
+
+  if m = 'first_blood' then
+    if exists (select 1 from jsonb_array_elements_text(s.team_a || s.team_b) x where x = sel) then
+      return;
+    end if;
+    -- 상대 라인은 일반 게임, 그것도 라인이 있는 모드에서만
+    if s.kind = 'casual' and s.mode <> 'aram'
+       and sel in ('them_TOP', 'them_JUNGLE', 'them_MID', 'them_ADC', 'them_SUPPORT') then
+      return;
+    end if;
+    raise exception '없는 선택지예요.';
+  end if;
+
+  if m in ('kills_parity', 'fb_side', 'dragon') then
+    if s.kind <> 'casual' then raise exception '내전에는 없는 항목이에요.'; end if;
+    if m = 'kills_parity' and sel not in ('odd', 'even') then raise exception '없는 선택지예요.'; end if;
+    if m = 'fb_side' and sel not in ('us', 'them') then raise exception '없는 선택지예요.'; end if;
+    if m = 'dragon' then
+      if s.mode = 'aram' then raise exception '칼바람에는 용이 없어요.'; end if;
+      if sel not in ('infernal', 'mountain', 'ocean', 'cloud', 'hextech', 'chemtech') then
+        raise exception '없는 선택지예요.';
+      end if;
+    end if;
+    return;
+  end if;
+
+  if m like 'kills\_%' or m like 'ourkills\_%' or m like 'oppkills\_%' then
+    if sel not in ('over', 'under') then raise exception '없는 선택지예요.'; end if;
+    if s.kind = 'casual' then
+      -- 일반 게임은 기준선이 열 때 박힌다. 다른 숫자로 거는 길을 막는다
+      begin
+        line := split_part(m, '_', 2)::numeric;
+      exception when others then
+        raise exception '없는 항목이에요.';
+      end;
+      if m like 'kills\_%' and line <> s.kill_line then
+        raise exception '총 킬 기준선이 이 판과 달라요.';
+      end if;
+      if m not like 'kills\_%' and line <> public.team_kill_line(s.kill_line) then
+        raise exception '팀 킬 기준선이 이 판과 달라요.';
+      end if;
+    elsif m not like 'kills\_%' then
+      raise exception '내전에는 없는 항목이에요.';
+    end if;
+    return;
+  end if;
+
+  raise exception '없는 항목이에요.';
+end; $fn$;
+
+
+-- 묶음에 넣을 때의 배당. 묶음은 마감 전에 걸므로 그때 배당을 박아둔다.
+-- 두 갈래 항목(언더오버·짝홀·어느 팀)은 낱개라면 몰린 만큼 움직이지만,
+-- 묶음은 기준값(1.98)으로 본다. 승리팀은 마감 때까지 배당을 모르니 못 묶는다.
+create or replace function public.base_odds(s scrims, m text, sel text)
+returns numeric language plpgsql stable security definer set search_path = public as $fn$
+declare o numeric;
+begin
+  if m = 'winner' then
+    raise exception '승리팀은 묶을 수 없어요. 배당이 마감 때 정해집니다.';
+  end if;
+  if m = 'dragon' then return 5.5; end if;
+  if m = 'first_blood' then
+    if s.kind = 'casual' then return public.casual_fb_odds(s, sel); end if;
+    select f.odds into o from public.fb_odds(s.id) f where f.player_id = sel::bigint;
+    return coalesce(o, round((jsonb_array_length(s.team_a) + jsonb_array_length(s.team_b)) * 0.85, 2));
+  end if;
+  return 1.98;
+end; $fn$;
+
+
+-- 정산이 끝난 판에서 이 선택이 맞았나. 'win' · 'lose' · 'void'(결과를 안 넣어 환불)
+-- src/rules/casual.js의 casualAnswer와 같은 규칙이다.
+create or replace function public.leg_result(s scrims, m text, sel text)
+returns text language plpgsql immutable as $fn$
+declare line numeric; v int; ans text;
+begin
+  if m = 'winner' then
+    if s.winner is null then return 'void'; end if;
+    return case when sel = s.winner then 'win' else 'lose' end;
+  end if;
+
+  if m = 'kills_parity' then
+    if s.total_kills is null then return 'void'; end if;
+    return case when sel = (case when s.total_kills % 2 = 0 then 'even' else 'odd' end)
+                then 'win' else 'lose' end;
+  end if;
+
+  -- kills_parity가 이 가지에 먼저 걸리면 'parity'::numeric에서 터진다.
+  -- 위에서 먼저 돌려보냈다
+  if m like 'kills\_%' or m like 'ourkills\_%' or m like 'oppkills\_%' then
+    v := case when m like 'kills\_%' then s.total_kills
+              when m like 'ourkills\_%' then s.our_kills
+              else s.opp_kills end;
+    if v is null then return 'void'; end if;
+    line := split_part(m, '_', 2)::numeric;
+    return case when (sel = 'over' and v > line) or (sel = 'under' and v < line)
+                then 'win' else 'lose' end;
+  end if;
+
+  if m = 'fb_side' then
+    if s.fb_side is null then return 'void'; end if;
+    return case when sel = s.fb_side then 'win' else 'lose' end;
+  end if;
+
+  if m = 'dragon' then
+    if s.first_dragon is null then return 'void'; end if;
+    return case when sel = s.first_dragon then 'win' else 'lose' end;
+  end if;
+
+  if m = 'first_blood' then
+    if s.kind = 'casual' then
+      if s.fb_side is null then return 'void'; end if;
+      -- 상대가 땄는데 어느 라인인지 모르면, 상대 라인에 건 것만 돌려준다.
+      -- 우리 쪽 사람에 건 것은 그대로 낙첨이다 - 배당이 이미 '상대가 딸
+      -- 절반'을 값에 넣고 있어서, 돌려주면 걸기만 해도 이득이 된다
+      if s.fb_side = 'them' and s.fb_enemy_lane is null and sel like 'them\_%' then
+        return 'void';
+      end if;
+      ans := case when s.fb_side = 'us' then s.first_blood_player_id::text
+                  when s.fb_enemy_lane is not null then 'them_' || s.fb_enemy_lane
+                  else 'them' end;
+    else
+      if s.first_blood_player_id is null then return 'void'; end if;
+      ans := s.first_blood_player_id::text;
+    end if;
+    return case when sel = ans then 'win' else 'lose' end;
+  end if;
+
+  return 'void';
+end; $fn$;
+
+
+-- 묶음 정산. 다리 하나라도 틀리면 0. 결과를 안 넣은 다리는 그 다리만 빠진
+-- 셈으로 친다(배당 1). 전부 빠지면 건 돈이 그대로 돌아간다.
+-- 곱은 numeric으로 차례대로 곱한다 - exp(sum(ln))으로 하면 3.9204가
+-- 3.92039999가 되어 지급이 1씩 모자라는 일이 생긴다.
+create or replace function public.settle_parlays(s scrims)
+returns void language plpgsql security definer set search_path = public as $fn$
+declare
+  t    record;
+  l    jsonb;
+  mult numeric;
+  lost boolean;
+  r    text;
+begin
+  for t in select id, amount, legs from bets where scrim_id = s.id and market = 'parlay' loop
+    mult := 1;
+    lost := false;
+    for l in select * from jsonb_array_elements(t.legs) loop
+      r := public.leg_result(s, l->>'market', l->>'selection');
+      if r = 'lose' then
+        lost := true;
+        exit;
+      end if;
+      if r = 'win' then mult := mult * (l->>'odds')::numeric; end if;
+    end loop;
+    update bets
+       set payout = case when lost then 0 else floor(t.amount * round(mult, 2))::int end
+     where id = t.id;
+  end loop;
+end; $fn$;
+
+
+-- 배팅 묶기. 담은 것들의 배당을 곱한 한 장으로 건다.
+-- 배당이 곱으로 커지는 만큼 한 번에 거는 끼꼬를 줄인다 - 버는 끼꼬(지급에서
+-- 건 돈을 뺀 것)가 30000을 넘지 않게 상한을 배당에서 거꾸로 구한다.
+-- src/rules/tuning.js의 PARLAY_MAX_WIN과 같아야 한다 (테스트가 대조한다)
+--
+-- bets에 market='parlay' 한 줄로 넣는다. 그러면 판 취소(cascade)·정산
+-- 되돌리기·계정 옮기기·'한 판에 하나' 제한이 낱개 배팅과 같은 길로 따라온다.
+create or replace function public.place_parlay(p_scrim bigint, p_legs jsonb, p_amount int)
+returns numeric language plpgsql security definer set search_path = public as $fn$
+declare
+  me   text := auth.user_id();
+  s    scrims;
+  l    jsonb;
+  legs jsonb := '[]'::jsonb;
+  o    numeric := 1;
+  lo   numeric;
+  cap  int;
+  n    int;
+begin
+  perform public.roll_season();
+
+  select * into s from scrims where id = p_scrim;
+  if s.id is null then raise exception '경기를 찾을 수 없어요.'; end if;
+  if not public.is_room_member(s.room_id) then
+    raise exception '이 방의 멤버가 아니에요.';
+  end if;
+  if s.status <> 'betting' then
+    raise exception '지금은 배팅할 수 없어요. 이미 마감됐습니다.';
+  end if;
+  if s.betting_closes_at is not null and now() >= s.betting_closes_at then
+    raise exception '배팅 시간이 끝났어요.';
+  end if;
+  if (select agreed_fairplay_at from profiles where user_id = me) is null then
+    raise exception '배팅에 신경쓰지 않고 경기를 진행하겠다는 동의가 먼저예요.';
+  end if;
+
+  if jsonb_typeof(p_legs) is distinct from 'array' then
+    raise exception '묶을 배팅이 없어요.';
+  end if;
+  n := jsonb_array_length(p_legs);
+  if n < 2 then raise exception '두 개 이상 담아야 묶을 수 있어요.'; end if;
+  if (select count(distinct x->>'market') from jsonb_array_elements(p_legs) x) <> n then
+    raise exception '같은 항목은 한 번만 묶을 수 있어요.';
+  end if;
+  -- 첫 킬은 '어느 팀'과 '누구' 중 하나, 킬 언더오버는 셋 중 하나.
+  -- 둘 다 넣으면 사실상 같은 걸 두 번 거는 셈이라 배당이 부풀려진다
+  if (select count(*) from jsonb_array_elements(p_legs) x
+       where x->>'market' in ('fb_side', 'first_blood')) > 1 then
+    raise exception '첫 킬은 어느 팀이나 누구 중 하나만 묶을 수 있어요.';
+  end if;
+  if (select count(*) from jsonb_array_elements(p_legs) x
+       where (x->>'market' like 'kills\_%' and x->>'market' <> 'kills_parity')
+          or x->>'market' like 'ourkills\_%' or x->>'market' like 'oppkills\_%') > 1 then
+    raise exception '킬 언더오버는 하나만 묶을 수 있어요.';
+  end if;
+
+  for l in select * from jsonb_array_elements(p_legs) loop
+    perform public.check_bet_pick(s, l->>'market', l->>'selection');
+    lo := public.base_odds(s, l->>'market', l->>'selection');
+    o := o * lo;
+    legs := legs || jsonb_build_array(jsonb_build_object(
+      'market', l->>'market', 'selection', l->>'selection', 'odds', lo));
+  end loop;
+  o := round(o, 2);
+
+  if p_amount is null or p_amount <= 0 then
+    raise exception '배팅 금액은 1 이상이어야 해요.';
+  end if;
+  cap := floor(30000 / (o - 1));
+  if p_amount > cap then
+    raise exception '이 묶음은 한 번에 % 끼꼬까지 걸 수 있어요.', cap;
+  end if;
+
+  -- 잔액 확인과 차감을 한 문장으로 (place_bets와 같은 이유)
+  perform public.ensure_wallet(s.room_id, me);
+  update room_wallets set points = points - p_amount
+   where room_id = s.room_id and user_id = me and points >= p_amount;
+  if not found then
+    raise exception '이 방의 끼꼬가 모자라요.';
+  end if;
+
+  begin
+    insert into bets (scrim_id, room_id, user_id, market, selection, amount, odds, legs)
+      values (p_scrim, s.room_id, me, 'parlay', n || '개 묶음', p_amount, o, legs);
+  exception when unique_violation then
+    raise exception '묶음은 한 판에 하나만 걸 수 있어요.';
+  end;
+
+  update scrims
+     set bet_total = bet_total + p_amount,
+         bet_count = (select count(distinct user_id) from bets where scrim_id = p_scrim)
+   where id = p_scrim;
+
+  insert into point_ledger (user_id, room_id, delta, reason, ref_id)
+  values (me, s.room_id, -p_amount, 'bet', p_scrim);
+
+  return o;
+end; $fn$;
+
+
+-- ============================================================
 -- 6-2. 일반 게임 또또 (내전 아님)
 -- ============================================================
 -- 우리끼리 일반·칼바람 큐를 돌릴 때 거는 또또. 전적에는 안 들어간다.
@@ -1513,17 +1843,19 @@ end; $fn$;
 -- 있어야 하는데 여기는 없고, 마켓도 서로 다르다. 한 함수에 조건을 겹겹이
 -- 쌓으면 어느 쪽 검사가 느슨해졌는지 모르게 된다. 돈이 오가는 길이다.
 --
--- 결과를 안 넣은 마켓은 전액 환불이다 (내전과 같다).
+-- 킬은 팀별로 받는다. 총 킬은 둘을 더해서 낸다 - 셋을 따로 받으면 우리 12,
+-- 상대 17, 총 30처럼 서로 안 맞는 숫자가 들어올 수 있다.
+-- 결과를 안 넣은 항목은 전액 환불이다 (내전과 같다).
+-- 맞았나 틀렸나는 leg_result 한 군데서만 판단한다. 묶음도 같은 함수를 본다.
+--
+-- 인자를 바꾸면 옛 함수가 남아 오버로드가 된다. PostgREST가 어느 것을
+-- 부를지 못 골라 ambiguous 오류를 내므로 먼저 지운다.
+drop function if exists public.settle_casual(bigint, int, bigint, text, text);
 create or replace function public.settle_casual(
-  p_scrim bigint, p_total_kills int, p_first_blood bigint,
-  p_fb_side text, p_dragon text)
+  p_scrim bigint, p_our_kills int, p_opp_kills int, p_first_blood bigint,
+  p_fb_side text, p_fb_lane text, p_dragon text)
 returns void language plpgsql security definer set search_path = public as $fn$
-declare
-  s          scrims;
-  kills_void boolean;
-  fb_void    boolean;
-  side_void  boolean;
-  drag_void  boolean;
+declare s scrims;
 begin
   perform public.roll_season();
 
@@ -1539,6 +1871,11 @@ begin
   if s.status <> 'locked' then
     raise exception '배팅을 먼저 마감해 주세요.';
   end if;
+
+  if p_our_kills < 0 or p_opp_kills < 0 then
+    raise exception '킬 수는 0 이상이어야 해요.';
+  end if;
+
   if p_fb_side is not null and p_fb_side not in ('us', 'them') then
     raise exception '첫 킬은 우리 팀 또는 상대 팀이에요.';
   end if;
@@ -1546,9 +1883,26 @@ begin
   if p_fb_side = 'us' and p_first_blood is null then
     raise exception '우리 팀이 땄으면 누가 땄는지도 골라주세요.';
   end if;
-  if p_fb_side = 'them' and p_first_blood is not null then
-    raise exception '상대 팀이 땄으면 우리 쪽 사람은 고를 수 없어요.';
+  if p_fb_side is distinct from 'us' and p_first_blood is not null then
+    raise exception '우리 팀이 땄을 때만 사람을 고를 수 있어요.';
   end if;
+  if p_first_blood is not null and not exists (
+    select 1 from jsonb_array_elements_text(s.team_a) x where x = p_first_blood::text
+  ) then
+    raise exception '이 판에 뛴 사람이 아니에요.';
+  end if;
+  if p_fb_lane is not null then
+    if p_fb_side is distinct from 'them' then
+      raise exception '상대 팀이 땄을 때만 상대 라인을 고를 수 있어요.';
+    end if;
+    if s.mode = 'aram' then
+      raise exception '칼바람에는 라인이 없어요.';
+    end if;
+    if p_fb_lane not in ('TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT') then
+      raise exception '없는 라인이에요.';
+    end if;
+  end if;
+
   if p_dragon is not null and s.mode = 'aram' then
     raise exception '칼바람에는 용이 없어요.';
   end if;
@@ -1558,47 +1912,33 @@ begin
   end if;
 
   update scrims
-     set total_kills = p_total_kills,
+     set our_kills = p_our_kills,
+         opp_kills = p_opp_kills,
+         -- 한쪽이라도 모르면 총 킬도 모른다 (총 킬·짝홀 환불)
+         total_kills = case when p_our_kills is not null and p_opp_kills is not null
+                            then p_our_kills + p_opp_kills end,
          first_blood_player_id = p_first_blood,
          fb_side = p_fb_side,
+         fb_enemy_lane = p_fb_lane,
          first_dragon = p_dragon,
          status = 'settled', settled_at = now()
    where id = p_scrim
    returning * into s;
 
-  kills_void := p_total_kills is null;
-  side_void  := p_fb_side is null;
-  drag_void  := p_dragon is null;
-  -- 첫 킬(사람)의 환불 조건은 '우리/상대를 안 넣었을 때'다.
-  -- 상대가 땄을 때 돌려주면 안 된다 - 배당이 이미 '상대가 딸 확률 절반'을
-  -- 값에 넣고 있어서, 돌려주면 걸기만 해도 이득인 마켓이 된다
-  fb_void    := p_fb_side is null;
-
+  -- 낱개. 배당은 마감 때 박힌 bet_pools 값이다
   update bets b
      set odds = p.odds,
-         payout = case
-           when b.market like 'kills%' and kills_void then b.amount
-           when b.market = 'first_blood' and fb_void then b.amount
-           when b.market = 'fb_side' and side_void then b.amount
-           when b.market = 'dragon' and drag_void then b.amount
-           when b.market = 'kills_parity' and b.selection =
-                (case when p_total_kills % 2 = 0 then 'even' else 'odd' end)
-             then floor(b.amount * p.odds)::int
-           when b.market like 'kills%' and b.market <> 'kills_parity' and (
-                (b.selection = 'over'  and p_total_kills > split_part(b.market, '_', 2)::numeric)
-             or (b.selection = 'under' and p_total_kills < split_part(b.market, '_', 2)::numeric))
-             then floor(b.amount * p.odds)::int
-           when b.market = 'first_blood' and b.selection = p_first_blood::text
-             then floor(b.amount * p.odds)::int
-           when b.market = 'fb_side' and b.selection = p_fb_side
-             then floor(b.amount * p.odds)::int
-           when b.market = 'dragon' and b.selection = p_dragon
-             then floor(b.amount * p.odds)::int
+         payout = case public.leg_result(s, b.market, b.selection)
+           when 'void' then b.amount
+           when 'win'  then floor(b.amount * p.odds)::int
            else 0
          end
     from bet_pools p
    where b.scrim_id = p_scrim
      and p.scrim_id = b.scrim_id and p.market = b.market and p.selection = b.selection;
+
+  -- 묶음. 배당은 걸 때 박혔다
+  perform public.settle_parlays(s);
 
   with paid as (
     select user_id, sum(payout)::int as amt
@@ -1616,7 +1956,7 @@ begin
   -- 참여 끼꼬는 주지 않는다. 전적에 안 들어가는 판이라, 주면 일반 큐를
   -- 돌리는 것만으로 끼꼬가 생긴다 (award_participation을 아예 안 부른다)
   perform public.log_room(s.room_id, 'casual_settled', jsonb_build_object(
-    'scrim', p_scrim, 'kills', p_total_kills,
+    'scrim', p_scrim, 'kills', s.total_kills,
     'fb_side', p_fb_side, 'dragon', p_dragon, 'bet_total', s.bet_total));
 end; $fn$;
 
@@ -1720,28 +2060,16 @@ begin
       when b->>'market' = 'dragon' then 1000
       when b->>'market' = 'fb_side' then 3000
       when b->>'market' like 'kills%' then 3000
+      when b->>'market' like 'ourkills%' then 3000
+      when b->>'market' like 'oppkills%' then 3000
       else null
     end;
     if cap is not null and (b->>'amount')::int > cap then
       raise exception '이 항목은 한 번에 % 끼꼬까지 걸 수 있어요.', cap;
     end if;
 
-    -- 모르는 마켓 이름이 들어오면 정산 때 아무 가지에도 안 걸려서
-    -- 그 돈이 환불도 지급도 없이 사라진다. 여기서 막는다.
-    -- 내전에 없는 마켓(짝홀·어느 팀·첫 용)과 그 반대(승리팀)도 가른다.
-    if b->>'market' not in ('winner', 'first_blood', 'kills_parity', 'fb_side', 'dragon')
-       and b->>'market' not like 'kills\_%' then
-      raise exception '없는 항목이에요.';
-    end if;
-    if s.kind = 'casual' and b->>'market' = 'winner' then
-      raise exception '일반 게임에는 승리팀이 없어요.';
-    end if;
-    if s.kind <> 'casual' and b->>'market' in ('kills_parity', 'fb_side', 'dragon') then
-      raise exception '내전에는 없는 항목이에요.';
-    end if;
-    if b->>'market' = 'dragon' and s.mode = 'aram' then
-      raise exception '칼바람에는 용이 없어요.';
-    end if;
+    -- 이 판에 있는 항목·선택지인가. 묶음 배팅도 같은 함수로 본다
+    perform public.check_bet_pick(s, b->>'market', b->>'selection');
   end loop;
 
   -- 일반 게임의 첫 킬은 '어느 팀'과 '누구' 중 하나만 건다. 이미 건 것과
@@ -1757,6 +2085,23 @@ begin
     ) t
   ) > 1 then
     raise exception '첫 킬은 어느 팀이나 누구 중 하나만 걸 수 있어요.';
+  end if;
+
+  -- 킬 언더오버도 셋(우리 팀·총·상대 팀) 중 하나만. 우리 팀 오버와 총 오버는
+  -- 거의 같이 움직여서, 둘 다 걸면 같은 걸 두 번 거는 셈이다
+  if s.kind = 'casual' and (
+    select count(distinct m) from (
+      select market as m from bets
+       where scrim_id = p_scrim and user_id = me
+         and ((market like 'kills\_%' and market <> 'kills_parity')
+              or market like 'ourkills\_%' or market like 'oppkills\_%')
+      union all
+      select x->>'market' from jsonb_array_elements(p_bets) x
+       where (x->>'market' like 'kills\_%' and x->>'market' <> 'kills_parity')
+          or x->>'market' like 'ourkills\_%' or x->>'market' like 'oppkills\_%'
+    ) t
+  ) > 1 then
+    raise exception '킬 언더오버는 우리 팀·총·상대 팀 중 하나만 걸 수 있어요.';
   end if;
 
   select sum((x->>'amount')::int) into total from jsonb_array_elements(p_bets) x;
@@ -1951,7 +2296,8 @@ begin
     select bp.market, sum(bp.total_amount) as pool
       from bet_pools bp
      where bp.scrim_id = p_scrim
-       and (bp.market like 'kills%' or bp.market = 'fb_side')
+       and (bp.market like 'kills%' or bp.market like 'ourkills%'
+            or bp.market like 'oppkills%' or bp.market = 'fb_side')
      group by bp.market
   )
   update bet_pools bp
@@ -1964,24 +2310,12 @@ begin
    where bp.scrim_id = p_scrim and bp.market = t.market;
 
   -- 일반 큐 또또의 고정 배당 둘.
-  --   첫 킬(사람) 상대팀이 딸 절반을 떼고, 남은 절반을 라인 몫으로 가른다
+  --   첫 킬(사람) casual_fb_odds - 묶음 배팅이 걸 때 보는 것과 같은 함수다
   --   첫 용      여섯 종류라 본전은 6.0인데 조금 깎는다
-  -- src/rules/tuning.js의 FIRST_BLOOD_LANE_SHARE · FIRST_DRAGON_ODDS와
-  -- 같은 숫자여야 한다 (테스트가 대조한다)
+  -- src/rules/tuning.js의 FIRST_DRAGON_ODDS와 같은 숫자여야 한다
   if s.kind = 'casual' then
     update bet_pools bp
-       set odds = round(
-             0.85 / (0.5 * case
-               when s.mode = 'aram' then 0.2
-               else case s.lanes ->> bp.selection
-                 when 'TOP'     then 0.22
-                 when 'JUNGLE'  then 0.18
-                 when 'MID'     then 0.24
-                 when 'ADC'     then 0.24
-                 when 'SUPPORT' then 0.12
-                 else 0.2
-               end
-             end), 2)
+       set odds = public.casual_fb_odds(s, bp.selection)
      where bp.scrim_id = p_scrim and bp.market = 'first_blood';
 
     update bet_pools set odds = 5.5
@@ -2077,6 +2411,9 @@ begin
    where b.scrim_id = p_scrim
      and p.scrim_id = b.scrim_id and p.market = b.market and p.selection = b.selection;
 
+  -- 묶음. 승리팀은 묶을 수 없으니 내전 묶음은 첫 킬·총 킬뿐이다
+  perform public.settle_parlays(s);
+
   with paid as (
     select user_id, sum(payout)::int as amt
       from bets where scrim_id = p_scrim and payout > 0 group by user_id
@@ -2152,13 +2489,17 @@ begin
     from (select user_id, sum(delta) d from ins group by user_id) x
    where w.room_id = s.room_id and w.user_id = x.user_id;
 
-  update bets set payout = null, odds = null where scrim_id = p_scrim;
+  -- 묶음의 배당은 걸 때 박힌 값이다. 지우면 다시 정산할 때 곱할 게 없다
+  update bets set payout = null,
+                  odds = case when market = 'parlay' then odds end
+   where scrim_id = p_scrim;
 
   update scrims
      set winner = null, total_kills = null, first_blood_player_id = null,
          -- 일반 게임 또또의 결과도 같이 비운다. 남겨두면 다시 정산하기 전까지
          -- 화면이 지난 결과(첫 용 등)를 적중으로 그린다
          fb_side = null, first_dragon = null,
+         our_kills = null, opp_kills = null, fb_enemy_lane = null,
          status = 'locked', settled_at = null, undo_count = undo_count + 1
    where id = p_scrim;
 
@@ -2185,7 +2526,8 @@ grant execute on function
   public.lock_betting(bigint),
   public.settle_scrim(bigint, text, int, bigint),
   public.open_casual_bet(bigint, text, jsonb, jsonb, int, numeric),
-  public.settle_casual(bigint, int, bigint, text, text),
+  public.settle_casual(bigint, int, int, bigint, text, text, text),
+  public.place_parlay(bigint, jsonb, int),
   public.unsettle_scrim(bigint)
 to authenticated;
 

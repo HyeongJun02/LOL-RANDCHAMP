@@ -3678,3 +3678,239 @@ li.day-sep em {
     justify-content: space-between;
   }
 }
+
+/* ---------- 킬 언더오버: 세로 칸 ---------- */
+/* 위에서부터 오버 · 기준선 · 언더. '오버 · 29.5 초과'를 버튼마다 붙이면
+   기준선이 두 번 나오고, 눈은 숫자보다 화살표를 먼저 본다.
+   일반 게임은 우리 팀 · 총 킬 · 상대 팀 세 칸, 내전은 총 킬 한 칸 */
+.kill-trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.kill-trio.is-single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 220px;
+}
+
+.kill-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.kill-col-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.15rem 0;
+}
+
+.kill-col-line em {
+  font-style: normal;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #6b7a94;
+}
+
+.kill-col-line strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #e6ecf7;
+}
+
+/* 오버는 빨강 위 화살표, 언더는 파랑 아래 화살표. 색이 같으면 위아래
+   어느 칸이 어느 쪽인지 화살표를 읽어야 안다 */
+.bet-opt.is-over .bet-opt-text {
+  color: #fca5a5;
+}
+
+.bet-opt.is-under .bet-opt-text {
+  color: #7dd3fc;
+}
+
+.bet-opt.is-over .bet-opt-text svg,
+.bet-opt.is-under .bet-opt-text svg {
+  font-size: 0.72em;
+  margin-right: 0.15rem;
+  vertical-align: -0.05em;
+}
+
+.bet-opt.is-over:hover:not(:disabled) {
+  border-color: rgba(249, 115, 98, 0.55);
+}
+
+/* 좁으면 세 칸이 너무 좁다. 오버·언더 두 버튼을 가로로 눕힌다 */
+@media (max-width: 520px) {
+  .kill-trio {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kill-trio.is-single {
+    max-width: none;
+  }
+
+  .kill-col {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 4.5rem minmax(0, 1fr);
+    align-items: center;
+  }
+}
+
+/* 짝/홀은 둘뿐이라 가로를 다 쓰면 버튼이 길쭉해진다 */
+.bet-opts.is-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 360px;
+}
+
+/* ---------- 첫 킬 표 ---------- */
+/* 왼쪽은 우리, 오른쪽은 상대. 맨 윗줄은 '어느 팀', 그 아래는 라인끼리
+   마주 본다 (탑 · 정글 · 미드 · 서폿 · 원딜) */
+.fb-table {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.5rem;
+}
+
+/* '어느 팀' 줄은 표의 머리라 한 칸 띄운다 */
+.fb-table > .bet-opt-wrap:nth-child(2) {
+  margin-bottom: 0.35rem;
+}
+
+.fb-table > .bet-opt-wrap:nth-child(1) {
+  margin-bottom: 0.35rem;
+}
+
+.bet-opt.is-side .bet-opt-text {
+  font-weight: 800;
+}
+
+/* 우리 쪽이 다섯이 안 되면 빈 자리. 줄이 안 무너지게 칸만 차지한다 */
+.fb-empty {
+  min-height: 2.2rem;
+  border-radius: 8px;
+  border: 1px dashed rgba(148, 163, 184, 0.12);
+}
+
+.fb-lane {
+  margin-left: 0.35rem;
+  padding: 0.02rem 0.32rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  font-style: normal;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #8b98ae;
+}
+
+.fb-lane.is-undecided {
+  color: #55637a;
+}
+
+/* ---------- 배팅 묶기 ---------- */
+
+.parlay-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #8b98ae;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.parlay-toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* 켜고 끄는 스위치 모양. 체크박스보다 '모드가 바뀐다'가 잘 읽힌다 */
+.parlay-switch {
+  position: relative;
+  width: 1.7rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.15s ease;
+}
+
+.parlay-switch::after {
+  content: '';
+  position: absolute;
+  top: 0.12rem;
+  left: 0.12rem;
+  width: 0.71rem;
+  height: 0.71rem;
+  border-radius: 50%;
+  background: #cbd5e5;
+  transition: transform 0.15s ease;
+}
+
+.parlay-toggle.is-on {
+  border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 55%, transparent);
+  color: var(--accent-light, var(--gg-gold-light));
+}
+
+.parlay-toggle.is-on .parlay-switch {
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 60%, transparent);
+}
+
+.parlay-toggle.is-on .parlay-switch::after {
+  transform: translateX(0.75rem);
+}
+
+.bet-cart.is-parlay {
+  border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 35%, transparent);
+}
+
+/* 묶음의 다리 한 줄. 금액칸이 없으니 무엇 · 배당 · 빼기 */
+.bet-cart-item.is-leg {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bet-odds.is-bad {
+  color: #f97362;
+}
+
+.parlay-sum {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0.6rem 0 0.4rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 10%, transparent);
+  font-size: 0.8rem;
+  color: #a8b4c8;
+}
+
+.parlay-sum strong {
+  margin-left: 0.25rem;
+  font-size: 1.05rem;
+  color: var(--accent-light, var(--gg-gold-light));
+  font-variant-numeric: tabular-nums;
+}
+
+.parlay-sum em {
+  font-style: normal;
+  font-size: 0.74rem;
+  color: #8b98ae;
+}
+
+.bet-cart-item.is-parlay-amt {
+  list-style: none;
+}

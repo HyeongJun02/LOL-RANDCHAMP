@@ -1016,8 +1016,10 @@ export const winningSelection = (scrim, market) => {
 export { BET_CAP };
 
 /* 상한은 tuning.js의 BET_CAP 한 곳에서만 정한다. null이면 상한 없음 */
-export const capOf = (market) =>
-  (isKillMarket(market) ? BET_CAP.kills : BET_CAP[market]) ?? null;
+export const capOf = (market) => {
+  if (/^(ourkills|oppkills)_/.test(market)) return BET_CAP.team_kills ?? null;
+  return (isKillMarket(market) ? BET_CAP.kills : BET_CAP[market]) ?? null;
+};
 
 export const marketLabel = (market) => {
   if (market === 'winner') return '승리팀';
@@ -1025,6 +1027,9 @@ export const marketLabel = (market) => {
   if (market === 'kills_parity') return '킬 짝/홀';
   if (market === 'fb_side') return '첫 킬 - 어느 팀';
   if (market === 'dragon') return '첫 용';
+  if (market === 'parlay') return '묶음';
+  if (market.startsWith('ourkills_')) return `우리 팀 킬 ${killLineOf(market)}`;
+  if (market.startsWith('oppkills_')) return `상대 팀 킬 ${killLineOf(market)}`;
   if (isKillMarket(market)) return `총 킬 ${killLineOf(market)}`;
   return market;
 };
@@ -1079,13 +1084,28 @@ export const openCasualBet = ({ roomId, mode, playerIds, lanes, closeSeconds, ki
 
 /* 일반 게임 또또 정산. 내전과 함수가 다르다 - 내전은 '이긴 팀'이 반드시
    있어야 하고 마켓도 서로 다르다 */
-export const settleCasual = (scrimId, { totalKills, firstBloodPlayerId, fbSide, dragon }) =>
+export const settleCasual = (
+  scrimId,
+  { ourKills, oppKills, firstBloodPlayerId, fbSide, fbLane, dragon }
+) =>
   rpc('settle_casual', {
     p_scrim: scrimId,
-    p_total_kills: totalKills ?? null,
+    p_our_kills: ourKills ?? null,
+    p_opp_kills: oppKills ?? null,
     p_first_blood: firstBloodPlayerId ?? null,
     p_fb_side: fbSide ?? null,
+    p_fb_lane: fbLane ?? null,
     p_dragon: dragon ?? null,
+  });
+
+/* 배팅 묶기. 다리마다 { market, selection }만 보낸다 - 배당은 서버가 다시
+   매긴다. 화면이 보낸 배당을 믿으면 콘솔에서 100배로 바꿔 보낼 수 있다.
+   돌려받는 값은 서버가 박은 묶음 배당이다 */
+export const placeParlay = (scrimId, legs, amount) =>
+  rpc('place_parlay', {
+    p_scrim: scrimId,
+    p_legs: legs.map(({ market, selection }) => ({ market, selection })),
+    p_amount: amount,
   });
 
 export const settleScrim = (scrimId, winner, totalKills, firstBloodPlayerId) =>

@@ -120,3 +120,75 @@ test('짝홀이 언더오버 가지에 먼저 걸리지 않는다', () => {
   expect(casualAnswer(s, 'kills_29.5')).toBe('over');
   expect(casualAnswer({ ...s, total_kills: 20 }, 'kills_29.5')).toBe('under');
 });
+
+describe('팀 킬 · 상대 라인 · 묶음', () => {
+  const {
+    killTrio,
+    isKillTrio,
+    fbRows,
+    parlayCap,
+    parlayOdds,
+    casualOutcome,
+  } = require('./casual');
+  const { PARLAY_MAX_WIN } = require('./tuning');
+
+  test('킬 언더오버 셋은 우리 팀 · 총 · 상대 팀 순서다', () => {
+    expect(killTrio(29.5).map((k) => k.key)).toEqual([
+      'ourkills_14.5',
+      'kills_29.5',
+      'oppkills_14.5',
+    ]);
+    /* 짝홀은 이름이 kills_로 시작하지만 언더오버가 아니다 */
+    expect(isKillTrio('kills_parity')).toBe(false);
+    expect(isKillTrio('ourkills_14.5')).toBe(true);
+    expect(isKillTrio('kills_29.5')).toBe(true);
+  });
+
+  /* 첫 킬 표: 탑 · 정글 · 미드 · 서폿 · 원딜. 라인이 있으면 그 줄에,
+     미정이면 남은 줄에 차례로 */
+  test('정한 라인은 그 줄에, 미정은 남은 줄에', () => {
+    const rows = fbRows([1, 2, 3], { 2: 'SUPPORT' }, 'normal');
+    expect(rows.map((r) => r.lane)).toEqual(['TOP', 'JUNGLE', 'MID', 'SUPPORT', 'ADC']);
+    expect(rows.find((r) => r.lane === 'SUPPORT').id).toBe(2);
+    expect(rows.find((r) => r.lane === 'TOP').id).toBe(1);
+    expect(rows.find((r) => r.lane === 'JUNGLE').id).toBe(3);
+    expect(rows.find((r) => r.lane === 'ADC').id).toBeNull();
+  });
+
+  /* 버는 끼꼬(지급 - 건 돈)가 상한을 안 넘는다 */
+  test('묶음 상한으로 걸면 버는 끼꼬가 상한 안이다', () => {
+    [3.92, 9.44, 46.75, 611.3].forEach((odds) => {
+      const cap = parlayCap(odds);
+      expect(Math.floor(cap * odds) - cap).toBeLessThanOrEqual(PARLAY_MAX_WIN);
+      /* 한 끼꼬만 더 걸면 넘어야 상한이 너무 짜지 않은 것이다 */
+      expect(Math.floor((cap + 1) * odds) - (cap + 1)).toBeGreaterThan(PARLAY_MAX_WIN - odds);
+    });
+  });
+
+  /* 곱한 뒤에 한 번만 반올림한다. 다리마다 반올림하면 서버와 1~2씩 어긋난다 */
+  test('묶음 배당은 곱한 뒤 한 번만 반올림한다', () => {
+    expect(parlayOdds([1.98, 1.98])).toBe(3.92);
+    expect(parlayOdds([1.98])).toBeNull();
+    expect(parlayOdds([1.98, null])).toBeNull();
+  });
+
+  /* 상대가 땄는데 라인을 모르면 상대 라인에 건 것만 돌려준다 */
+  test('상대 라인을 모르면 상대 라인 배팅만 환불', () => {
+    const s = { status: 'settled', fb_side: 'them' };
+    expect(casualOutcome(s, 'first_blood', 'them_TOP')).toBe('void');
+    expect(casualOutcome(s, 'first_blood', '12')).toBe('lose');
+
+    const known = { ...s, fb_enemy_lane: 'TOP' };
+    expect(casualOutcome(known, 'first_blood', 'them_TOP')).toBe('win');
+    expect(casualOutcome(known, 'first_blood', 'them_MID')).toBe('lose');
+  });
+
+  test('팀 킬은 각자 기준선과 견준다', () => {
+    const s = { status: 'settled', our_kills: 16, opp_kills: 9, total_kills: 25 };
+    expect(casualOutcome(s, 'ourkills_14.5', 'over')).toBe('win');
+    expect(casualOutcome(s, 'oppkills_14.5', 'under')).toBe('win');
+    expect(casualOutcome(s, 'kills_29.5', 'under')).toBe('win');
+    /* 한쪽을 모르면 그 팀 것만 환불 */
+    expect(casualOutcome({ ...s, opp_kills: null }, 'oppkills_14.5', 'over')).toBe('void');
+  });
+});

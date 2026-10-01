@@ -141,3 +141,89 @@ test('첫 킬은 팀과 사람 중 하나만 담긴다', async () => {
   /* 사람을 고르는 순간 팀 쪽은 빠진다 */
   expect(optionFor(el, '우리 팀').className).not.toContain('picked');
 });
+
+/* ---------- 킬 언더오버 · 첫 킬 표 · 배팅 묶기 ---------- */
+
+const picked = (el) => [...el.querySelectorAll('.bet-opt.picked')];
+
+test('킬 언더오버는 우리 팀 · 총 킬 · 상대 팀 세 칸이고 하나만 담긴다', async () => {
+  const el = await render({ active: casual() });
+  const cols = [...el.querySelectorAll('.kill-trio .kill-col')];
+  expect(cols.map((c) => c.querySelector('.kill-col-line em').textContent)).toEqual([
+    '우리 팀',
+    '총 킬',
+    '상대 팀',
+  ]);
+  expect(cols[0].querySelector('.kill-col-line strong').textContent).toBe('14.5');
+
+  /* 위에서부터 오버 · 기준선 · 언더 */
+  const kids = [...cols[1].children].map((n) => n.textContent);
+  expect(kids[0]).toContain('오버');
+  expect(kids[1]).toContain('29.5');
+  expect(kids[2]).toContain('언더');
+
+  await click(cols[0].querySelector('.bet-opt.is-over'));
+  await click(cols[1].querySelector('.bet-opt.is-under'));
+  /* 우리 팀 오버는 빠지고 총 킬 언더만 남는다 */
+  expect(picked(el)).toHaveLength(1);
+  expect(cols[1].querySelector('.bet-opt.is-under').className).toContain('picked');
+});
+
+test('첫 킬은 우리와 상대가 라인끼리 마주 본다', async () => {
+  const el = await render({ active: casual() });
+  const cells = [...el.querySelectorAll('.fb-table > *')].map((n) => n.textContent);
+  /* 맨 윗줄은 어느 팀 */
+  expect(cells[0]).toContain('우리 팀');
+  expect(cells[1]).toContain('상대 팀');
+  /* 탑 줄: 우리 쪽은 라인이 정해진 사람이 없으니 비어 있다 */
+  expect(cells[3]).toContain('상대 탑');
+  /* 서폿 줄: 영희(서폿)와 상대 서폿 */
+  const supRow = cells.indexOf(cells.find((c) => c.includes('상대 서폿')));
+  expect(cells[supRow - 1]).toContain('영희');
+});
+
+test('라인이 미정이면 남은 줄에 앉고 미정이라 적힌다', async () => {
+  const el = await render({ active: casual({ lanes: { 2: 'SUPPORT' } }) });
+  const mine = optionFor(el, '철수');
+  expect(mine.textContent).toContain('미정');
+});
+
+test('칼바람에는 상대를 고를 칸이 없다', async () => {
+  const el = await render({ active: casual({ mode: 'aram', kill_line: 59.5, lanes: {} }) });
+  expect(el.textContent).not.toContain('상대 탑');
+  expect(optionFor(el, '철수')).toBeDefined();
+});
+
+test('배팅 묶기를 켜면 배당이 곱해지고 한 칸에만 적는다', async () => {
+  const el = await render({ active: casual() });
+  await click(optionFor(el, '홀'));
+  await click(el.querySelector('.casual-dragons .bet-opt'));
+  await click(el.querySelector('.parlay-toggle'));
+
+  /* 1.98 × 5.5 = 10.89 */
+  expect(el.querySelector('.parlay-sum strong').textContent).toBe('10.89배');
+  /* 버는 끼꼬 30000을 넘지 않게: floor(30000 / 9.89) = 3033 */
+  expect(el.querySelector('.parlay-sum em').textContent).toContain('3,033');
+  /* 금액 칸은 하나뿐 */
+  expect(el.querySelectorAll('.bet-cart .bet-amount')).toHaveLength(1);
+});
+
+test('하나만 담으면 묶을 수 없다고 말해준다', async () => {
+  const el = await render({ active: casual() });
+  await click(optionFor(el, '홀'));
+  await click(el.querySelector('.parlay-toggle'));
+  expect(el.querySelector('.bet-cart').textContent).toContain('두 개 이상');
+  expect([...el.querySelectorAll('.bet-cart button')].find((b) => b.textContent === '묶어서 걸기').disabled).toBe(true);
+});
+
+/* 내전도 같은 언더오버 칸을 쓴다. 승리팀은 마감 때까지 배당을 모르니 못 묶는다 */
+test('내전: 총 킬 한 칸, 승리팀은 묶을 수 없다', async () => {
+  const scrim = casual({ kind: 'scrim', team_b: [], lanes: {}, kill_line: 53.5 });
+  const el = await render({ active: scrim });
+  expect(el.querySelectorAll('.kill-trio.is-single .kill-col')).toHaveLength(1);
+
+  await click(optionFor(el, '1팀 승리'));
+  await click(el.querySelector('.kill-col .bet-opt.is-over'));
+  await click(el.querySelector('.parlay-toggle'));
+  expect(el.querySelector('.bet-cart').textContent).toContain('승리팀은 묶을 수 없어요');
+});

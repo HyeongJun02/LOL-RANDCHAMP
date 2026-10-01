@@ -1,4 +1,5 @@
 import {
+  PARLAY_MAX_WIN,
   CASUAL_KILL_LINES,
   FIRST_BLOOD_LANE_SHARE,
   FIRST_DRAGON_ODDS,
@@ -61,13 +62,73 @@ export const laneLabel = (key) => LANES.find((x) => x.key === key)?.label || '';
 export const casualKillLine = (mode) =>
   CASUAL_KILL_LINES[mode] ?? CASUAL_KILL_LINES.normal;
 
+/* 우리 팀·상대 팀 킬 기준선. 총 기준선의 절반을 .5로 맞춘다 (29.5 → 14.5).
+   sql/setup.sql의 team_kill_line과 같아야 한다 */
+export const teamKillLine = (total) => Math.floor(Number(total) / 2) + 0.5;
+
+/* 킬 언더오버 셋. 셋 중 하나만 건다 - 우리 팀 오버와 총 오버는 거의 같이
+   움직여서, 둘 다 걸면 같은 걸 두 번 거는 셈이다 */
+export const killTrio = (total) => {
+  const t = teamKillLine(total);
+  return [
+    { key: `ourkills_${t}`, label: '우리 팀', line: t },
+    { key: `kills_${total}`, label: '총 킬', line: Number(total) },
+    { key: `oppkills_${t}`, label: '상대 팀', line: t },
+  ];
+};
+
+export const isKillTrio = (market) =>
+  /^(ourkills|oppkills)_/.test(market) ||
+  (market.startsWith('kills_') && market !== 'kills_parity');
+
+/* 상대 팀 첫 킬은 사람을 모르니 라인으로 건다 ('them_TOP') */
+export const enemyPick = (lane) => `them_${lane}`;
+export const enemyLaneOf = (sel) =>
+  typeof sel === 'string' && sel.startsWith('them_') ? sel.slice(5) : null;
+
+/* 첫 킬 표의 줄 순서. 탑 · 정글 · 미드 · 서폿 · 원딜 */
+export const FB_ROW_ORDER = ['TOP', 'JUNGLE', 'MID', 'SUPPORT', 'ADC'];
+
+/* 우리 다섯을 첫 킬 표의 줄에 앉힌다. 라인이 있으면 그 줄에, 미정이면
+   남은 줄에 차례대로. 칼바람은 라인이 없으니 고른 순서대로 */
+export const fbRows = (ids, lanes = {}, mode) => {
+  const rows = FB_ROW_ORDER.map((lane) => ({ lane, id: null }));
+  if (!hasLanes(mode)) {
+    ids.forEach((id, i) => {
+      if (rows[i]) rows[i].id = id;
+    });
+    return rows;
+  }
+  const rest = [];
+  ids.forEach((id) => {
+    const row = rows.find((r) => r.lane === lanes[id] && r.id == null);
+    if (row) row.id = id;
+    else rest.push(id);
+  });
+  rest.forEach((id) => {
+    const row = rows.find((r) => r.id == null);
+    if (row) row.id = id;
+  });
+  return rows;
+};
+
+/* 묶음 배팅의 거는 상한. 버는 끼꼬가 PARLAY_MAX_WIN을 넘지 않게.
+   sql/setup.sql의 place_parlay와 같은 셈이다 */
+export const parlayCap = (odds) => (odds > 1 ? Math.floor(PARLAY_MAX_WIN / (odds - 1)) : 0);
+
+/* 담은 배팅들의 묶음 배당. 서버처럼 곱한 뒤에 한 번만 반올림한다 */
+export const parlayOdds = (legOdds) => {
+  if (legOdds.length < 2 || legOdds.some((o) => !(o > 0))) return null;
+  return Math.round(legOdds.reduce((a, b) => a * b, 1) * 100) / 100;
+};
+
 /* 첫 킬을 이 라인이 딸 배당.
 
    상대팀이 딸 확률 절반을 먼저 떼고, 남은 절반을 라인 몫으로 가른다.
    칼바람은 라인이 없으니 다섯이 똑같이 나눈다. */
 export const firstBloodOdds = (lane, mode) => {
   const share = hasLanes(mode)
-    ? FIRST_BLOOD_LANE_SHARE[lane] ?? 1 / CASUAL_TEAM_SIZE
+    ? FIRST_BLOOD_LANE_SHARE[enemyLaneOf(lane) || lane] ?? 1 / CASUAL_TEAM_SIZE
     : 1 / CASUAL_TEAM_SIZE;
   if (!(share > 0)) return null;
   return Math.round((FIRST_BLOOD_RATE / (0.5 * share)) * 100) / 100;
@@ -105,6 +166,11 @@ export const casualAnswer = (scrim, market) => {
     if (scrim.total_kills == null) return null;
     return scrim.total_kills > Number(market.split('_')[1]) ? 'over' : 'under';
   }
+  if (/^(ourkills|oppkills)_/.test(market)) {
+    const v = market.startsWith('our') ? scrim.our_kills : scrim.opp_kills;
+    if (v == null) return null;
+    return v > Number(market.split('_')[1]) ? 'over' : 'under';
+  }
   if (market === 'fb_side') return scrim.fb_side ?? null;
   if (market === 'dragon') return scrim.first_dragon ?? null;
 
@@ -115,12 +181,35 @@ export const casualAnswer = (scrim, market) => {
      아무 선택지와도 안 맞는 값을 돌려줘서 전부 낙첨으로 그린다 */
   if (market === 'first_blood') {
     if (!scrim.fb_side) return null;
-    if (scrim.fb_side === 'them') return 'them';
+    if (scrim.fb_side === 'them') {
+      return scrim.fb_enemy_lane ? enemyPick(scrim.fb_enemy_lane) : 'them';
+    }
     return scrim.first_blood_player_id == null
       ? null
       : String(scrim.first_blood_player_id);
   }
   return null;
+};
+
+/* 정산이 끝난 판에서 이 선택이 어떻게 됐나. 'win' · 'lose' · 'void'(환불).
+   sql/setup.sql의 leg_result와 같은 규칙이다.
+
+   정답 하나로는 말할 수 없는 경우가 하나 있다 - 상대가 첫 킬을 땄는데
+   어느 라인인지 모를 때. 상대 라인에 건 것은 돌려주고, 우리 쪽 사람에
+   건 것은 그대로 낙첨이다 */
+export const casualOutcome = (scrim, market, selection) => {
+  if (!scrim || scrim.status !== 'settled') return null;
+  if (
+    market === 'first_blood' &&
+    scrim.fb_side === 'them' &&
+    !scrim.fb_enemy_lane &&
+    enemyLaneOf(selection)
+  ) {
+    return 'void';
+  }
+  const ans = casualAnswer(scrim, market);
+  if (ans == null) return 'void';
+  return ans === selection ? 'win' : 'lose';
 };
 
 export const PARITY = [

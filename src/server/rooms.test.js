@@ -1023,7 +1023,10 @@ test('배팅 상한이 tuning.js와 DB에서 같다', () => {
     kills_parity: "like 'kills%' then",
     fb_side: "= 'fb_side' then",
     dragon: "= 'dragon' then",
+    team_kills: "like 'ourkills%' then",
   };
+  /* 상대 팀 킬도 같은 상한 */
+  expect(body).toContain(`like 'oppkills%' then ${BET_CAP.team_kills}`);
 
   Object.entries(BET_CAP).forEach(([market, cap]) => {
     expect(sqlOf[market]).toBeDefined();
@@ -2020,12 +2023,25 @@ describe('일반 게임 또또 (SQL)', () => {
   const settle = fnBody('settle_casual');
   const lock = fnBody('lock_betting');
   const open = fnBody('open_casual_bet');
+  const leg = fnBody('leg_result');
+  const pick = fnBody('check_bet_pick');
+
+  /* 맞았나 틀렸나를 두 군데서 따로 판단하면 언젠가 어긋난다.
+     낱개 정산과 묶음 정산이 같은 함수를 본다 */
+  test('맞았나는 leg_result 한 군데서만 판단한다', () => {
+    expect(settle).toContain('case public.leg_result(s, b.market, b.selection)');
+    expect(fnBody('settle_parlays')).toContain('public.leg_result(s,');
+  });
 
   /* 상대가 첫 킬을 땄을 때 '누구' 마켓을 환불하면, 배당(8.5배 언저리)이
      이미 '상대가 딸 절반'을 값에 넣고 있어서 걸기만 해도 이득이 된다 */
   test('첫 킬(사람)은 상대가 땄을 때 환불이 아니라 낙첨이다', () => {
-    expect(settle).toContain('fb_void := p_fb_side is null;');
-    expect(settle).not.toContain('fb_void := p_first_blood is null');
+    /* 환불은 '어느 팀인지조차 안 넣었을 때'뿐 */
+    expect(leg).toContain("if s.fb_side is null then return 'void'; end if;");
+    /* 상대 라인을 모를 때는 상대 라인에 건 것만 돌려준다 */
+    expect(leg).toContain(
+      "if s.fb_side = 'them' and s.fb_enemy_lane is null and sel like 'them\\_%' then"
+    );
   });
 
   /* 전적에 안 들어가는 판에 참여 끼꼬를 주면, 일반 큐만 돌려도 끼꼬가 생긴다 */
@@ -2035,20 +2051,39 @@ describe('일반 게임 또또 (SQL)', () => {
 
   /* 'kills_parity'가 언더오버 가지에 먼저 걸리면 'parity'::numeric에서 터진다 */
   test('짝홀은 언더오버 가지에 안 걸린다', () => {
-    expect(settle).toContain("b.market like 'kills%' and b.market <> 'kills_parity' and (");
+    expect(leg.indexOf("if m = 'kills_parity' then")).toBeLessThan(
+      leg.indexOf("if m like 'kills\\_%'")
+    );
     /* 마감 때 기준선을 박는 자리도 같은 함정이 있다 */
     expect(lock).toContain("bp.market like 'kills%' and bp.market <> 'kills_parity'");
+  });
+
+  /* 총 킬을 따로 받으면 우리 12 · 상대 17 · 총 30처럼 서로 안 맞는 숫자가
+     들어올 수 있다. 총 킬은 둘의 합이다 */
+  test('총 킬은 팀 킬의 합이다', () => {
+    expect(settle).toContain('then p_our_kills + p_opp_kills end');
   });
 
   /* 화면에 '7.08배'라고 해놓고 서버가 다른 배당으로 주면 안 된다 */
   test('라인 몫과 첫 용 배당이 tuning.js와 같다', () => {
     const { FIRST_BLOOD_LANE_SHARE, FIRST_DRAGON_ODDS } = require('../rules/tuning');
+    const fb = fnBody('casual_fb_odds');
     Object.entries(FIRST_BLOOD_LANE_SHARE).forEach(([lane, share]) => {
-      expect(lock).toContain(`when '${lane}' then ${share}`);
+      expect(fb).toContain(`when '${lane}' then ${share}`);
     });
     expect(lock).toContain(`set odds = ${FIRST_DRAGON_ODDS}`);
-    /* 칼바람은 라인이 없어 다섯이 똑같이 나눈다 */
-    expect(lock).toContain("when s.mode = 'aram' then 0.2");
+    expect(fnBody('base_odds')).toContain(`return ${FIRST_DRAGON_ODDS};`);
+    /* 마감 배당과 묶음 배당이 같은 함수를 본다 */
+    expect(lock).toContain('public.casual_fb_odds(s, bp.selection)');
+    expect(fnBody('base_odds')).toContain('public.casual_fb_odds(s, sel)');
+  });
+
+  test('팀 킬 기준선이 화면과 같다', () => {
+    const { teamKillLine } = require('../rules/casual');
+    expect(fnBody('team_kill_line')).toContain('floor(total / 2) + 0.5');
+    expect(teamKillLine(29.5)).toBe(14.5);
+    expect(teamKillLine(59.5)).toBe(29.5);
+    expect(teamKillLine(53.5)).toBe(26.5);
   });
 
   /* 아무 id나 받으면 남의 방 사람에게 배당이 걸린다 */
@@ -2057,16 +2092,79 @@ describe('일반 게임 또또 (SQL)', () => {
     expect(open).toContain('jsonb_array_length(p_players) > 5');
   });
 
-  /* 내전 정산 함수로 일반 게임을 정산하면 '이긴 팀'을 요구한다. 거꾸로도
-     막아야 한다 */
   test('일반 게임만 이쪽으로 정산한다', () => {
     expect(settle).toContain("if s.kind <> 'casual' then");
   });
 
   test('없는 마켓이나 엉뚱한 쪽 마켓은 받지 않는다', () => {
-    const place = fnBody('place_bets');
-    expect(place).toContain("raise exception '없는 항목이에요.'");
-    expect(place).toContain("s.kind = 'casual' and b->>'market' = 'winner'");
-    expect(place).toContain("b->>'market' = 'dragon' and s.mode = 'aram'");
+    expect(fnBody('place_bets')).toContain(
+      "perform public.check_bet_pick(s, b->>'market', b->>'selection');"
+    );
+    expect(pick).toContain("raise exception '없는 항목이에요.'");
+    expect(pick).toContain("raise exception '일반 게임에는 승리팀이 없어요.'");
+    expect(pick).toContain("raise exception '칼바람에는 용이 없어요.'");
+    /* 기준선을 다른 숫자로 바꿔 거는 길 */
+    expect(pick).toContain('line <> s.kill_line');
+    expect(pick).toContain('line <> public.team_kill_line(s.kill_line)');
+  });
+
+  /* 우리 팀 오버와 총 오버는 거의 같이 움직인다. 둘 다 걸면 같은 걸 두 번 */
+  test('킬 언더오버는 셋 중 하나만', () => {
+    expect(fnBody('place_bets')).toContain(
+      "킬 언더오버는 우리 팀·총·상대 팀 중 하나만 걸 수 있어요."
+    );
+  });
+});
+
+/* ---------- 배팅 묶기 ---------- */
+
+describe('배팅 묶기 (SQL)', () => {
+  const place = fnBody('place_parlay');
+
+  /* 버는 끼꼬(지급 - 건 돈)가 상한을 넘지 않게, 상한을 배당에서 거꾸로 구한다 */
+  test('버는 끼꼬 상한이 tuning.js와 같다', () => {
+    const { PARLAY_MAX_WIN } = require('../rules/tuning');
+    expect(place).toContain(`cap := floor(${PARLAY_MAX_WIN} / (o - 1));`);
+  });
+
+  /* 낱개와 같은 표에 한 줄로 넣어야 취소·되돌리기·계정 옮기기가 따라온다 */
+  test('bets에 parlay 한 줄로 들어간다', () => {
+    expect(place).toContain("values (p_scrim, s.room_id, me, 'parlay',");
+    expect(place).toContain("'bet', p_scrim");
+  });
+
+  /* 승리팀은 마감 때까지 배당을 모르니 곱할 수가 없다 */
+  test('승리팀은 못 묶는다', () => {
+    expect(fnBody('base_odds')).toContain('승리팀은 묶을 수 없어요');
+  });
+
+  test('묶기 전에 다리마다 낱개와 같은 검사를 거친다', () => {
+    expect(place).toContain("perform public.check_bet_pick(s, l->>'market', l->>'selection');");
+    expect(place).toContain('두 개 이상 담아야 묶을 수 있어요.');
+    expect(place).toContain('첫 킬은 어느 팀이나 누구 중 하나만 묶을 수 있어요.');
+    expect(place).toContain('킬 언더오버는 하나만 묶을 수 있어요.');
+  });
+
+  /* 정산 되돌리기가 배당을 지우면 다시 정산할 때 곱할 게 없다 */
+  test('되돌려도 묶음 배당은 남는다', () => {
+    expect(fnBody('unsettle_scrim')).toContain("odds = case when market = 'parlay' then odds end");
+  });
+
+  /* 지급을 지갑에 넣기 전에 묶음 지급이 정해져 있어야 한다 */
+  test('내전·일반 정산 둘 다 묶음을 지갑에 넣기 전에 정산한다', () => {
+    ['settle_scrim', 'settle_casual'].forEach((fn) => {
+      const body = fnBody(fn);
+      expect(body.indexOf('perform public.settle_parlays(s);')).toBeGreaterThan(-1);
+      expect(body.indexOf('perform public.settle_parlays(s);')).toBeLessThan(
+        body.indexOf('with paid as')
+      );
+    });
+  });
+
+  /* exp(sum(ln))으로 곱하면 3.9204가 3.92039999가 되어 지급이 1씩 모자란다 */
+  test('배당 곱은 numeric으로 차례대로 곱한다', () => {
+    const body = fnBody('settle_parlays');
+    expect(body).toContain("mult := mult * (l->>'odds')::numeric;");
+    expect(body).not.toMatch(/exp\(|ln\(/);
   });
 });

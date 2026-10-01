@@ -1,6 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaLock, FaCheck, FaUndo, FaChevronRight, FaTrash, FaDice, FaTimes } from 'react-icons/fa';
+import {
+  FaLock,
+  FaCheck,
+  FaUndo,
+  FaChevronRight,
+  FaTrash,
+  FaDice,
+  FaTimes,
+  FaArrowUp,
+  FaArrowDown,
+  FaLink,
+} from 'react-icons/fa';
 import {
   killLineOfScrim,
   killMarket,
@@ -13,6 +24,7 @@ import {
   settleScrim,
   settleCasual,
   openCasualBet,
+  placeParlay,
   unsettleScrim,
   removeScrim,
   fetchBetting,
@@ -35,6 +47,15 @@ import {
   dragonLabel,
   firstBloodOdds,
   dragonOdds,
+  killTrio,
+  isKillTrio,
+  fbRows,
+  enemyPick,
+  enemyLaneOf,
+  parlayCap,
+  parlayOdds,
+  casualOutcome,
+  FB_ROW_ORDER,
 } from '../../rules/casual';
 import { timeAgo } from '../../lib/timeAgo';
 import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS } from '../../rules/tuning';
@@ -150,10 +171,16 @@ const BetTab = ({
 
   /* ---------- 배팅 담기 ---------- */
 
-  /* 일반 게임의 첫 킬은 '어느 팀'과 '누구' 중 하나만 건다. 한쪽을 담으면
-     다른 쪽은 장바구니에서 뺀다 (이미 건 쪽이 있으면 아예 못 누른다 -
+  /* 같이 못 거는 항목들. 일반 게임의 첫 킬은 '어느 팀'과 '누구' 중 하나,
+     킬 언더오버는 우리 팀·총·상대 팀 중 하나. 하나를 담으면 같은 무리의
+     다른 항목은 장바구니에서 빠진다 (이미 건 쪽이 있으면 아예 못 누른다 -
      서버도 막는다) */
-  const RIVAL = { fb_side: 'first_blood', first_blood: 'fb_side' };
+  const groupOf = (scrim, market) => {
+    if (scrim?.kind !== 'casual') return null;
+    if (market === 'fb_side' || market === 'first_blood') return 'fb';
+    if (isKillTrio(market)) return 'kills';
+    return null;
+  };
 
   const pick = (market, selection) =>
     setCart((prev) => {
@@ -161,7 +188,12 @@ const BetTab = ({
       if (next[market]?.selection === selection) delete next[market];
       else {
         next[market] = { selection, amount: prev[market]?.amount ?? '' };
-        if (activeScrim?.kind === 'casual' && RIVAL[market]) delete next[RIVAL[market]];
+        const g = groupOf(activeScrim, market);
+        if (g) {
+          Object.keys(next).forEach((k) => {
+            if (k !== market && groupOf(activeScrim, k) === g) delete next[k];
+          });
+        }
       }
       return next;
     });
@@ -184,6 +216,49 @@ const BetTab = ({
     });
 
   const cartRows = Object.entries(cart);
+
+  /* ---------- 배팅 묶기 ---------- */
+
+  /* 담은 것들을 한 장으로. 배당을 곱한다. 거는 끼꼬는 하나만 적는다 */
+  const [parlay, setParlay] = useState(false);
+  const [parlayAmt, setParlayAmt] = useState('');
+
+  /* 묶을 때 박히는 배당. 서버(base_odds)와 같은 규칙이다 - 두 갈래 항목은
+     기준값, 첫 킬·첫 용은 고정값. 승리팀은 마감 때까지 모르니 못 묶는다 */
+  const legOdds = (scrim, market, selection) => {
+    if (!scrim || market === 'winner') return null;
+    if (market === 'dragon') return dragonOdds();
+    if (market === 'first_blood') {
+      if (scrim.kind === 'casual') {
+        return firstBloodOdds(enemyLaneOf(selection) || scrim.lanes?.[selection], scrim.mode);
+      }
+      const n = (scrim.team_a?.length || 0) + (scrim.team_b?.length || 0);
+      return fbOdds.get(Number(selection)) ?? Math.round(n * FIRST_BLOOD_RATE * 100) / 100;
+    }
+    return KILLS_ODDS;
+  };
+
+  const legs = cartRows.map(([market, v]) => ({
+    market,
+    selection: v.selection,
+    odds: legOdds(activeScrim, market, v.selection),
+  }));
+  const hasWinnerLeg = legs.some((l) => l.market === 'winner');
+  const combo = hasWinnerLeg ? null : parlayOdds(legs.map((l) => l.odds));
+  /* 버는 끼꼬가 상한을 넘지 않게 거꾸로 구한 값과 잔액 중 작은 쪽 */
+  const comboCap = combo ? Math.min(parlayCap(combo), me?.points ?? 0) : 0;
+  const myParlay = activeScrim
+    ? bets.find((b) => b.scrim_id === activeScrim.id && b.user_id === myId && b.market === 'parlay')
+    : null;
+  const parlayNum = Number(parlayAmt) || 0;
+
+  const bumpParlay = (n) => setParlayAmt(String(Math.min(parlayNum + n, comboCap)));
+
+  /* 묶음에 든 것들을 한 줄로. 내 배팅·정산 펼치기 두 곳이 같은 말을 쓴다 */
+  const legsText = (b) =>
+    (b.legs || [])
+      .map((l) => `${marketLabel(l.market)} ${selectionLabel(l.market, l.selection)}`)
+      .join(' × ');
   const cartTotal = cartRows.reduce((sum, [, v]) => sum + (Number(v.amount) || 0), 0);
   const overBalance = cartTotal > (me?.points ?? 0);
 
@@ -214,6 +289,36 @@ const BetTab = ({
       await placeBets(scrim.id, payload);
       setCart({});
       toast.success('배팅했어요. 배당은 마감 때 공개됩니다.');
+      onChanged();
+      load();
+    });
+
+  const submitParlay = (scrim) =>
+    guard(async () => {
+      if (legs.length < 2) {
+        toast.error('두 개 이상 담아야 묶을 수 있어요.');
+        return;
+      }
+      if (hasWinnerLeg) {
+        toast.error('승리팀은 묶을 수 없어요. 배당이 마감 때 정해집니다.');
+        return;
+      }
+      const amount = Number(parlayAmt);
+      if (!Number.isInteger(amount) || amount <= 0) {
+        toast.error('걸 끼꼬를 적어주세요.');
+        return;
+      }
+      if (amount > comboCap) {
+        toast.error(`이 묶음은 ${num(comboCap)} 끼꼬까지 걸 수 있어요.`);
+        return;
+      }
+      /* 배당은 서버가 다시 매겨 돌려준다. 화면이 보낸 값을 믿으면 콘솔에서
+         고쳐 보낼 수 있다 */
+      const odds = await placeParlay(scrim.id, legs, amount);
+      setCart({});
+      setParlayAmt('');
+      setParlay(false);
+      toast.success(`${Number(odds).toFixed(2)}배로 묶어서 걸었어요.`);
       onChanged();
       load();
     });
@@ -277,14 +382,20 @@ const BetTab = ({
   /* 일반 게임만. 첫 킬을 우리가 땄나 상대가 땄나, 첫 용은 무엇이었나 */
   const [fbSide, setFbSide] = useState('');
   const [dragon, setDragon] = useState('');
+  /* 일반 게임은 킬을 팀별로 받는다. 상대가 첫 킬을 땄으면 어느 라인인지 */
+  const [ourK, setOurK] = useState('');
+  const [oppK, setOppK] = useState('');
+  const [fbLane, setFbLane] = useState('');
   const [openCasual, setOpenCasual] = useState(false);
 
   const settle = (scrim) =>
     guard(async () => {
       if (scrim.kind === 'casual') {
-        const k = kills === '' ? null : Number(kills);
-        if (k !== null && (!Number.isInteger(k) || k < 0)) {
-          toast.error('총 킬 수를 숫자로 적어주세요.');
+        const asKills = (v) => (v === '' ? null : Number(v));
+        const ours = asKills(ourK);
+        const opp = asKills(oppK);
+        if ([ours, opp].some((k) => k !== null && (!Number.isInteger(k) || k < 0))) {
+          toast.error('킬 수를 숫자로 적어주세요.');
           return;
         }
         /* 우리가 땄다면서 아무도 안 고르면 '누구' 마켓이 영원히 안 정해진다.
@@ -294,14 +405,18 @@ const BetTab = ({
           return;
         }
         await settleCasual(scrim.id, {
-          totalKills: k,
+          ourKills: ours,
+          oppKills: opp,
           fbSide: fbSide || null,
           firstBloodPlayerId: fbSide === 'us' && fb !== '' ? Number(fb) : null,
+          fbLane: fbSide === 'them' && fbLane ? fbLane : null,
           dragon: dragon || null,
         });
-        setKills('');
+        setOurK('');
+        setOppK('');
         setFb('');
         setFbSide('');
+        setFbLane('');
         setDragon('');
         toast.success('정산했어요.');
         onChanged();
@@ -365,7 +480,10 @@ const BetTab = ({
   /* 마켓마다 선택지 표기가 다르다. 내 배팅·정산 펼치기 두 곳이 같은 말을
      써야 헷갈리지 않아서 한 군데서만 만든다 */
   const selectionLabel = (market, selection) => {
-    if (market === 'first_blood') return nameOf.get(Number(selection)) || '?';
+    if (market === 'first_blood') {
+      const enemy = enemyLaneOf(selection);
+      return enemy ? `상대 ${laneLabel(enemy)}` : nameOf.get(Number(selection)) || '?';
+    }
     if (market === 'kills_parity') return PARITY.find((x) => x.key === selection)?.label;
     if (market === 'fb_side') return SIDES.find((x) => x.key === selection)?.label;
     if (market === 'dragon') return dragonLabel(selection);
@@ -412,14 +530,13 @@ const BetTab = ({
   const bettorsOn = (scrim, market, selection) =>
     bets.filter((b) => b.scrim_id === scrim.id && b.market === market && b.selection === selection);
 
-  const renderOption = ({ scrim, market, selection, label, key, fixed, icon }) => {
+  const renderOption = ({ scrim, market, selection, label, key, fixed, icon, tone = '' }) => {
     const p = poolOf(scrim.id, market, selection);
     const mine = myBets(scrim.id).find((b) => b.market === market);
-    /* 일반 게임에서 첫 킬의 다른 쪽에 이미 걸었으면 이쪽은 잠근다 */
+    /* 같은 무리의 다른 항목에 이미 걸었으면 이쪽은 잠근다 */
+    const g = groupOf(scrim, market);
     const rivalTaken =
-      scrim.kind === 'casual' &&
-      RIVAL[market] &&
-      myBets(scrim.id).some((b) => b.market === RIVAL[market]);
+      Boolean(g) && myBets(scrim.id).some((b) => b.market !== market && groupOf(scrim, b.market) === g);
     const taken = Boolean(mine) || rivalTaken;
     const picked = cart[market]?.selection === selection;
     const open = scrim.status === 'betting';
@@ -436,9 +553,15 @@ const BetTab = ({
             ? fbOdds.get(Number(selection))
             : null;
 
-    const answer = winningSelection(scrim, market);
-    const won = settled && answer === selection;
-    const lost = settled && answer != null && answer !== selection;
+    /* 일반 게임은 정답 하나로 말할 수 없는 경우가 있다 (상대가 땄는데 라인을
+       모를 때 - 상대 라인에 건 것만 환불). 결과를 선택지마다 따로 본다 */
+    const outcome =
+      scrim.kind === 'casual' ? casualOutcome(scrim, market, selection) : null;
+    const answer = scrim.kind === 'casual' ? null : winningSelection(scrim, market);
+    const won = settled && (scrim.kind === 'casual' ? outcome === 'win' : answer === selection);
+    const lost =
+      settled &&
+      (scrim.kind === 'casual' ? outcome === 'lose' : answer != null && answer !== selection);
     const isMine = mine?.selection === selection;
     const on = bettorsOn(scrim, market, selection);
     const fbShown =
@@ -450,7 +573,7 @@ const BetTab = ({
       <div className={`bet-opt-wrap ${settled ? 'is-settled' : ''}`} key={key}>
         <button
           type="button"
-          className={`bet-opt ${picked ? 'picked' : ''} ${isMine ? 'mine' : ''} ${
+          className={`bet-opt ${tone} ${picked ? 'picked' : ''} ${isMine ? 'mine' : ''} ${
             won ? 'won' : ''
           } ${lost ? 'lost' : ''}`}
           disabled={!open || taken}
@@ -509,67 +632,138 @@ const BetTab = ({
     );
   };
 
+  /* 언더오버 한 칸. 위에서부터 오버 · 기준선 · 언더.
+     '오버 · 29.5 초과' 같은 글자를 버튼마다 붙이면 기준선이 두 번 나오고,
+     눈은 숫자보다 화살표를 먼저 본다 */
+  const renderKillColumn = (scrim, { key, label, line }) => (
+    <div className="kill-col" key={key}>
+      {renderOption({
+        scrim,
+        market: key,
+        selection: 'over',
+        tone: 'is-over',
+        label: (
+          <>
+            <FaArrowUp /> 오버
+          </>
+        ),
+      })}
+      <div className="kill-col-line">
+        <em>{label}</em>
+        <strong>{line}</strong>
+      </div>
+      {renderOption({
+        scrim,
+        market: key,
+        selection: 'under',
+        tone: 'is-under',
+        label: (
+          <>
+            <FaArrowDown /> 언더
+          </>
+        ),
+      })}
+    </div>
+  );
+
   /* 일반 게임 또또. 내전과 마켓이 다르다 - 승리팀이 없고(우리 다섯이 한
-     팀이다) 짝홀·어느 팀·첫 용이 있다 */
+     팀이다) 팀별 킬·짝홀·어느 팀·첫 용이 있다 */
   const renderCasualMarkets = (scrim) => {
-    const line = Number(scrim.kill_line);
-    const kills = killMarket(line);
+    const total = Number(scrim.kill_line);
     const lanes = scrim.lanes || {};
     const ours = scrim.team_a || [];
+    const laned = hasLanes(scrim.mode);
+
+    /* 첫 킬 - 우리 쪽 사람 한 칸 */
+    const ourCell = (id) =>
+      renderOption({
+        key: `u${id}`,
+        scrim,
+        market: 'first_blood',
+        selection: String(id),
+        label: (
+          <>
+            {nameOf.get(id) || '?'}
+            {laned && (
+              <i className={`fb-lane ${lanes[id] ? '' : 'is-undecided'}`}>
+                {lanes[id] ? laneLabel(lanes[id]) : '미정'}
+              </i>
+            )}
+          </>
+        ),
+        /* 라인으로 정해지는 고정 배당이라 마감 전에도 보여준다 */
+        fixed: firstBloodOdds(lanes[id], scrim.mode),
+      });
+
     return (
       <>
         <div className="bet-market">
           <h4>
-            총 킬 <strong className="bet-line">{line}</strong>
-            <em>기준 {KILLS_ODDS}배</em>
+            킬 언더/오버
+            <em>셋 중 하나만 · 기준 {KILLS_ODDS}배</em>
           </h4>
-          <div className="bet-opts">
-            {renderOption({ scrim, market: kills, selection: 'over', label: `오버 · ${line} 초과` })}
-            {renderOption({ scrim, market: kills, selection: 'under', label: `언더 · ${line} 미만` })}
-          </div>
+          <div className="kill-trio">{killTrio(total).map((k) => renderKillColumn(scrim, k))}</div>
+          <p className="rooms-hint">
+            우리 팀 오버와 총 킬 오버는 거의 같이 움직여서 하나만 고릅니다. 한쪽에 몰리면
+            그쪽 배당이 내려가고 반대쪽이 올라갑니다 — 확정된 배당은 마감 때 나옵니다.
+          </p>
         </div>
 
         <div className="bet-market">
           <h4>
             {marketLabel('kills_parity')}
-            <em>기준 {KILLS_ODDS}배</em>
+            <em>총 킬 기준 · {KILLS_ODDS}배</em>
           </h4>
-          <div className="bet-opts">
+          <div className="bet-opts is-compact">
             {PARITY.map((x) =>
               renderOption({ key: x.key, scrim, market: 'kills_parity', selection: x.key, label: x.label })
             )}
           </div>
         </div>
 
-        {/* 둘 중 하나만. 한쪽을 담으면 다른 쪽은 빠진다 */}
+        {/* 왼쪽은 우리, 오른쪽은 상대. 맨 윗줄은 '어느 팀', 그 아래는 라인끼리
+            마주 본다. 팀이나 사람 중 하나만 담긴다 */}
         <div className="bet-market">
           <h4>
             첫 킬
             <em>팀이나 사람 중 하나만</em>
           </h4>
-          <div className="bet-opts">
+          <div className="fb-table">
             {SIDES.map((x) =>
-              renderOption({ key: x.key, scrim, market: 'fb_side', selection: x.key, label: x.label })
-            )}
-          </div>
-          <div className="bet-opts bet-opts-grid casual-fb">
-            {ours.map((id) =>
               renderOption({
-                key: id,
+                key: x.key,
                 scrim,
-                market: 'first_blood',
-                selection: String(id),
-                label: hasLanes(scrim.mode) && lanes[id]
-                  ? `${nameOf.get(id) || '?'} · ${laneLabel(lanes[id])}`
-                  : nameOf.get(id) || '?',
-                /* 라인으로 정해지는 고정 배당이라 마감 전에도 보여준다 */
-                fixed: firstBloodOdds(lanes[id], scrim.mode),
+                market: 'fb_side',
+                selection: x.key,
+                label: x.label,
+                tone: 'is-side',
               })
             )}
+            {laned
+              ? fbRows(ours, lanes, scrim.mode).map((row) => (
+                  <React.Fragment key={row.lane}>
+                    {row.id != null ? ourCell(row.id) : <span className="fb-empty" />}
+                    {renderOption({
+                      key: `e${row.lane}`,
+                      scrim,
+                      market: 'first_blood',
+                      selection: enemyPick(row.lane),
+                      label: `상대 ${laneLabel(row.lane)}`,
+                      fixed: firstBloodOdds(row.lane, scrim.mode),
+                    })}
+                  </React.Fragment>
+                ))
+              : ours.map((id) => (
+                  /* 칼바람은 라인이 없어서 상대를 고를 수가 없다. 우리 쪽만 */
+                  <React.Fragment key={id}>
+                    {ourCell(id)}
+                    <span className="fb-empty" />
+                  </React.Fragment>
+                ))}
           </div>
           <p className="rooms-hint">
             '우리 팀'은 우리 중 누가 따든 맞습니다. 사람을 고르면 배당이 훨씬 크지만,
-            상대 팀이 따면 전부 낙첨입니다. 한 번에 {num(capOf('first_blood'))} 끼꼬까지.
+            다른 사람이 따면 낙첨입니다. 한 번에 {num(capOf('first_blood'))} 끼꼬까지.
           </p>
         </div>
 
@@ -649,12 +843,11 @@ const BetTab = ({
           return (
             <div className="bet-market" key={market}>
               <h4>
-                총 킬 <strong className="bet-line">{line}</strong>
+                총 킬 언더/오버
                 <em>기준 {KILLS_ODDS}배</em>
               </h4>
-              <div className="bet-opts">
-                {renderOption({ scrim, market, selection: 'over', label: `오버 · ${line} 초과` })}
-                {renderOption({ scrim, market, selection: 'under', label: `언더 · ${line} 미만` })}
+              <div className="kill-trio is-single">
+                {renderKillColumn(scrim, { key: market, label: '총 킬', line })}
               </div>
               <p className="rooms-hint">
                 둘 중 하나만 고를 수 있어요. 한쪽에 몰리면 그쪽 배당이 내려가고 반대쪽이
@@ -680,7 +873,7 @@ const BetTab = ({
                 {marketLabel(b.market)}
                 <em>
                   {' · '}
-                  {selectionLabel(b.market, b.selection)}
+                  {b.market === 'parlay' ? legsText(b) : selectionLabel(b.market, b.selection)}
                 </em>
               </span>
               <span className="kkiko-when">{num(b.amount)} 끼꼬</span>
@@ -763,7 +956,11 @@ const BetTab = ({
                           <li key={b.id} className={hit ? 'is-plus' : 'is-minus'}>
                             <span className="bet-line-what">
                               {marketLabel(b.market)}
-                              <em>{selectionLabel(b.market, b.selection)}</em>
+                              <em>
+                                {b.market === 'parlay'
+                                  ? legsText(b)
+                                  : selectionLabel(b.market, b.selection)}
+                              </em>
                             </span>
                             <span className="bet-line-amt">
                               {num(b.amount)}
@@ -897,99 +1094,229 @@ const BetTab = ({
           {renderMyBets(activeScrim)}
 
           {activeScrim.status === 'betting' && cartRows.length > 0 && (
-            <div className="bet-cart">
+            <div className={`bet-cart ${parlay ? 'is-parlay' : ''}`}>
               <h4>
                 담은 배팅<span className="bet-cart-n">{cartRows.length}</span>
+                {/* 한 판에 묶음은 하나뿐이다. 이미 걸었으면 끈 채로 잠근다 */}
+                <button
+                  type="button"
+                  className={`parlay-toggle ${parlay ? 'is-on' : ''}`}
+                  onClick={() => setParlay(!parlay)}
+                  disabled={Boolean(myParlay)}
+                  aria-pressed={parlay}
+                  title={myParlay ? '이 판에는 이미 묶음을 걸었어요' : '배당을 곱해서 한 장으로 겁니다'}
+                >
+                  <FaLink /> 배팅 묶기
+                  <span className="parlay-switch" aria-hidden="true" />
+                </button>
               </h4>
 
-              <ul className="bet-cart-list">
-                {cartRows.map(([market, v]) => {
-                  const cap = capOf(market);
-                  return (
-                    <li className="bet-cart-item" key={market}>
-                      {/* 무엇에 걸었는지가 먼저. 마켓 이름만 적혀 있으면
-                          위로 올라가 다시 확인해야 한다 */}
-                      <span className="bet-cart-what">
-                        <b>{marketLabel(market)}</b>
-                        <em>{selectionLabel(market, v.selection)}</em>
-                      </span>
-
-                      <span className="bet-cart-amt">
-                        <input
-                          className="bet-amount"
-                          type="number"
-                          inputMode="numeric"
-                          min="1"
-                          max={cap || undefined}
-                          value={v.amount}
-                          placeholder="0"
-                          aria-label={`${marketLabel(market)}에 걸 끼꼬`}
-                          onChange={(e) => setAmount(market, e.target.value)}
-                        />
-                        <i>끼꼬</i>
-                      </span>
-
-                      {/* 빼려면 위로 올라가 같은 칸을 다시 눌러야 했다 */}
-                      <button
-                        className="icon-btn bet-cart-drop"
-                        onClick={() => pick(market, v.selection)}
-                        aria-label={`${marketLabel(market)} 빼기`}
-                        title="빼기"
-                      >
-                        <FaTimes />
-                      </button>
-
-                      <div className="bet-chips">
-                        {/* 좁은 화면에서 초기화까지 한 줄에 들어가야 해서
-                            천 단위 쉼표는 뺀다 (+1,000 → +1000) */}
-                        {BUMPS.map((n) => (
-                          <button key={n} className="bet-chip" onClick={() => bump(market, n)}>
-                            +{n}
-                          </button>
-                        ))}
+              {parlay ? (
+                <>
+                  <ul className="bet-cart-list">
+                    {legs.map((l) => (
+                      <li className="bet-cart-item is-leg" key={l.market}>
+                        <span className="bet-cart-what">
+                          <b>{marketLabel(l.market)}</b>
+                          <em>{selectionLabel(l.market, l.selection)}</em>
+                        </span>
+                        <em className={`bet-odds ${l.odds ? '' : 'is-bad'}`}>
+                          {l.odds ? `${l.odds.toFixed(2)}배` : '못 묶음'}
+                        </em>
                         <button
-                          className="bet-chip is-clear"
-                          onClick={() => setAmount(market, '')}
-                          disabled={!v.amount}
+                          className="icon-btn bet-cart-drop"
+                          onClick={() => pick(l.market, l.selection)}
+                          aria-label={`${marketLabel(l.market)} 빼기`}
+                          title="빼기"
                         >
-                          초기화
+                          <FaTimes />
                         </button>
-                        {cap && <em className="bet-cap">최대 {num(cap)}</em>}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                      </li>
+                    ))}
+                  </ul>
 
-              <div className={`bet-cart-foot ${overBalance ? 'is-over' : ''}`}>
-                <span className="bet-cart-total">
-                  <i>합계</i>
-                  <strong>{num(cartTotal)}</strong>
-                </span>
-                {/* '잔액 12,000'만 적혀 있으면 걸고 나서 얼마가 남는지를
-                    매번 머리로 뺀다 */}
-                <span className="bet-cart-left">
-                  {num(me?.points)}
-                  <b>→</b>
-                  {num((me?.points ?? 0) - cartTotal)}
-                </span>
-                <button
-                  className="primary-btn"
-                  onClick={() => submit(activeScrim)}
-                  disabled={overBalance}
-                >
-                  배팅 완료
-                </button>
-              </div>
-              {/* '배팅 완료'를 눌러야 모자란 걸 알려주면 늦다 */}
-              {overBalance && (
-                <p className="bet-over-msg">
-                  잔액보다 {num(cartTotal - (me?.points ?? 0))} 끼꼬 더 걸었어요.
-                </p>
+                  {/* 곱한 배당과, 그 배당에서 거꾸로 구한 상한 */}
+                  <div className="parlay-sum">
+                    <span>
+                      묶음 배당 <strong>{combo ? `${combo.toFixed(2)}배` : '-'}</strong>
+                    </span>
+                    {combo && <em>최대 {num(comboCap)} 끼꼬</em>}
+                  </div>
+                  {hasWinnerLeg && (
+                    <p className="bet-over-msg">
+                      승리팀은 묶을 수 없어요. 배당이 마감 때 정해져서 곱할 수가 없습니다.
+                    </p>
+                  )}
+                  {!hasWinnerLeg && legs.length < 2 && (
+                    <p className="rooms-hint">두 개 이상 담아야 묶을 수 있어요.</p>
+                  )}
+
+                  <div className="bet-cart-item is-parlay-amt">
+                    <span className="bet-cart-amt">
+                      <input
+                        className="bet-amount"
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        max={comboCap || undefined}
+                        value={parlayAmt}
+                        placeholder="0"
+                        aria-label="묶음에 걸 끼꼬"
+                        onChange={(e) => setParlayAmt(e.target.value)}
+                        disabled={!combo}
+                      />
+                      <i>끼꼬</i>
+                    </span>
+                    <div className="bet-chips">
+                      {BUMPS.map((n) => (
+                        <button
+                          key={n}
+                          className="bet-chip"
+                          onClick={() => bumpParlay(n)}
+                          disabled={!combo}
+                        >
+                          +{n}
+                        </button>
+                      ))}
+                      <button
+                        className="bet-chip"
+                        onClick={() => setParlayAmt(String(comboCap))}
+                        disabled={!combo || comboCap <= 0}
+                      >
+                        최대
+                      </button>
+                      <button
+                        className="bet-chip is-clear"
+                        onClick={() => setParlayAmt('')}
+                        disabled={!parlayAmt}
+                      >
+                        초기화
+                      </button>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`bet-cart-foot ${parlayNum > (me?.points ?? 0) ? 'is-over' : ''}`}
+                  >
+                    <span className="bet-cart-total">
+                      <i>적중 시</i>
+                      <strong>
+                        {combo && parlayNum > 0
+                          ? `+${num(Math.floor(parlayNum * combo) - parlayNum)}`
+                          : '-'}
+                      </strong>
+                    </span>
+                    <span className="bet-cart-left">
+                      {num(me?.points)}
+                      <b>→</b>
+                      {num((me?.points ?? 0) - parlayNum)}
+                    </span>
+                    <button
+                      className="primary-btn"
+                      onClick={() => submitParlay(activeScrim)}
+                      disabled={!combo || parlayNum <= 0 || parlayNum > comboCap}
+                    >
+                      묶어서 걸기
+                    </button>
+                  </div>
+                  <p className="rooms-hint">
+                    전부 맞아야 받습니다. 하나라도 틀리면 전부 잃어요. 결과를 안 넣은 항목은 그
+                    항목만 빼고 계산합니다. 배당은 거는 순간 박힙니다 — 언더오버처럼 몰리면
+                    움직이는 항목도 묶음에서는 기준값({KILLS_ODDS}배)으로 곱합니다.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <ul className="bet-cart-list">
+                    {cartRows.map(([market, v]) => {
+                      const cap = capOf(market);
+                      return (
+                        <li className="bet-cart-item" key={market}>
+                          {/* 무엇에 걸었는지가 먼저. 마켓 이름만 적혀 있으면
+                              위로 올라가 다시 확인해야 한다 */}
+                          <span className="bet-cart-what">
+                            <b>{marketLabel(market)}</b>
+                            <em>{selectionLabel(market, v.selection)}</em>
+                          </span>
+
+                          <span className="bet-cart-amt">
+                            <input
+                              className="bet-amount"
+                              type="number"
+                              inputMode="numeric"
+                              min="1"
+                              max={cap || undefined}
+                              value={v.amount}
+                              placeholder="0"
+                              aria-label={`${marketLabel(market)}에 걸 끼꼬`}
+                              onChange={(e) => setAmount(market, e.target.value)}
+                            />
+                            <i>끼꼬</i>
+                          </span>
+
+                          {/* 빼려면 위로 올라가 같은 칸을 다시 눌러야 했다 */}
+                          <button
+                            className="icon-btn bet-cart-drop"
+                            onClick={() => pick(market, v.selection)}
+                            aria-label={`${marketLabel(market)} 빼기`}
+                            title="빼기"
+                          >
+                            <FaTimes />
+                          </button>
+
+                          <div className="bet-chips">
+                            {/* 좁은 화면에서 초기화까지 한 줄에 들어가야 해서
+                                천 단위 쉼표는 뺀다 (+1,000 → +1000) */}
+                            {BUMPS.map((n) => (
+                              <button key={n} className="bet-chip" onClick={() => bump(market, n)}>
+                                +{n}
+                              </button>
+                            ))}
+                            <button
+                              className="bet-chip is-clear"
+                              onClick={() => setAmount(market, '')}
+                              disabled={!v.amount}
+                            >
+                              초기화
+                            </button>
+                            {cap && <em className="bet-cap">최대 {num(cap)}</em>}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <div className={`bet-cart-foot ${overBalance ? 'is-over' : ''}`}>
+                    <span className="bet-cart-total">
+                      <i>합계</i>
+                      <strong>{num(cartTotal)}</strong>
+                    </span>
+                    {/* '잔액 12,000'만 적혀 있으면 걸고 나서 얼마가 남는지를
+                        매번 머리로 뺀다 */}
+                    <span className="bet-cart-left">
+                      {num(me?.points)}
+                      <b>→</b>
+                      {num((me?.points ?? 0) - cartTotal)}
+                    </span>
+                    <button
+                      className="primary-btn"
+                      onClick={() => submit(activeScrim)}
+                      disabled={overBalance}
+                    >
+                      배팅 완료
+                    </button>
+                  </div>
+                  {/* '배팅 완료'를 눌러야 모자란 걸 알려주면 늦다 */}
+                  {overBalance && (
+                    <p className="bet-over-msg">
+                      잔액보다 {num(cartTotal - (me?.points ?? 0))} 끼꼬 더 걸었어요.
+                    </p>
+                  )}
+                  <p className="rooms-hint">
+                    담은 것들은 각각 따로 걸립니다. 배당을 곱하려면 <b>배팅 묶기</b>를 켜세요.
+                  </p>
+                </>
               )}
-              <p className="rooms-hint">
-                담은 것들은 각각 따로 걸립니다. 배당을 곱하는 조합이 아닙니다.
-              </p>
             </div>
           )}
 
@@ -1009,14 +1336,29 @@ const BetTab = ({
           {canEdit && activeScrim.status === 'locked' && activeScrim.kind === 'casual' && (
             <div className="bet-result">
               <h4>경기 결과 넣기</h4>
-              <input
-                className="rooms-input"
-                type="number"
-                min="0"
-                value={kills}
-                placeholder="총 킬 수 (양 팀 합계)"
-                onChange={(e) => setKills(e.target.value)}
-              />
+              {/* 총 킬은 따로 안 받는다. 둘을 더한다 - 셋을 따로 받으면
+                  서로 안 맞는 숫자가 들어올 수 있다 */}
+              <div className="rooms-form-row">
+                <input
+                  className="rooms-input"
+                  type="number"
+                  min="0"
+                  value={ourK}
+                  placeholder="우리 팀 킬"
+                  onChange={(e) => setOurK(e.target.value)}
+                />
+                <input
+                  className="rooms-input"
+                  type="number"
+                  min="0"
+                  value={oppK}
+                  placeholder="상대 팀 킬"
+                  onChange={(e) => setOppK(e.target.value)}
+                />
+              </div>
+              {ourK !== '' && oppK !== '' && (
+                <p className="rooms-hint">총 {Number(ourK) + Number(oppK)}킬</p>
+              )}
 
               {/* 첫 킬. 우리가 땄으면 누가 땄는지까지 - 그래야 '누구'에 건
                   사람들이 정산된다. 상대가 땄으면 사람은 고를 게 없다 */}
@@ -1027,7 +1369,8 @@ const BetTab = ({
                     className={`seg-tab ${fbSide === x.key ? 'active' : ''}`}
                     onClick={() => {
                       setFbSide(fbSide === x.key ? '' : x.key);
-                      if (x.key === 'them') setFb('');
+                      setFb('');
+                      setFbLane('');
                     }}
                   >
                     첫 킬 · {x.label}
@@ -1046,6 +1389,23 @@ const BetTab = ({
                   {(activeScrim.team_a || []).map((id) => (
                     <option key={id} value={id}>
                       {nameOf.get(id) || '?'}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {/* 상대 라인은 몰라도 된다. 비우면 상대 라인에 건 것만 돌려준다 */}
+              {fbSide === 'them' && hasLanes(activeScrim.mode) && (
+                <select
+                  className="rooms-input"
+                  value={fbLane}
+                  onChange={(e) => setFbLane(e.target.value)}
+                  aria-label="첫 킬을 딴 상대 라인"
+                  style={{ marginTop: '0.5rem' }}
+                >
+                  <option value="">상대 어느 라인? (모르면 비워두기)</option>
+                  {FB_ROW_ORDER.map((lane) => (
+                    <option key={lane} value={lane}>
+                      상대 {laneLabel(lane)}
                     </option>
                   ))}
                 </select>
@@ -1075,8 +1435,8 @@ const BetTab = ({
                 정산
               </button>
               <p className="rooms-hint">
-                비워둔 항목은 그 마켓 전체를 환불합니다. 상대 팀이 첫 킬을 땄으면 사람에 건
-                배팅은 환불이 아니라 낙첨입니다.
+                비워둔 항목은 그 마켓 전체를 환불합니다. 첫 킬을 딴 쪽이 아닌 사람에 건 배팅은
+                환불이 아니라 낙첨입니다 (상대 라인을 비우면 상대 라인에 건 것만 환불).
               </p>
             </div>
           )}
@@ -1178,9 +1538,12 @@ const BetTab = ({
               </h3>
               {renderCasualTeam(s)}
               <p className="rooms-hint">
-                총 킬 {s.total_kills ?? '-'} · 첫 킬{' '}
+                킬 {s.our_kills ?? '-'} : {s.opp_kills ?? '-'}
+                {s.total_kills != null && ` (총 ${s.total_kills})`} · 첫 킬{' '}
                 {s.fb_side === 'them'
-                  ? '상대 팀'
+                  ? s.fb_enemy_lane
+                    ? `상대 ${laneLabel(s.fb_enemy_lane)}`
+                    : '상대 팀'
                   : s.first_blood_player_id
                     ? nameOf.get(s.first_blood_player_id) || '?'
                     : '-'}
