@@ -376,6 +376,22 @@ begin
     return;
   end if;
 
+  -- 자정을 넘겨 끝나는 판이 있다. 9월 30일 밤에 열고 10월 1일에 정산하면,
+  -- 건 끼꼬는 9월 지갑에서 빠지는데 번 끼꼬는 10월 지갑으로 들어간다.
+  -- 9월은 건 만큼 손해로 마무리되고, 10월은 초기화된 지갑에 공짜 돈이
+  -- 얹힌다. 한 판이 두 달에 걸쳐 쪼개지는 셈이다.
+  --
+  -- 진행 중인 판이 있으면 끝날 때까지 계절을 넘기지 않는다. 그 판의 돈이
+  -- 전부 오간 뒤에 박제하면 한 달 안에서 아귀가 맞는다.
+  -- 잊고 안 끝낸 판이 계절을 영원히 붙들지 않게 열두 시간까지만 기다린다.
+  if exists (
+    select 1 from scrims
+     where status in ('betting', 'locked')
+       and played_at > now() - interval '12 hours'
+  ) then
+    return;
+  end if;
+
   -- 두 명이 동시에 들어오면 둘 다 롤할 수 있다. 잠근 뒤 다시 읽어야 한다.
   -- 먼저 읽고 잠그면 둘 다 옛 값을 보고 통과한다.
   select current_month into cur from app_season where id = 1 for update;

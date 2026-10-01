@@ -1983,3 +1983,20 @@ describe('방 폴링', () => {
     expect(src).toContain("removeEventListener('visibilitychange', check)");
   });
 });
+
+/* ---------- 달 경계 ---------- */
+
+/* 9월 30일 밤에 또또를 열고 10월 1일에 정산하면, 건 끼꼬는 9월 지갑에서
+   빠지는데 번 끼꼬는 초기화된 10월 지갑으로 들어갔다. 9월은 건 만큼
+   손해로 박제되고 10월은 공짜 돈이 얹힌다 - 한 판이 두 달로 쪼개진다 */
+test('진행 중인 판이 있으면 계절을 넘기지 않는다', () => {
+  const body = fnBody('roll_season');
+  /* 박제(hall_of_fame)보다 먼저 막아야 한다. 박제한 뒤에 막으면 이미
+     어긋난 값이 남는다 */
+  const guard = body.indexOf("status in ('betting', 'locked')");
+  const snap = body.indexOf('insert into hall_of_fame');
+  expect(guard).toBeGreaterThan(-1);
+  expect(snap).toBeGreaterThan(guard);
+  /* 잊고 안 끝낸 판이 계절을 영원히 붙들면 아무도 초기화되지 않는다 */
+  expect(body).toMatch(/played_at > now\(\) - interval '\d+ hours'/);
+});
