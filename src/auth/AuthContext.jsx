@@ -59,7 +59,16 @@ export const AuthProvider = ({ children }) => {
      예전 사용자를 계속 돌려준다. 그래서 정말 지워졌는지 직접 확인한다. */
   const signOut = async () => {
     const res = await neon.auth.signOut();
-    if (res?.error) throw new Error(res.error.message || '로그아웃에 실패했어요.');
+    if (res?.error) {
+      /* 403은 Neon Auth가 이 사이트 주소를 모르는 경우다. 로그인은 쿠키가
+         없어 검사를 건너뛰지만 로그아웃은 쿠키를 들고 가서 걸린다 */
+      const { status, message } = res.error;
+      throw new Error(
+        status === 403
+          ? `로그아웃이 거절됐어요(403). Neon Auth 신뢰 도메인에 ${window.location.origin} 을 추가해야 해요.`
+          : `로그아웃에 실패했어요${status ? ` (${status})` : ''}: ${message || '알 수 없는 오류'}`
+      );
+    }
 
     let left = null;
     try {

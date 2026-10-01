@@ -37,8 +37,9 @@ const Header = () => {
   const handleSignOut = async () => {
     try {
       await signOut();
-    } catch {
-      toast.error('로그아웃에 실패했어요. 다시 시도해 주세요.');
+    } catch (e) {
+      /* 뭉뚱그린 문구만 띄웠더니 배포 사이트에서만 실패할 때 이유를 알 수 없었다 */
+      toast.error(e?.message || '로그아웃에 실패했어요. 다시 시도해 주세요.');
     }
   };
 
