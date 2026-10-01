@@ -4,6 +4,7 @@ import {
   FIRST_BLOOD_LANE_SHARE,
   FIRST_DRAGON_ODDS,
   CASUAL_FB_RATE,
+  CASUAL_FB_TIER_BONUS,
   KILLS_ODDS,
 } from './tuning';
 
@@ -126,12 +127,24 @@ export const parlayOdds = (legOdds) => {
 
    상대팀이 딸 확률 절반을 먼저 떼고, 남은 절반을 라인 몫으로 가른다.
    칼바람은 라인이 없으니 다섯이 똑같이 나눈다. */
-export const firstBloodOdds = (lane, mode) => {
+/* 롤 티어 사다리에서 골드(3)보다 몇 칸 아래인가. 모르는 티어는 골드로 본다.
+   sql/setup.sql의 tier_ladder('lol')과 같은 순서다 */
+const LOL_LADDER = [
+  'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
+  'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER',
+];
+export const tierFactor = (tier) => {
+  const idx = LOL_LADDER.indexOf(tier);
+  return 1 + (3 - (idx < 0 ? 3 : idx)) * CASUAL_FB_TIER_BONUS;
+};
+
+/* tier는 우리 쪽 사람에게만 준다. 상대 라인은 티어를 모른다 */
+export const firstBloodOdds = (lane, mode, tier) => {
   const share = hasLanes(mode)
     ? FIRST_BLOOD_LANE_SHARE[enemyLaneOf(lane) || lane] ?? 1 / CASUAL_TEAM_SIZE
     : 1 / CASUAL_TEAM_SIZE;
   if (!(share > 0)) return null;
-  return Math.round((CASUAL_FB_RATE / (0.5 * share)) * 100) / 100;
+  return Math.round(((CASUAL_FB_RATE / (0.5 * share)) * tierFactor(tier)) * 100) / 100;
 };
 
 /* 반반인 마켓(짝홀·우리팀/상대팀)은 언더오버와 같은 기준 배당을 쓴다 */

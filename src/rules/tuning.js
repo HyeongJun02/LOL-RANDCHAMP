@@ -92,6 +92,14 @@ export const CASUAL_KILL_LINES = {
    sql/setup.sql의 casual_fb_odds에 같은 숫자가 있다 (테스트가 대조한다) */
 export const CASUAL_FB_RATE = 0.7;
 
+/* 티어 보정. 골드를 1.00으로 두고 한 칸 낮을 때마다 이만큼 배당을 올린다
+   (높으면 내린다). 랭크가 낮으면 첫 킬을 딸 확률도 낮다.
+   내전(2%)보다 크게 잡았다 - 일반 큐는 상대 티어가 우리와 비슷하게 잡혀서
+   우리 쪽 실력 차이가 첫 킬에 그대로 드러난다.
+     아이언 +12% · 실버 +4% · 골드 0 · 에메랄드 -8% · 그마 -20%
+   sql/setup.sql의 casual_fb_odds에 같은 숫자가 있다 */
+export const CASUAL_FB_TIER_BONUS = 0.04;
+
 export const FIRST_BLOOD_LANE_SHARE = {
   TOP: 0.21,
   JUNGLE: 0.19,

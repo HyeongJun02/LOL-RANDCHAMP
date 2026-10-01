@@ -1460,8 +1460,8 @@ $fn$;
 -- 라인 미정·칼바람은 다섯 중 하나(0.2)로 본다.
 -- src/rules/tuning.js의 FIRST_BLOOD_LANE_SHARE와 같아야 한다 (테스트가 대조한다)
 create or replace function public.casual_fb_odds(s scrims, sel text)
-returns numeric language plpgsql immutable as $fn$
-declare lane text;
+returns numeric language plpgsql stable as $fn$
+declare lane text; idx int;
 begin
   if s.mode = 'aram' then
     lane := null;
@@ -1470,7 +1470,13 @@ begin
   else
     lane := s.lanes ->> sel;
   end if;
-  -- 0.7은 tuning.js의 CASUAL_FB_RATE. 내전(0.85)보다 많이 깎는다 -
+  -- 우리 쪽 사람이면 티어. 랭크가 낮으면 첫 킬을 딸 확률도 낮다.
+  -- 상대 라인은 티어를 모르니 골드(3)로 본다
+  if sel not like 'them\_%' and sel ~ '^[0-9]+$' then
+    select array_position(public.tier_ladder('lol'), rp.tier) - 1 into idx
+      from room_players rp where rp.id = sel::bigint;
+  end if;
+  -- 0.7은 tuning.js의 CASUAL_FB_RATE, 0.04는 CASUAL_FB_TIER_BONUS.
   -- 0.85에 서포터 몫 0.12였을 때 서포터가 14배가 넘었다
   return round(0.7 / (0.5 * case lane
     when 'TOP'     then 0.21
@@ -1479,7 +1485,7 @@ begin
     when 'ADC'     then 0.225
     when 'SUPPORT' then 0.15
     else 0.2
-  end), 2);
+  end) * (1 + (3 - coalesce(idx, 3)) * 0.04), 2);
 end; $fn$;
 
 

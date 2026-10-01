@@ -88,6 +88,7 @@ const BetTab = ({
   const gameKey = useGameKey();
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
   const memberName = new Map(members.map((m) => [m.user_id, m.nickname]));
+  const tierOf = (id) => players.find((p) => p.id === Number(id))?.tier;
   const me = members.find((m) => m.user_id === myId);
   const { confirm } = useDialog();
 
@@ -230,7 +231,12 @@ const BetTab = ({
     if (market === 'dragon') return dragonOdds();
     if (market === 'first_blood') {
       if (scrim.kind === 'casual') {
-        return firstBloodOdds(enemyLaneOf(selection) || scrim.lanes?.[selection], scrim.mode);
+        const enemy = enemyLaneOf(selection);
+        return firstBloodOdds(
+          enemy || scrim.lanes?.[selection],
+          scrim.mode,
+          enemy ? null : tierOf(Number(selection))
+        );
       }
       const n = (scrim.team_a?.length || 0) + (scrim.team_b?.length || 0);
       return fbOdds.get(Number(selection)) ?? Math.round(n * FIRST_BLOOD_RATE * 100) / 100;
@@ -763,8 +769,8 @@ const BetTab = ({
             )}
           </>
         ),
-        /* 라인으로 정해지는 고정 배당이라 마감 전에도 보여준다 */
-        fixed: firstBloodOdds(lanes[id], scrim.mode),
+        /* 라인·티어로 정해지는 고정 배당이라 마감 전에도 보여준다 */
+        fixed: firstBloodOdds(lanes[id], scrim.mode, tierOf(id)),
       });
 
     return (

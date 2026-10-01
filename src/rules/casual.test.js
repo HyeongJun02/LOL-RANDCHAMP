@@ -193,3 +193,13 @@ describe('팀 킬 · 상대 라인 · 묶음', () => {
     expect(casualOutcome({ ...s, opp_kills: null }, 'oppkills_14.5', 'over')).toBe('void');
   });
 });
+
+/* 랭크가 낮으면 첫 킬을 딸 확률도 낮다. 배당이 올라가야 한다 */
+test('첫 킬 배당은 티어가 낮을수록 높다', () => {
+  const { tierFactor } = require('./casual');
+  expect(firstBloodOdds('MID', 'normal', 'IRON')).toBeGreaterThan(firstBloodOdds('MID', 'normal', 'GOLD'));
+  expect(firstBloodOdds('MID', 'normal', 'GOLD')).toBeGreaterThan(firstBloodOdds('MID', 'normal', 'MASTER'));
+  /* 티어를 모르면(상대 라인) 골드로 본다 */
+  expect(firstBloodOdds('MID', 'normal')).toBe(firstBloodOdds('MID', 'normal', 'GOLD'));
+  expect(tierFactor('IRON')).toBeCloseTo(1.12, 5);
+});

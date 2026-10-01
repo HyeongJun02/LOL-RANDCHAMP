@@ -30,6 +30,7 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
   const auto = casualKillLine(mode);
   const full = team.length >= CASUAL_TEAM_SIZE;
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
+  const tierOf = (id) => players.find((p) => p.id === id)?.tier;
 
   /* 모드를 바꾸면 기준선도 그 모드의 자동값으로. 손으로 고쳐둔 값이 있어도
      일반(29.5)에서 고친 값을 칼바람(59.5)에 그대로 들고 가면 말이 안 된다 */
@@ -141,7 +142,7 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
                       key={l.key}
                       className={`casual-lane ${x.lane === l.key ? 'is-on' : ''}`}
                       onClick={() => setLane(x.id, l.key)}
-                      title={`첫 킬 ${firstBloodOdds(l.key, mode)}배`}
+                      title={`첫 킬 ${firstBloodOdds(l.key, mode, tierOf(x.id))}배`}
                     >
                       {l.label}
                     </button>
@@ -150,7 +151,7 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
               )}
               <em className="casual-odds">
                 {hasLanes(mode) && !x.lane && <span className="casual-undecided">미정 · </span>}
-                첫 킬 {firstBloodOdds(x.lane, mode).toFixed(2)}배
+                첫 킬 {firstBloodOdds(x.lane, mode, tierOf(x.id)).toFixed(2)}배
               </em>
               <button
                 className="icon-btn"

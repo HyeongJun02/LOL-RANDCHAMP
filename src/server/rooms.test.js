@@ -2195,3 +2195,8 @@ test('일반 게임 결과 컬럼을 전부 받아온다', () => {
   const { CASUAL_FB_RATE } = require('../rules/tuning');
   expect(fnBody('casual_fb_odds')).toContain(`round(${CASUAL_FB_RATE} / (0.5 *`);
 });
+
+test('일반 게임 첫 킬 티어 보정이 tuning.js와 같다', () => {
+  const { CASUAL_FB_TIER_BONUS } = require('../rules/tuning');
+  expect(fnBody('casual_fb_odds')).toContain(`(1 + (3 - coalesce(idx, 3)) * ${CASUAL_FB_TIER_BONUS})`);
+});
