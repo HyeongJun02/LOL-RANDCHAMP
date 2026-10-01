@@ -4322,3 +4322,23 @@ li.day-sep em {
     flex: 1;
   }
 }
+
+/* 라인 아이콘 + 글자 */
+.lane-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  white-space: nowrap;
+}
+
+.lane-tag img {
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
+}
+
+/* 고르지 않은 라인 단추는 아이콘도 흐리게 */
+.casual-lane:not(.is-on) .lane-tag img {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}

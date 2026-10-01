@@ -5,6 +5,7 @@ import { useDialog } from '../../components/common/Dialog';
 import Modal from '../../components/common/Modal';
 import Empty from '../../components/common/Empty';
 import BetTab from './BetTab';
+import LaneTag from './LaneTag';
 import { timeAgo } from '../../lib/timeAgo';
 import {
   CASUAL_MODES,
@@ -126,7 +127,7 @@ const CasualHistory = ({
           {(s.team_a || []).map((id) => (
             <span key={id} className="hist-name">
               {nameOf.get(Number(id)) || '?'}
-              {laned && s.lanes?.[id] && <i className="fb-lane">{laneLabel(s.lanes[id])}</i>}
+              {laned && s.lanes?.[id] && <LaneTag lane={s.lanes[id]} className="fb-lane" />}
             </span>
           ))}
         </span>

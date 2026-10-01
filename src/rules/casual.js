@@ -32,13 +32,19 @@ export const CASUAL_TEAM_SIZE = 5;
 export const hasLanes = (mode) => mode !== 'aram';
 export const hasDragon = (mode) => mode !== 'aram';
 
+/* 아이콘은 라인 정하기가 쓰는 금색 그림 (public/line_icon) */
 export const LANES = [
-  { key: 'TOP', label: '탑' },
-  { key: 'JUNGLE', label: '정글' },
-  { key: 'MID', label: '미드' },
-  { key: 'ADC', label: '원딜' },
-  { key: 'SUPPORT', label: '서폿' },
+  { key: 'TOP', label: '탑', icon: 'top_gold.svg' },
+  { key: 'JUNGLE', label: '정글', icon: 'jungle_gold.svg' },
+  { key: 'MID', label: '미드', icon: 'mid_gold.svg' },
+  { key: 'ADC', label: '원딜', icon: 'adc_gold.webp' },
+  { key: 'SUPPORT', label: '서폿', icon: 'support_gold.svg' },
 ];
+
+export const laneIcon = (key) => {
+  const l = LANES.find((x) => x.key === key);
+  return l ? `${process.env.PUBLIC_URL || ''}/line_icon/${l.icon}` : null;
+};
 
 /* public/dragon_icon 의 파일들. 첫 용은 장로가 될 수 없어서 여섯뿐이다 */
 export const DRAGONS = [

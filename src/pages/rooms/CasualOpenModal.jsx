@@ -4,6 +4,7 @@ import { FaDice, FaTimes, FaRedo, FaRandom, FaExternalLinkAlt } from 'react-icon
 import { loadLastLines } from '../../lib/lastLines';
 import Modal from '../../components/common/Modal';
 import KillLinePicker from './KillLinePicker';
+import LaneTag from './LaneTag';
 import { ClosePresets, LINE_HINT } from './BetOpenModal';
 import {
   CASUAL_MODES,
@@ -203,7 +204,7 @@ const CasualOpenModal = ({ players, recent = null, onClose, onOpen }) => {
                       onClick={() => setLane(x.id, l.key)}
                       title={`첫 킬 ${firstBloodOdds(l.key, mode, tierOf(x.id))}배`}
                     >
-                      {l.label}
+                      <LaneTag lane={l.key} />
                     </button>
                   ))}
                 </div>

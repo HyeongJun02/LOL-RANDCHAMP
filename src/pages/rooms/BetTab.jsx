@@ -35,6 +35,7 @@ import { useDialog } from '../../components/common/Dialog';
 import Empty from '../../components/common/Empty';
 import BetTimer from './BetTimer';
 import CasualOpenModal from './CasualOpenModal';
+import LaneTag from './LaneTag';
 import {
   PARITY,
   SIDES,
@@ -762,11 +763,12 @@ const BetTab = ({
         label: (
           <>
             {nameOf.get(id) || '?'}
-            {laned && (
-              <i className={`fb-lane ${lanes[id] ? '' : 'is-undecided'}`}>
-                {lanes[id] ? laneLabel(lanes[id]) : '미정'}
-              </i>
-            )}
+            {laned &&
+              (lanes[id] ? (
+                <LaneTag lane={lanes[id]} className="fb-lane" />
+              ) : (
+                <i className="fb-lane is-undecided">미정</i>
+              ))}
           </>
         ),
         /* 라인·티어로 정해지는 고정 배당이라 마감 전에도 보여준다 */
@@ -834,7 +836,7 @@ const BetTab = ({
                       scrim,
                       market: 'first_blood',
                       selection: enemyPick(row.lane),
-                      label: `상대 ${laneLabel(row.lane)}`,
+                      label: <LaneTag lane={row.lane} prefix="상대 " />,
                       fixed: firstBloodOdds(row.lane, scrim.mode),
                     })}
                   </React.Fragment>
@@ -1528,7 +1530,7 @@ const BetTab = ({
                               className={`result-chip ${fbLane === lane ? 'is-on' : ''}`}
                               onClick={() => setFbLane(fbLane === lane ? '' : lane)}
                             >
-                              상대 {laneLabel(lane)}
+                              <LaneTag lane={lane} prefix="상대 " />
                             </button>
                           ))}
                           <span className="result-hint">모르면 비워두기</span>
