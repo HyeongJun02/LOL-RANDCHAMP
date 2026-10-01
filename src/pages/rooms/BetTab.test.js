@@ -235,8 +235,8 @@ test('낱개로 담아도 배당과 적중 금액이 보인다', async () => {
   await click(el.querySelector('.casual-dragons .bet-opt'));
 
   const rates = [...el.querySelectorAll('.bet-cart-rate')].map((n) => n.textContent);
-  /* 짝홀은 몰리면 움직여서 '약', 첫 용은 고정 */
-  expect(rates).toEqual(['약 1.98배', '5.50배']);
+  /* 일반 게임은 전부 고정 배당이라 '약'이 안 붙는다 */
+  expect(rates).toEqual(['1.98배', '5.50배']);
 
   const input = el.querySelectorAll('.bet-cart .bet-amount')[1];
   await act(async () => {

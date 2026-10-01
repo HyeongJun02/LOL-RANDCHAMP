@@ -262,7 +262,11 @@ const BetTab = ({
   const singleOdds = (scrim, market, selection) => {
     const odds = legOdds(scrim, market, selection);
     if (odds == null) return null;
-    return { odds, fixed: market === 'first_blood' || market === 'dragon' };
+    return {
+      odds,
+      /* 일반 게임은 전부 고정이다. 내전은 두 갈래 항목이 몰린 만큼 움직인다 */
+      fixed: scrim.kind === 'casual' || market === 'first_blood' || market === 'dragon',
+    };
   };
 
   const bumpParlay = (n) => setParlayAmt(String(Math.min(parlayNum + n, comboCap)));
@@ -655,6 +659,8 @@ const BetTab = ({
         market: key,
         selection: 'over',
         tone: 'is-over',
+        /* 일반 게임은 고정 배당이라 마감 전에도 그대로 보여준다 */
+        fixed: scrim.kind === 'casual' ? KILLS_ODDS : undefined,
         label: (
           <>
             <FaArrowUp /> 오버
@@ -670,6 +676,7 @@ const BetTab = ({
         market: key,
         selection: 'under',
         tone: 'is-under',
+        fixed: scrim.kind === 'casual' ? KILLS_ODDS : undefined,
         label: (
           <>
             <FaArrowDown /> 언더
@@ -713,23 +720,30 @@ const BetTab = ({
         <div className="bet-market">
           <h4>
             킬 언더/오버
-            <em>셋 중 하나만 · 기준 {KILLS_ODDS}배</em>
+            <em>셋 중 하나만 · {KILLS_ODDS}배 고정</em>
           </h4>
           <div className="kill-trio">{killTrio(total).map((k) => renderKillColumn(scrim, k))}</div>
           <p className="rooms-hint">
-            우리 팀 오버와 총 킬 오버는 거의 같이 움직여서 하나만 고릅니다. 한쪽에 몰리면
-            그쪽 배당이 내려가고 반대쪽이 올라갑니다 — 확정된 배당은 마감 때 나옵니다.
+            우리 팀 오버와 총 킬 오버는 거의 같이 움직여서 하나만 고릅니다. 일반 게임은
+            배당이 고정이라 걸 때 보이는 배당이 그대로 받는 배당입니다.
           </p>
         </div>
 
         <div className="bet-market">
           <h4>
             {marketLabel('kills_parity')}
-            <em>총 킬 기준 · {KILLS_ODDS}배</em>
+            <em>총 킬 기준 · {KILLS_ODDS}배 고정</em>
           </h4>
           <div className="bet-opts is-compact">
             {PARITY.map((x) =>
-              renderOption({ key: x.key, scrim, market: 'kills_parity', selection: x.key, label: x.label })
+              renderOption({
+                key: x.key,
+                scrim,
+                market: 'kills_parity',
+                selection: x.key,
+                label: x.label,
+                fixed: KILLS_ODDS,
+              })
             )}
           </div>
         </div>
@@ -750,6 +764,7 @@ const BetTab = ({
                 selection: x.key,
                 label: x.label,
                 tone: 'is-side',
+                fixed: KILLS_ODDS,
               })
             )}
             {laned
@@ -1241,8 +1256,11 @@ const BetTab = ({
                   )}
                   <p className="rooms-hint">
                     전부 맞아야 받습니다. 하나라도 틀리면 전부 잃어요. 결과를 안 넣은 항목은 그
-                    항목만 빼고 계산합니다. 배당은 거는 순간 박힙니다 — 언더오버처럼 몰리면
-                    움직이는 항목도 묶음에서는 기준값({KILLS_ODDS}배)으로 곱합니다.
+                    항목만 빼고 계산합니다. 배당은 거는 순간 박힙니다
+                    {activeScrim.kind !== 'casual' &&
+                      ` — 언더오버처럼 몰리면 움직이는 항목도 묶음에서는 기준값(${KILLS_ODDS}배)으로 곱합니다`}
+                    . 묶음에 건 끼꼬는 낱개 배당에 섞이지 않아서, 묶음이 반대쪽 배당을 띄우지
+                    않습니다.
                   </p>
                 </>
               ) : (

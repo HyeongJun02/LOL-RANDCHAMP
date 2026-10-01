@@ -2108,6 +2108,14 @@ describe('일반 게임 또또 (SQL)', () => {
     expect(pick).toContain('line <> public.team_kill_line(s.kill_line)');
   });
 
+  /* 일반 게임은 배당이 고정이다. 걸 때 본 배당이 곧 받는 배당 */
+  test('일반 게임은 두 갈래 항목도 1.98 고정', () => {
+    const { KILLS_ODDS } = require('../rules/tuning');
+    /* 몰린 만큼 움직이는 셈에서 일반 게임을 뺀다 */
+    expect(lock).toContain("and s.kind <> 'casual'");
+    expect(lock).toContain(`update bet_pools set odds = ${KILLS_ODDS}`);
+  });
+
   /* 우리 팀 오버와 총 오버는 거의 같이 움직인다. 둘 다 걸면 같은 걸 두 번 */
   test('킬 언더오버는 셋 중 하나만', () => {
     expect(fnBody('place_bets')).toContain(
@@ -2143,6 +2151,13 @@ describe('배팅 묶기 (SQL)', () => {
     expect(place).toContain('두 개 이상 담아야 묶을 수 있어요.');
     expect(place).toContain('첫 킬은 어느 팀이나 누구 중 하나만 묶을 수 있어요.');
     expect(place).toContain('킬 언더오버는 하나만 묶을 수 있어요.');
+  });
+
+  /* 묶음에 건 끼꼬가 낱개 배당 집계(bet_pools)에 들어가면, 묶음이 걸린
+     쪽의 반대 배당이 올라가서 그쪽에 낱개로 건 사람이 득을 본다.
+     묶음은 배당을 걸 때 박으므로 집계에 들어갈 이유가 없다 */
+  test('묶음은 낱개 배당 집계에 안 섞인다', () => {
+    expect(place).not.toContain('bet_pools');
   });
 
   /* 정산 되돌리기가 배당을 지우면 다시 정산할 때 곱할 게 없다 */

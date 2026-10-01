@@ -2298,6 +2298,8 @@ begin
      where bp.scrim_id = p_scrim
        and (bp.market like 'kills%' or bp.market like 'ourkills%'
             or bp.market like 'oppkills%' or bp.market = 'fb_side')
+       -- 일반 게임은 배당이 고정이다 (아래)
+       and s.kind <> 'casual'
      group by bp.market
   )
   update bet_pools bp
@@ -2314,6 +2316,15 @@ begin
   --   첫 용      여섯 종류라 본전은 6.0인데 조금 깎는다
   -- src/rules/tuning.js의 FIRST_DRAGON_ODDS와 같은 숫자여야 한다
   if s.kind = 'casual' then
+    -- 일반 게임은 두 갈래 항목도 1.98 고정. 걸 때 본 배당이 곧 받는 배당이라
+    -- 한눈에 읽히고, 내전처럼 판을 짜서 주작하기도 어려워 몰림을 막을
+    -- 이유가 적다. 배당이 안 움직이니 '반대쪽에 조금 걸어 배당을 띄우는'
+    -- 수도 없다
+    update bet_pools set odds = 1.98
+     where scrim_id = p_scrim
+       and (market like 'kills%' or market like 'ourkills%'
+            or market like 'oppkills%' or market = 'fb_side');
+
     update bet_pools bp
        set odds = public.casual_fb_odds(s, bp.selection)
      where bp.scrim_id = p_scrim and bp.market = 'first_blood';
