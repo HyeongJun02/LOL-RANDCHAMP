@@ -3794,10 +3794,21 @@ li.day-sep em {
     max-width: none;
   }
 
+  /* 가로로 눕히면 언더가 왼쪽, 오버가 오른쪽이어야 한다 (수직선 위의
+     작은 수 · 큰 수처럼). 그리는 순서는 오버 · 기준선 · 언더라 뒤집는다 */
   .kill-col {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 4.5rem minmax(0, 1fr);
+    display: flex;
+    flex-direction: row-reverse;
     align-items: center;
+  }
+
+  .kill-col > .bet-opt-wrap {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .kill-col > .kill-col-line {
+    flex: 0 0 4.5rem;
   }
 }
 
@@ -4413,4 +4424,10 @@ li.day-sep em {
   .casual-row .hist-facts {
     justify-content: flex-start;
   }
+}
+
+/* 배당은 늘 칸 오른쪽 끝. 첫 킬 확률(%)이 있는 사람만 배당이 오른쪽에
+   붙고, 없는 사람은 왼쪽으로 쏠려서 칸마다 배당 자리가 달랐다 */
+.bet-opt-meta .bet-odds {
+  margin-left: auto;
 }
