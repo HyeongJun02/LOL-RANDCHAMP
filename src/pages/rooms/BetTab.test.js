@@ -227,3 +227,21 @@ test('내전: 총 킬 한 칸, 승리팀은 묶을 수 없다', async () => {
   await click(el.querySelector('.parlay-toggle'));
   expect(el.querySelector('.bet-cart').textContent).toContain('승리팀은 묶을 수 없어요');
 });
+
+/* 묶지 않을 때도 배당이 보여야 '얼마를 걸지'를 정할 수 있다 */
+test('낱개로 담아도 배당과 적중 금액이 보인다', async () => {
+  const el = await render({ active: casual() });
+  await click(optionFor(el, '홀'));
+  await click(el.querySelector('.casual-dragons .bet-opt'));
+
+  const rates = [...el.querySelectorAll('.bet-cart-rate')].map((n) => n.textContent);
+  /* 짝홀은 몰리면 움직여서 '약', 첫 용은 고정 */
+  expect(rates).toEqual(['약 1.98배', '5.50배']);
+
+  const input = el.querySelectorAll('.bet-cart .bet-amount')[1];
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '1000');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  expect(el.querySelector('.bet-if').textContent.replace(/\s/g, '')).toBe('적중시+4,500');
+});

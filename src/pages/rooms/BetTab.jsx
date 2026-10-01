@@ -252,6 +252,14 @@ const BetTab = ({
     : null;
   const parlayNum = Number(parlayAmt) || 0;
 
+  /* 낱개로 걸 때 보여줄 배당. 첫 킬·첫 용은 고정이라 그대로, 두 갈래 항목은
+     몰리면 움직이니 '약', 승리팀은 걸린 돈으로 나눠 갖는 거라 마감 전엔 모른다 */
+  const singleOdds = (scrim, market, selection) => {
+    const odds = legOdds(scrim, market, selection);
+    if (odds == null) return null;
+    return { odds, fixed: market === 'first_blood' || market === 'dragon' };
+  };
+
   const bumpParlay = (n) => setParlayAmt(String(Math.min(parlayNum + n, comboCap)));
 
   /* 묶음에 든 것들을 한 줄로. 내 배팅·정산 펼치기 두 곳이 같은 말을 쓴다 */
@@ -1230,6 +1238,8 @@ const BetTab = ({
                   <ul className="bet-cart-list">
                     {cartRows.map(([market, v]) => {
                       const cap = capOf(market);
+                      const so = singleOdds(activeScrim, market, v.selection);
+                      const amt = Number(v.amount) || 0;
                       return (
                         <li className="bet-cart-item" key={market}>
                           {/* 무엇에 걸었는지가 먼저. 마켓 이름만 적혀 있으면
@@ -1237,6 +1247,9 @@ const BetTab = ({
                           <span className="bet-cart-what">
                             <b>{marketLabel(market)}</b>
                             <em>{selectionLabel(market, v.selection)}</em>
+                            <i className={`bet-cart-rate ${so?.fixed ? 'is-fixed' : ''}`}>
+                              {so ? `${so.fixed ? '' : '약 '}${so.odds.toFixed(2)}배` : '마감 때'}
+                            </i>
                           </span>
 
                           <span className="bet-cart-amt">
@@ -1280,6 +1293,13 @@ const BetTab = ({
                               초기화
                             </button>
                             {cap && <em className="bet-cap">최대 {num(cap)}</em>}
+                            {/* 배당만 적혀 있으면 매번 머리로 곱해야 한다 */}
+                            {so && amt > 0 && (
+                              <em className="bet-if">
+                                적중 시 {so.fixed ? '' : '약 '}+
+                                {num(Math.floor(amt * so.odds) - amt)}
+                              </em>
+                            )}
                           </div>
                         </li>
                       );
@@ -1313,7 +1333,8 @@ const BetTab = ({
                     </p>
                   )}
                   <p className="rooms-hint">
-                    담은 것들은 각각 따로 걸립니다. 배당을 곱하려면 <b>배팅 묶기</b>를 켜세요.
+                    담은 것들은 각각 따로 걸립니다. '약'이 붙은 배당은 몰린 만큼 움직여서 마감 때
+                    확정되고, 첫 킬·첫 용은 그대로입니다. 배당을 곱하려면 <b>배팅 묶기</b>를 켜세요.
                   </p>
                 </>
               )}

@@ -1549,6 +1549,30 @@ li.day-sep em {
   font-weight: 600;
 }
 
+/* 낱개 배당. 확정(첫 킬·첫 용)은 밝게, 마감 때 움직이는 건 흐리게 */
+.bet-cart-rate {
+  flex: none;
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #8b98ae;
+}
+
+.bet-cart-rate.is-fixed {
+  color: var(--accent-light, var(--gg-gold-light));
+}
+
+.bet-if {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #4ade80;
+}
+
 .bet-cart-what em {
   min-width: 0;
   overflow: hidden;
@@ -3913,4 +3937,9 @@ li.day-sep em {
 
 .bet-cart-item.is-parlay-amt {
   list-style: none;
+}
+
+/* 상한과 적중 금액이 같이 있으면 상한이 오른쪽으로 밀고, 적중은 그 옆에 붙는다 */
+.bet-cap + .bet-if {
+  margin-left: 0.6rem;
 }
