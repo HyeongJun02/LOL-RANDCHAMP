@@ -38,22 +38,22 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
     setLine(casualKillLine(m));
   };
 
-  /* 비어 있는 라인 중 첫 번째를 준다. 다섯이 다 다른 라인이어야 하니,
-     하나씩 고를 때마다 남는 자리를 채워 넣는다 */
-  const freeLane = (taken) => LANES.find((l) => !taken.includes(l.key))?.key || null;
-
+  /* 라인은 미정으로 시작한다. 큐를 돌리기 전엔 라인이 안 정해진 경우가
+     많다. 미정이면 첫 킬 배당은 다섯 중 하나(평균)로 본다 */
   const toggle = (id) =>
     setTeam((prev) => {
       if (prev.some((x) => x.id === id)) return prev.filter((x) => x.id !== id);
       if (prev.length >= CASUAL_TEAM_SIZE) return prev;
-      return [...prev, { id, lane: freeLane(prev.map((x) => x.lane)) }];
+      return [...prev, { id, lane: null }];
     });
 
-  /* 라인을 바꾸면 그 라인을 쓰던 사람과 자리를 맞바꾼다. 두 사람이 같은
-     라인이면 첫 킬 배당이 어긋난다 */
+  /* 라인을 고르면 그 라인을 쓰던 사람과 자리를 맞바꾼다 (상대가 미정이었으면
+     그쪽이 미정이 된다). 두 사람이 같은 라인이면 첫 킬 배당이 어긋난다.
+     같은 라인을 다시 누르면 미정으로 돌아간다 */
   const setLane = (id, lane) =>
     setTeam((prev) => {
       const mine = prev.find((x) => x.id === id)?.lane ?? null;
+      if (mine === lane) return prev.map((x) => (x.id === id ? { ...x, lane: null } : x));
       return prev.map((x) => {
         if (x.id === id) return { ...x, lane };
         if (x.lane === lane) return { ...x, lane: mine };
@@ -108,9 +108,29 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
         뛰는 사람 <b>{team.length}</b>/{CASUAL_TEAM_SIZE}
       </p>
 
+      {/* 사람 칩은 고른 뒤에도 그 자리에 남는다. 고른 사람을 칩 목록에서
+          빼거나 위에 쌓으면, 누를 때마다 남은 칩들이 밀려서 다음 사람을
+          다시 찾아야 했다 */}
+      <div className="casual-pool">
+        {players.map((p) => {
+          const on = team.some((x) => x.id === p.id);
+          return (
+            <button
+              key={p.id}
+              className={`casual-chip ${on ? 'is-on' : ''}`}
+              onClick={() => toggle(p.id)}
+              disabled={!on && full}
+              aria-pressed={on}
+            >
+              {p.name}
+            </button>
+          );
+        })}
+      </div>
+
       {/* 고른 사람. 라인은 칼바람이면 안 그린다 */}
       {team.length > 0 && (
-        <ul className="casual-team">
+        <ul className="casual-team" style={{ marginTop: '0.6rem' }}>
           {team.map((x) => (
             <li key={x.id}>
               <span className="casual-name">{nameOf.get(x.id) || '?'}</span>
@@ -129,9 +149,8 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
                 </div>
               )}
               <em className="casual-odds">
-                {x.lane || !hasLanes(mode)
-                  ? `첫 킬 ${firstBloodOdds(x.lane, mode)}배`
-                  : '라인을 골라주세요'}
+                {hasLanes(mode) && !x.lane && <span className="casual-undecided">미정 · </span>}
+                첫 킬 {firstBloodOdds(x.lane, mode)}배
               </em>
               <button
                 className="icon-btn"
@@ -145,26 +164,11 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
         </ul>
       )}
 
-      {/* 아직 안 고른 사람. 다 찼으면 더 못 누른다 */}
-      <div className="casual-pool">
-        {players
-          .filter((p) => !team.some((x) => x.id === p.id))
-          .map((p) => (
-            <button
-              key={p.id}
-              className="casual-chip"
-              onClick={() => toggle(p.id)}
-              disabled={full}
-            >
-              {p.name}
-            </button>
-          ))}
-      </div>
       {hasLanes(mode) && (
         <p className="rooms-hint">
-          라인마다 첫 킬 배당이 다릅니다. 서포터가 제일 높고(
-          {firstBloodOdds('SUPPORT', mode)}배), {laneLabel('MID')}·{laneLabel('ADC')}가 제일
-          낮습니다({firstBloodOdds('MID', mode)}배).
+          라인은 몰라도 됩니다 — 미정이면 다섯 중 하나로 보고 {firstBloodOdds(null, mode)}배.
+          정하면 서포터가 제일 높고({firstBloodOdds('SUPPORT', mode)}배),{' '}
+          {laneLabel('MID')}·{laneLabel('ADC')}가 제일 낮습니다({firstBloodOdds('MID', mode)}배).
         </p>
       )}
 

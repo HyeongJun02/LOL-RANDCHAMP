@@ -60,28 +60,54 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-test('고르는 순서대로 빈 라인이 하나씩 채워진다', async () => {
+/* 큐를 돌리기 전엔 라인이 안 정해진 경우가 많다 */
+test('라인은 미정으로 시작한다', async () => {
+  await render();
+  await click(byText('.casual-chip', '철수'));
+  expect(laneOf('철수')).toBeUndefined();
+  expect(rowOf('철수').textContent).toContain('미정');
+});
+
+/* 고른 칩을 목록에서 빼면 남은 칩이 밀려서 다음 사람을 다시 찾아야 했다 */
+test('칩은 눌러도 자리를 안 옮긴다', async () => {
+  await render();
+  const before = [...document.querySelectorAll('.casual-chip')].map((c) => c.textContent);
+  await click(byText('.casual-chip', '철수'));
+  await click(byText('.casual-chip', '민수'));
+  const after = [...document.querySelectorAll('.casual-chip')].map((c) => c.textContent);
+  expect(after).toEqual(before);
+  expect(byText('.casual-chip', '철수').className).toContain('is-on');
+});
+
+const pickLane = (name, label) =>
+  click([...rowOf(name).querySelectorAll('.casual-lane')].find((b) => b.textContent === label));
+
+/* 같은 라인이 둘이면 첫 킬 배당이 어긋난다. 고른 라인을 쓰던 사람과
+   자리를 맞바꾼다 - 그쪽이 미정이었으면 미정이 된다 */
+test('이미 쓰는 라인을 고르면 서로 맞바꾼다', async () => {
   await render();
   await click(byText('.casual-chip', '철수'));
   await click(byText('.casual-chip', '영희'));
-  expect(laneOf('철수')).toBe('탑');
-  expect(laneOf('영희')).toBe('정글');
-});
+  await pickLane('철수', '탑');
+  await pickLane('영희', '정글');
 
-/* 같은 라인이 둘이면 첫 킬 배당이 어긋난다. 고른 라인을 쓰던 사람과
-   자리를 맞바꾼다 */
-test('이미 쓰는 라인을 고르면 서로 맞바꾼다', async () => {
-  await render();
-  await click(byText('.casual-chip', '철수')); // 탑
-  await click(byText('.casual-chip', '영희')); // 정글
-
-  const mid = [...rowOf('영희').querySelectorAll('.casual-lane')].find(
-    (b) => b.textContent === '탑'
-  );
-  await click(mid);
-
+  await pickLane('영희', '탑');
   expect(laneOf('영희')).toBe('탑');
   expect(laneOf('철수')).toBe('정글');
+
+  /* 미정인 사람이 가져가면 원래 주인은 미정이 된다 */
+  await click(byText('.casual-chip', '민수'));
+  await pickLane('민수', '탑');
+  expect(laneOf('민수')).toBe('탑');
+  expect(laneOf('영희')).toBeUndefined();
+});
+
+test('같은 라인을 다시 누르면 미정으로 돌아간다', async () => {
+  await render();
+  await click(byText('.casual-chip', '철수'));
+  await pickLane('철수', '미드');
+  await pickLane('철수', '미드');
+  expect(laneOf('철수')).toBeUndefined();
 });
 
 test('다섯 명이 차면 더 못 고른다', async () => {
@@ -108,13 +134,14 @@ test('칼바람은 라인을 보내지 않는다', async () => {
   expect(opened.killLine).toBe(59.5);
 });
 
-test('일반이면 라인을 같이 보낸다', async () => {
+test('일반이면 정한 라인만 보낸다 (미정은 안 보낸다)', async () => {
   await render();
   await click(byText('.casual-chip', '철수'));
   await click(byText('.casual-chip', '영희'));
+  await pickLane('철수', '서폿');
   await click(document.querySelector('.dialog-ok'));
 
   expect(opened.mode).toBe('normal');
-  expect(opened.lanes).toEqual({ 1: 'TOP', 2: 'JUNGLE' });
+  expect(opened.lanes).toEqual({ 1: 'SUPPORT' });
   expect(opened.killLine).toBe(29.5);
 });

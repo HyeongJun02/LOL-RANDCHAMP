@@ -3644,6 +3644,17 @@ li.day-sep em {
   border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 50%, transparent);
 }
 
+/* 고른 사람. 목록에서 빼지 않고 그 자리에서 불만 켠다 */
+.casual-chip.is-on {
+  border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 60%, transparent);
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 18%, transparent);
+  color: var(--accent-light, var(--gg-gold-light));
+}
+
+.casual-undecided {
+  color: #55637a;
+}
+
 .casual-chip:disabled {
   opacity: 0.35;
   cursor: default;
