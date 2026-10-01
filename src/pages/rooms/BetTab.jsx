@@ -1446,160 +1446,174 @@ const BetTab = ({
             </button>
           )}
 
-          {canEdit && activeScrim.status === 'locked' && activeScrim.kind === 'casual' && (
+          {/* 결과 넣기. 항목마다 이름표를 왼쪽에 두고 한 줄씩 - 전에는 칸들이
+              한 줄에 엉겨 있어서 무엇을 넣는 칸인지 읽기 어려웠다 */}
+          {canEdit && activeScrim.status === 'locked' && (
             <div className="bet-result">
               <h4>경기 결과 넣기</h4>
-              {/* 총 킬은 따로 안 받는다. 둘을 더한다 - 셋을 따로 받으면
-                  서로 안 맞는 숫자가 들어올 수 있다 */}
-              <div className="rooms-form-row">
-                <input
-                  className="rooms-input"
-                  type="number"
-                  min="0"
-                  value={ourK}
-                  placeholder="우리 팀 킬"
-                  onChange={(e) => setOurK(e.target.value)}
-                />
-                <input
-                  className="rooms-input"
-                  type="number"
-                  min="0"
-                  value={oppK}
-                  placeholder="상대 팀 킬"
-                  onChange={(e) => setOppK(e.target.value)}
-                />
-              </div>
-              {ourK !== '' && oppK !== '' && (
-                <p className="rooms-hint">총 {Number(ourK) + Number(oppK)}킬</p>
+
+              {activeScrim.kind === 'casual' ? (
+                <>
+                  <div className="result-field">
+                    <span className="result-label">킬</span>
+                    <div className="result-score">
+                      <label>
+                        <em>우리 팀</em>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          value={ourK}
+                          placeholder="-"
+                          aria-label="우리 팀 킬"
+                          onChange={(e) => setOurK(e.target.value)}
+                        />
+                      </label>
+                      <i>:</i>
+                      <label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          value={oppK}
+                          placeholder="-"
+                          aria-label="상대 팀 킬"
+                          onChange={(e) => setOppK(e.target.value)}
+                        />
+                        <em>상대 팀</em>
+                      </label>
+                      {ourK !== '' && oppK !== '' && (
+                        <b className="result-total">총 {Number(ourK) + Number(oppK)}킬</b>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="result-field">
+                    <span className="result-label">첫 킬</span>
+                    <div className="result-pick">
+                      <div className="seg-tabs">
+                        {SIDES.map((x) => (
+                          <button
+                            key={x.key}
+                            className={`seg-tab ${fbSide === x.key ? 'active' : ''}`}
+                            onClick={() => {
+                              setFbSide(fbSide === x.key ? '' : x.key);
+                              setFb('');
+                              setFbLane('');
+                            }}
+                          >
+                            {x.label}
+                          </button>
+                        ))}
+                      </div>
+                      {fbSide === 'us' && (
+                        <div className="result-chips">
+                          {(activeScrim.team_a || []).map((id) => (
+                            <button
+                              key={id}
+                              className={`result-chip ${String(fb) === String(id) ? 'is-on' : ''}`}
+                              onClick={() => setFb(String(id))}
+                            >
+                              {nameOf.get(id) || '?'}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {/* 상대 라인은 몰라도 된다. 비우면 상대 라인에 건 것만 돌려준다 */}
+                      {fbSide === 'them' && hasLanes(activeScrim.mode) && (
+                        <div className="result-chips">
+                          {FB_ROW_ORDER.map((lane) => (
+                            <button
+                              key={lane}
+                              className={`result-chip ${fbLane === lane ? 'is-on' : ''}`}
+                              onClick={() => setFbLane(fbLane === lane ? '' : lane)}
+                            >
+                              상대 {laneLabel(lane)}
+                            </button>
+                          ))}
+                          <span className="result-hint">모르면 비워두기</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {hasDragon(activeScrim.mode) && (
+                    <div className="result-field">
+                      <span className="result-label">첫 용</span>
+                      <div className="casual-dragon-pick">
+                        {DRAGONS.map((d) => (
+                          <button
+                            key={d.key}
+                            className={`casual-dragon ${dragon === d.key ? 'is-on' : ''}`}
+                            onClick={() => setDragon(dragon === d.key ? '' : d.key)}
+                            title={d.label}
+                          >
+                            <img src={dragonIcon(d.key)} alt="" />
+                            <span>{d.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="result-field">
+                    <span className="result-label">이긴 팀</span>
+                    <div className="seg-tabs">
+                      {['A', 'B'].map((w) => (
+                        <button
+                          key={w}
+                          className={`seg-tab ${winner === w ? 'active' : ''}`}
+                          onClick={() => setWinner(w)}
+                        >
+                          {w === 'A' ? '1팀 승리' : '2팀 승리'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="result-field">
+                    <span className="result-label">총 킬</span>
+                    <div className="result-score">
+                      <label>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min="0"
+                          value={kills}
+                          placeholder="-"
+                          aria-label="총 킬 수"
+                          onChange={(e) => setKills(e.target.value)}
+                        />
+                        <em>킬</em>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="result-field">
+                    <span className="result-label">첫 킬</span>
+                    <div className="result-chips">
+                      {[...(activeScrim.team_a || []), ...(activeScrim.team_b || [])].map((id) => (
+                        <button
+                          key={id}
+                          className={`result-chip ${String(fb) === String(id) ? 'is-on' : ''}`}
+                          onClick={() => setFb(String(fb) === String(id) ? '' : String(id))}
+                        >
+                          {nameOf.get(id) || '?'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* 첫 킬. 우리가 땄으면 누가 땄는지까지 - 그래야 '누구'에 건
-                  사람들이 정산된다. 상대가 땄으면 사람은 고를 게 없다 */}
-              <div className="seg-tabs" style={{ marginTop: '0.6rem' }}>
-                {SIDES.map((x) => (
-                  <button
-                    key={x.key}
-                    className={`seg-tab ${fbSide === x.key ? 'active' : ''}`}
-                    onClick={() => {
-                      setFbSide(fbSide === x.key ? '' : x.key);
-                      setFb('');
-                      setFbLane('');
-                    }}
-                  >
-                    첫 킬 · {x.label}
-                  </button>
-                ))}
-              </div>
-              {fbSide === 'us' && (
-                <select
-                  className="rooms-input"
-                  value={fb}
-                  onChange={(e) => setFb(e.target.value)}
-                  aria-label="첫 킬을 딴 사람"
-                  style={{ marginTop: '0.5rem' }}
-                >
-                  <option value="">누가 땄나요?</option>
-                  {(activeScrim.team_a || []).map((id) => (
-                    <option key={id} value={id}>
-                      {nameOf.get(id) || '?'}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {/* 상대 라인은 몰라도 된다. 비우면 상대 라인에 건 것만 돌려준다 */}
-              {fbSide === 'them' && hasLanes(activeScrim.mode) && (
-                <select
-                  className="rooms-input"
-                  value={fbLane}
-                  onChange={(e) => setFbLane(e.target.value)}
-                  aria-label="첫 킬을 딴 상대 라인"
-                  style={{ marginTop: '0.5rem' }}
-                >
-                  <option value="">상대 어느 라인? (모르면 비워두기)</option>
-                  {FB_ROW_ORDER.map((lane) => (
-                    <option key={lane} value={lane}>
-                      상대 {laneLabel(lane)}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {hasDragon(activeScrim.mode) && (
-                <div className="casual-dragon-pick">
-                  {DRAGONS.map((d) => (
-                    <button
-                      key={d.key}
-                      className={`casual-dragon ${dragon === d.key ? 'is-on' : ''}`}
-                      onClick={() => setDragon(dragon === d.key ? '' : d.key)}
-                      title={d.label}
-                    >
-                      <img src={dragonIcon(d.key)} alt="" />
-                      <span>{d.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <button
-                className="primary-btn"
-                style={{ marginTop: '0.7rem' }}
-                onClick={() => settle(activeScrim)}
-              >
-                정산
+              <button className="primary-btn result-submit" onClick={() => settle(activeScrim)}>
+                정산하기
               </button>
               <p className="rooms-hint">
-                비워둔 항목은 그 마켓 전체를 환불합니다. 첫 킬을 딴 쪽이 아닌 사람에 건 배팅은
-                환불이 아니라 낙첨입니다 (상대 라인을 비우면 상대 라인에 건 것만 환불).
-              </p>
-            </div>
-          )}
-
-          {canEdit && activeScrim.status === 'locked' && activeScrim.kind !== 'casual' && (
-            <div className="bet-result">
-              <h4>경기 결과 넣기</h4>
-              <div className="seg-tabs">
-                <button
-                  className={`seg-tab ${winner === 'A' ? 'active' : ''}`}
-                  onClick={() => setWinner('A')}
-                >
-                  1팀 승리
-                </button>
-                <button
-                  className={`seg-tab ${winner === 'B' ? 'active' : ''}`}
-                  onClick={() => setWinner('B')}
-                >
-                  2팀 승리
-                </button>
-              </div>
-              <div className="rooms-form-row">
-                <input
-                  className="rooms-input"
-                  type="number"
-                  min="0"
-                  value={kills}
-                  placeholder="총 킬 수"
-                  onChange={(e) => setKills(e.target.value)}
-                />
-                <select
-                  className="rooms-input"
-                  value={fb}
-                  onChange={(e) => setFb(e.target.value)}
-                  aria-label="첫 킬"
-                >
-                  <option value="">첫 킬</option>
-                  {[...(activeScrim.team_a || []), ...(activeScrim.team_b || [])].map((id) => (
-                    <option key={id} value={id}>
-                      {nameOf.get(id) || '?'}
-                    </option>
-                  ))}
-                </select>
-                <button className="primary-btn" onClick={() => settle(activeScrim)}>
-                  정산
-                </button>
-              </div>
-              <p className="rooms-hint">
-                비워둔 항목은 그 마켓 전체를 환불합니다. 적중한 쪽에 아무도 안 걸었을 때도
-                환불입니다.
+                비워둔 항목은 그 마켓 전체를 환불합니다.
+                {activeScrim.kind === 'casual'
+                  ? ' 첫 킬을 딴 쪽이 아닌 사람에 건 배팅은 환불이 아니라 낙첨입니다.'
+                  : ' 적중한 쪽에 아무도 안 걸었을 때도 환불입니다.'}
               </p>
             </div>
           )}
