@@ -150,7 +150,7 @@ const CasualOpenModal = ({ players, onClose, onOpen }) => {
               )}
               <em className="casual-odds">
                 {hasLanes(mode) && !x.lane && <span className="casual-undecided">미정 · </span>}
-                첫 킬 {firstBloodOdds(x.lane, mode)}배
+                첫 킬 {firstBloodOdds(x.lane, mode).toFixed(2)}배
               </em>
               <button
                 className="icon-btn"
