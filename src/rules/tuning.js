@@ -73,7 +73,8 @@ export const PARLAY_MAX_WIN = 35000;
 
    오버만 계속 뜨면 올리고 언더만 뜨면 내린다. 0.5씩 움직여보면 감이 온다. */
 export const CASUAL_KILL_LINES = {
-  normal: 29.5,
+  /* 29.5로 잡았더니 매번 오버였다 */
+  normal: 44.5,
   aram: 59.5,
 };
 

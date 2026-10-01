@@ -569,6 +569,16 @@ const BetTab = ({
   const bettorsOn = (scrim, market, selection) =>
     bets.filter((b) => b.scrim_id === scrim.id && b.market === market && b.selection === selection);
 
+  /* 묶음에 이 선택지를 넣은 사람들. 묶음은 이 칸 하나로 번 게 아니라서
+     금액 없이 '묶음'으로만 적는다 */
+  const parlayOn = (scrim, market, selection) =>
+    bets.filter(
+      (b) =>
+        b.scrim_id === scrim.id &&
+        b.market === 'parlay' &&
+        (b.legs || []).some((l) => l.market === market && l.selection === selection)
+    );
+
   const renderOption = ({ scrim, market, selection, label, key, fixed, icon, tone = '' }) => {
     const p = poolOf(scrim.id, market, selection);
     const mine = myBets(scrim.id).find((b) => b.market === market);
@@ -601,7 +611,10 @@ const BetTab = ({
     const lost =
       settled &&
       (scrim.kind === 'casual' ? outcome === 'lose' : answer != null && answer !== selection);
-    const isMine = mine?.selection === selection;
+    const onParlay = parlayOn(scrim, market, selection);
+    /* 내 묶음에 들어 있는 칸도 '내 것'이다 */
+    const isMine =
+      mine?.selection === selection || onParlay.some((b) => b.user_id === myId);
     const on = bettorsOn(scrim, market, selection);
     const fbShown =
       market === 'first_blood' && scrim.kind !== 'casual'
@@ -654,7 +667,7 @@ const BetTab = ({
           )}
         </button>
 
-        {settled && on.length > 0 && (
+        {settled && on.length + onParlay.length > 0 && (
           <ul className="bet-opt-bettors">
             {on.map((b) => (
               <li key={b.id}>
@@ -663,6 +676,12 @@ const BetTab = ({
                 <span className={`kkiko-delta ${b.payout > 0 ? 'plus' : 'minus'}`}>
                   {b.payout > 0 ? `+${num(b.payout - b.amount)}` : `-${num(b.amount)}`}
                 </span>
+              </li>
+            ))}
+            {onParlay.map((b) => (
+              <li key={`p${b.id}`}>
+                <span className="bet-bettor">{memberName.get(b.user_id) || '알 수 없음'}</span>
+                <span className="bet-bettor-parlay">묶음</span>
               </li>
             ))}
           </ul>

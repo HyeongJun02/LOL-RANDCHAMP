@@ -93,7 +93,7 @@ const TABS = [
   /* 팀을 넣는 화면과 지난 판을 훑는 화면은 하는 일이 다르다.
      한 판 기록하려고 들어왔다가 목록을 지나쳐야 했고, 지난 판을 보려면
      입력칸부터 스크롤해야 했다 */
-  { key: 'history', group: 1, label: '내전 기록', icon: <FaListUl />, desc: '지난 판과 또또 결과' },
+  { key: 'history', group: 1, label: '대전 기록', icon: <FaListUl />, desc: '내전·일반 게임 지난 판' },
   { key: 'stats', group: 1, label: '통계', icon: <FaChartBar />, desc: '순위·시즌 정산·명예의 전당' },
   { key: 'bet', group: 2, label: '또또', icon: <FaDice />, desc: '끼꼬를 걸고 결과를 맞힙니다' },
   { key: 'kkiko', group: 2, label: '포인트', icon: <FaCoins />, desc: '끼꼬 잔액과 주고받기' },

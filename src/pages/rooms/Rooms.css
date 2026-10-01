@@ -1927,10 +1927,12 @@ li.day-sep em {
 
 /* 정산 뒤: 맞은 칸은 초록, 틀린 칸은 눌러앉힌다.
    내가 고른 칸은 disabled여도 흐려지지 않게 따로 살린다 */
+/* 정답이지만 내가 안 건 칸은 연하게. 내가 맞힌 칸만 진하게 떠야
+   '내가 뭘 맞혔나'가 바로 보인다 */
 .bet-opt.won {
-  border-color: var(--gg-green);
-  background: rgba(74, 222, 128, 0.14);
-  color: #dcfce7;
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.07);
+  color: #bbf7d0;
   opacity: 1;
 }
 
@@ -1939,7 +1941,20 @@ li.day-sep em {
 }
 
 .bet-opt.won.mine {
-  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.35);
+  border-color: var(--gg-green);
+  background: rgba(74, 222, 128, 0.24);
+  color: #f0fdf4;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.45), 0 0 18px -6px rgba(74, 222, 128, 0.8);
+}
+
+.bet-bettor-parlay {
+  margin-left: auto;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 18%, transparent);
+  color: var(--accent-light, var(--gg-gold-light));
+  font-size: 0.66rem;
+  font-weight: 800;
 }
 
 .bet-opt.mine.lost {

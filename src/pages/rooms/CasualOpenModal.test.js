@@ -143,5 +143,5 @@ test('일반이면 정한 라인만 보낸다 (미정은 안 보낸다)', async 
 
   expect(opened.mode).toBe('normal');
   expect(opened.lanes).toEqual({ 1: 'SUPPORT' });
-  expect(opened.killLine).toBe(29.5);
+  expect(opened.killLine).toBe(44.5);
 });
