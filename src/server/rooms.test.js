@@ -1525,7 +1525,8 @@ test('걸러내기 단추는 줄에 붙는 라벨에서 그대로 만들어진�
   expect(FEED_FILTERS[0]).toEqual({ label: '전체', types: null });
   /* 라벨 하나에 종류가 여러 개 묶인 것은 한 단추로 모인다 (또또) */
   const bet = FEED_FILTERS.find((f) => f.label === '또또');
-  expect(bet.types).toEqual(['betting_open', 'betting_locked']);
+  /* 일반 게임 또또도 같은 단추로 거른다 */
+  expect(bet.types).toEqual(['betting_open', 'casual_open', 'casual_settled', 'betting_locked']);
   /* 종류를 하나 더하면 단추도 저절로 생긴다 - 빠진 게 없어야 한다 */
   const covered = FEED_FILTERS.flatMap((f) => f.types || []);
   expect(covered.sort()).toEqual(Object.keys(LOG_TAGS).sort());

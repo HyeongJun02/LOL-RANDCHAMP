@@ -1744,6 +1744,21 @@ begin
     end if;
   end loop;
 
+  -- 일반 게임의 첫 킬은 '어느 팀'과 '누구' 중 하나만 건다. 이미 건 것과
+  -- 이번에 담은 것을 같이 본다 - 따로 두 번 보내서 둘 다 거는 길을 막는다.
+  -- 돈을 빼기 전에 막아야 거절돼도 아무 일이 없다
+  if s.kind = 'casual' and (
+    select count(distinct m) from (
+      select market as m from bets
+       where scrim_id = p_scrim and user_id = me and market in ('fb_side', 'first_blood')
+      union all
+      select x->>'market' from jsonb_array_elements(p_bets) x
+       where x->>'market' in ('fb_side', 'first_blood')
+    ) t
+  ) > 1 then
+    raise exception '첫 킬은 어느 팀이나 누구 중 하나만 걸 수 있어요.';
+  end if;
+
   select sum((x->>'amount')::int) into total from jsonb_array_elements(p_bets) x;
 
   -- 잔액 확인과 차감을 한 문장으로. 갈라놓으면 두 요청이 같은 잔액을 보고
@@ -1832,6 +1847,9 @@ begin
      where p.room_id = s.room_id
        and p.status = 'settled'
        and p.first_blood_player_id is not null
+       -- 일반 큐 판은 우리 다섯만 있어서 '다섯 중 하나'로 세어진다.
+       -- 섞으면 내전(열 명 중 하나) 확률이 부풀려진다
+       and p.kind = 'scrim'
   ),
   stat as (
     select r.pid,
@@ -2138,6 +2156,9 @@ begin
 
   update scrims
      set winner = null, total_kills = null, first_blood_player_id = null,
+         -- 일반 게임 또또의 결과도 같이 비운다. 남겨두면 다시 정산하기 전까지
+         -- 화면이 지난 결과(첫 용 등)를 적중으로 그린다
+         fb_side = null, first_dragon = null,
          status = 'locked', settled_at = null, undo_count = undo_count + 1
    where id = p_scrim;
 

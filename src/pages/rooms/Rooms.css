@@ -3449,3 +3449,221 @@ li.day-sep em {
   color: var(--gg-gold) !important;
   transform: rotate(-30deg);
 }
+
+/* ============================================================
+   일반 게임 또또 (내전 아님)
+   ============================================================ */
+
+/* 또또가 없을 때 여는 자리. 내전 또또는 게임 시작 탭에서 열고, 이건
+   팀을 짤 일이 없어서 여기서 바로 연다 */
+.casual-open-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.8rem;
+  margin-top: 0.4rem;
+}
+
+/* '일반 게임 · 칼바람'. 내전과 한눈에 갈려야 한다 - 같은 카드에 같은
+   제목이면 이게 전적에 남는 판인지 아닌지 모른다 */
+.casual-badge {
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.1);
+  color: #7dd3fc;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+/* 첫 킬 - 누구. 이름에 라인이 붙어 길어서 한 줄에 둘~셋 */
+.casual-fb {
+  margin-top: 0.4rem;
+}
+
+/* 첫 용 여섯. 아이콘이 있어서 글자만 있는 칸보다 넓게 */
+.casual-dragons {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+}
+
+.bet-opt-icon {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+
+/* 결과 넣기의 첫 용 고르기 */
+.casual-dragon-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+
+.casual-dragon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.45rem 0.3rem;
+  border-radius: 9px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #8b98ae;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.casual-dragon img {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.casual-dragon:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.casual-dragon.is-on {
+  border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 60%, transparent);
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 14%, transparent);
+  color: var(--accent-light, var(--gg-gold-light));
+}
+
+/* ---------- 여는 팝업 ---------- */
+
+.casual-modes .seg-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+}
+
+.casual-modes .seg-tab em {
+  font-style: normal;
+  font-size: 0.66rem;
+  opacity: 0.7;
+}
+
+/* 고른 사람. 이름 · 라인 다섯 칸 · 첫 킬 배당 · 빼기 */
+.casual-team {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+/* 자리에 이름을 붙여둔다. 칼바람은 라인 칸이 없어서 요소가 하나 적은데,
+   칸 순서로만 채우면 뒤의 것들이 한 칸씩 밀린다 (내전 기록에서 실제로
+   겪었다 - 2팀 이름이 좁은 칸에 들어가 세 줄로 접혔다) */
+.casual-team li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 4.6rem auto;
+  grid-template-areas: 'name lanes odds x';
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.casual-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.casual-lanes {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.1rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.casual-lane {
+  padding: 0.2rem 0.4rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7a94;
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.casual-lane:hover {
+  color: #cbd5e5;
+}
+
+.casual-lane.is-on {
+  background: color-mix(in srgb, var(--accent, var(--gg-gold)) 22%, transparent);
+  color: var(--accent-light, var(--gg-gold-light));
+}
+
+.casual-odds {
+  font-style: normal;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: #8b98ae;
+  text-align: right;
+}
+
+/* 아직 안 고른 사람들 */
+.casual-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.casual-chip {
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #cbd5e5;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.casual-chip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent, var(--gg-gold)) 50%, transparent);
+}
+
+.casual-chip:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.casual-team .casual-name { grid-area: name; }
+.casual-team .casual-lanes { grid-area: lanes; }
+.casual-team .casual-odds { grid-area: odds; }
+.casual-team .icon-btn { grid-area: x; }
+
+/* 좁은 화면에서는 라인 다섯 칸이 이름 아래 줄로 내려간다 */
+@media (max-width: 520px) {
+  .casual-team li {
+    grid-template-columns: minmax(0, 1fr) 4.6rem auto;
+    grid-template-areas:
+      'name odds x'
+      'lanes lanes lanes';
+  }
+
+  .casual-team .casual-lanes {
+    justify-content: space-between;
+  }
+}

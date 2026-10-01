@@ -11,6 +11,8 @@ import {
   placeBets,
   lockBetting,
   settleScrim,
+  settleCasual,
+  openCasualBet,
   unsettleScrim,
   removeScrim,
   fetchBetting,
@@ -20,6 +22,20 @@ import {
 import { useDialog } from '../../components/common/Dialog';
 import Empty from '../../components/common/Empty';
 import BetTimer from './BetTimer';
+import CasualOpenModal from './CasualOpenModal';
+import {
+  PARITY,
+  SIDES,
+  DRAGONS,
+  CASUAL_MODES,
+  hasDragon,
+  hasLanes,
+  laneLabel,
+  dragonIcon,
+  dragonLabel,
+  firstBloodOdds,
+  dragonOdds,
+} from '../../rules/casual';
 import { timeAgo } from '../../lib/timeAgo';
 import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS } from '../../rules/tuning';
 import { useGameKey } from '../../lib/GameContext';
@@ -45,6 +61,8 @@ const BetTab = ({
   /* 한 판만 보여줄 때. 내전 기록 탭에서 판돈을 누르면 이 화면을 그대로
      팝업에 띄운다 - 결과를 두 벌로 그리면 둘이 조금씩 달라진다 */
   single = null,
+  /* 일반 게임 또또를 열 때만 쓴다 */
+  roomId,
 }) => {
   const gameKey = useGameKey();
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
@@ -96,7 +114,9 @@ const BetTab = ({
      부르면 배팅 한 번에 요청이 하나씩 더 붙는다 */
   useEffect(() => {
     let alive = true;
-    if (!liveId) {
+    /* 일반 게임은 라인으로 배당이 정해진다. 내전 배당(티어·지난 기록)을
+       부르면 엉뚱한 숫자가 뜬다 */
+    if (!liveId || activeScrim?.kind === 'casual') {
       setFbOdds(new Map());
       return undefined;
     }
@@ -106,7 +126,7 @@ const BetTab = ({
     return () => {
       alive = false;
     };
-  }, [liveId]);
+  }, [liveId, activeScrim?.kind]);
 
   const guard = async (fn) => {
     if (busy.current) return;
@@ -130,11 +150,19 @@ const BetTab = ({
 
   /* ---------- 배팅 담기 ---------- */
 
+  /* 일반 게임의 첫 킬은 '어느 팀'과 '누구' 중 하나만 건다. 한쪽을 담으면
+     다른 쪽은 장바구니에서 뺀다 (이미 건 쪽이 있으면 아예 못 누른다 -
+     서버도 막는다) */
+  const RIVAL = { fb_side: 'first_blood', first_blood: 'fb_side' };
+
   const pick = (market, selection) =>
     setCart((prev) => {
       const next = { ...prev };
       if (next[market]?.selection === selection) delete next[market];
-      else next[market] = { selection, amount: prev[market]?.amount ?? '' };
+      else {
+        next[market] = { selection, amount: prev[market]?.amount ?? '' };
+        if (activeScrim?.kind === 'casual' && RIVAL[market]) delete next[RIVAL[market]];
+      }
       return next;
     });
 
@@ -246,9 +274,40 @@ const BetTab = ({
   const [winner, setWinner] = useState('');
   const [kills, setKills] = useState('');
   const [fb, setFb] = useState('');
+  /* 일반 게임만. 첫 킬을 우리가 땄나 상대가 땄나, 첫 용은 무엇이었나 */
+  const [fbSide, setFbSide] = useState('');
+  const [dragon, setDragon] = useState('');
+  const [openCasual, setOpenCasual] = useState(false);
 
   const settle = (scrim) =>
     guard(async () => {
+      if (scrim.kind === 'casual') {
+        const k = kills === '' ? null : Number(kills);
+        if (k !== null && (!Number.isInteger(k) || k < 0)) {
+          toast.error('총 킬 수를 숫자로 적어주세요.');
+          return;
+        }
+        /* 우리가 땄다면서 아무도 안 고르면 '누구' 마켓이 영원히 안 정해진다.
+           서버도 막지만, 눌러보기 전에 알려준다 */
+        if (fbSide === 'us' && fb === '') {
+          toast.error('우리 팀이 땄으면 누가 땄는지도 골라주세요.');
+          return;
+        }
+        await settleCasual(scrim.id, {
+          totalKills: k,
+          fbSide: fbSide || null,
+          firstBloodPlayerId: fbSide === 'us' && fb !== '' ? Number(fb) : null,
+          dragon: dragon || null,
+        });
+        setKills('');
+        setFb('');
+        setFbSide('');
+        setDragon('');
+        toast.success('정산했어요.');
+        onChanged();
+        load();
+        return;
+      }
       if (winner !== 'A' && winner !== 'B') {
         toast.error('이긴 팀을 골라주세요.');
         return;
@@ -307,6 +366,9 @@ const BetTab = ({
      써야 헷갈리지 않아서 한 군데서만 만든다 */
   const selectionLabel = (market, selection) => {
     if (market === 'first_blood') return nameOf.get(Number(selection)) || '?';
+    if (market === 'kills_parity') return PARITY.find((x) => x.key === selection)?.label;
+    if (market === 'fb_side') return SIDES.find((x) => x.key === selection)?.label;
+    if (market === 'dragon') return dragonLabel(selection);
     if (selection === 'A') return '1팀';
     if (selection === 'B') return '2팀';
     if (selection === 'over') return '오버';
@@ -326,15 +388,39 @@ const BetTab = ({
     </div>
   );
 
+  /* 일반 게임의 '우리 팀'. 상대는 모르니 한 줄뿐이고, 라인을 같이 적는다 */
+  const renderCasualTeam = (scrim) => (
+    <div className="bet-teams">
+      <div className="bet-team">
+        <strong>우리 팀</strong>
+        <span>
+          {(scrim.team_a || [])
+            .map((id) => {
+              const lane = hasLanes(scrim.mode) && scrim.lanes?.[id];
+              return `${nameOf.get(id) || '?'}${lane ? ` (${laneLabel(lane)})` : ''}`;
+            })
+            .join(', ')}
+        </span>
+      </div>
+    </div>
+  );
+
+  const modeName = (scrim) => CASUAL_MODES.find((m) => m.key === scrim.mode)?.label || '';
+
   /* 이 선택지에 건 사람들. 정산이 끝났으면 각자 얼마를 벌고 잃었는지까지.
      "누가 어디에 걸었나"를 눈으로 보는 게 또또의 절반이다 */
   const bettorsOn = (scrim, market, selection) =>
     bets.filter((b) => b.scrim_id === scrim.id && b.market === market && b.selection === selection);
 
-  const renderOption = ({ scrim, market, selection, label, key }) => {
+  const renderOption = ({ scrim, market, selection, label, key, fixed, icon }) => {
     const p = poolOf(scrim.id, market, selection);
     const mine = myBets(scrim.id).find((b) => b.market === market);
-    const taken = Boolean(mine);
+    /* 일반 게임에서 첫 킬의 다른 쪽에 이미 걸었으면 이쪽은 잠근다 */
+    const rivalTaken =
+      scrim.kind === 'casual' &&
+      RIVAL[market] &&
+      myBets(scrim.id).some((b) => b.market === RIVAL[market]);
+    const taken = Boolean(mine) || rivalTaken;
     const picked = cart[market]?.selection === selection;
     const open = scrim.status === 'betting';
     const settled = scrim.status === 'settled';
@@ -344,16 +430,21 @@ const BetTab = ({
     const odds =
       p?.odds != null
         ? Number(p.odds)
-        : market === 'first_blood' && scrim.id === liveId
-          ? fbOdds.get(Number(selection))
-          : null;
+        : fixed != null
+          ? fixed
+          : market === 'first_blood' && scrim.id === liveId
+            ? fbOdds.get(Number(selection))
+            : null;
 
     const answer = winningSelection(scrim, market);
     const won = settled && answer === selection;
     const lost = settled && answer != null && answer !== selection;
     const isMine = mine?.selection === selection;
     const on = bettorsOn(scrim, market, selection);
-    const fbShown = market === 'first_blood' ? fbRate.get(Number(selection)) || null : null;
+    const fbShown =
+      market === 'first_blood' && scrim.kind !== 'casual'
+        ? fbRate.get(Number(selection)) || null
+        : null;
 
     return (
       <div className={`bet-opt-wrap ${settled ? 'is-settled' : ''}`} key={key}>
@@ -368,6 +459,7 @@ const BetTab = ({
           <span className="bet-opt-label">
             {/* 이름이 길면 칸을 밀어내는 대신 잘린다. 퍼블 칸은 폭이 좁아서
                 안 잘라두면 확률과 배당이 칸 밖으로 넘친다 */}
+            {icon && <img className="bet-opt-icon" src={icon} alt="" />}
             <span className="bet-opt-text">{label}</span>
             {/* 라벨은 '내가 어떻게 됐나'만 말한다. 정답 자체는 초록 칸이
                 이미 말해주고 있어서 안 건 칸에까지 적중을 붙일 이유가 없다 */}
@@ -417,7 +509,101 @@ const BetTab = ({
     );
   };
 
+  /* 일반 게임 또또. 내전과 마켓이 다르다 - 승리팀이 없고(우리 다섯이 한
+     팀이다) 짝홀·어느 팀·첫 용이 있다 */
+  const renderCasualMarkets = (scrim) => {
+    const line = Number(scrim.kill_line);
+    const kills = killMarket(line);
+    const lanes = scrim.lanes || {};
+    const ours = scrim.team_a || [];
+    return (
+      <>
+        <div className="bet-market">
+          <h4>
+            총 킬 <strong className="bet-line">{line}</strong>
+            <em>기준 {KILLS_ODDS}배</em>
+          </h4>
+          <div className="bet-opts">
+            {renderOption({ scrim, market: kills, selection: 'over', label: `오버 · ${line} 초과` })}
+            {renderOption({ scrim, market: kills, selection: 'under', label: `언더 · ${line} 미만` })}
+          </div>
+        </div>
+
+        <div className="bet-market">
+          <h4>
+            {marketLabel('kills_parity')}
+            <em>기준 {KILLS_ODDS}배</em>
+          </h4>
+          <div className="bet-opts">
+            {PARITY.map((x) =>
+              renderOption({ key: x.key, scrim, market: 'kills_parity', selection: x.key, label: x.label })
+            )}
+          </div>
+        </div>
+
+        {/* 둘 중 하나만. 한쪽을 담으면 다른 쪽은 빠진다 */}
+        <div className="bet-market">
+          <h4>
+            첫 킬
+            <em>팀이나 사람 중 하나만</em>
+          </h4>
+          <div className="bet-opts">
+            {SIDES.map((x) =>
+              renderOption({ key: x.key, scrim, market: 'fb_side', selection: x.key, label: x.label })
+            )}
+          </div>
+          <div className="bet-opts bet-opts-grid casual-fb">
+            {ours.map((id) =>
+              renderOption({
+                key: id,
+                scrim,
+                market: 'first_blood',
+                selection: String(id),
+                label: hasLanes(scrim.mode) && lanes[id]
+                  ? `${nameOf.get(id) || '?'} · ${laneLabel(lanes[id])}`
+                  : nameOf.get(id) || '?',
+                /* 라인으로 정해지는 고정 배당이라 마감 전에도 보여준다 */
+                fixed: firstBloodOdds(lanes[id], scrim.mode),
+              })
+            )}
+          </div>
+          <p className="rooms-hint">
+            '우리 팀'은 우리 중 누가 따든 맞습니다. 사람을 고르면 배당이 훨씬 크지만,
+            상대 팀이 따면 전부 낙첨입니다. 한 번에 {num(capOf('first_blood'))} 끼꼬까지.
+          </p>
+        </div>
+
+        {hasDragon(scrim.mode) && (
+          <div className="bet-market">
+            <h4>
+              {marketLabel('dragon')}
+              <em>{dragonOdds()}배</em>
+            </h4>
+            <div className="bet-opts bet-opts-grid casual-dragons">
+              {DRAGONS.map((d) =>
+                renderOption({
+                  key: d.key,
+                  scrim,
+                  market: 'dragon',
+                  selection: d.key,
+                  label: d.label,
+                  icon: dragonIcon(d.key),
+                  fixed: dragonOdds(),
+                })
+              )}
+            </div>
+            <p className="rooms-hint">
+              어느 팀이 잡든 처음 나온 용의 종류만 맞히면 됩니다. 한 번에{' '}
+              {num(capOf('dragon'))} 끼꼬까지.
+            </p>
+          </div>
+        )}
+      </>
+    );
+  };
+
   const renderMarkets = (scrim) => {
+    if (scrim.kind === 'casual') return renderCasualMarkets(scrim);
     const roster = [...(scrim.team_a || []), ...(scrim.team_b || [])];
     const fixedFb = (roster.length * FIRST_BLOOD_RATE).toFixed(2);
     return (
@@ -602,11 +788,25 @@ const BetTab = ({
   return (
     <div className="room-settings">
       {single ? null : !activeScrim ? (
-        <Empty
-          icon={<FaDice />}
-          title="지금 열린 또또가 없어요"
-          desc="게임 시작 탭에서 팀을 채우고 '또또 열기'를 누르면 여기에 올라옵니다."
-        />
+        <section className="room-panel">
+          <Empty
+            icon={<FaDice />}
+            title="지금 열린 또또가 없어요"
+            desc="내전은 게임 시작 탭에서 팀을 채우고 '또또 열기'를 누르면 여기에 올라옵니다."
+          />
+          {/* 내전이 아닌 날에도 걸 수 있다. 우리끼리 일반·칼바람 큐를 돌릴 때.
+              롤 방만 - 발로란트는 용도 라인도 없다 */}
+          {canEdit && gameKey === 'lol' && (
+            <div className="casual-open-row">
+              <button className="ghost-btn" onClick={() => setOpenCasual(true)}>
+                <FaDice /> 일반 게임 또또 열기
+              </button>
+              <span className="rooms-hint">
+                우리끼리 일반·칼바람 큐를 돌릴 때. 전적에는 안 남고 끼꼬만 오갑니다.
+              </span>
+            </div>
+          )}
+        </section>
       ) : (
         /* 진행 중인 판은 빛나게 둔다. 지난 기록과 같은 카드로 그려두면
            스크롤하다가 '지금 걸 수 있는 판'을 그냥 지나친다 */
@@ -621,7 +821,14 @@ const BetTab = ({
           }
         >
           <h3>
-            내전
+            {activeScrim.kind === 'casual' ? (
+              <>
+                일반 게임
+                <span className="casual-badge">{modeName(activeScrim)}</span>
+              </>
+            ) : (
+              '내전'
+            )}
             {/* 상태와 남은 시간은 한 덩어리다. 타이머를 아래에 크게 두면
                 정작 걸어야 할 선택지가 화면 밖으로 밀린다 */}
             <span className="bet-head-live">
@@ -639,10 +846,14 @@ const BetTab = ({
             </span>
           </h3>
 
-          <div className="bet-teams">
-            {renderTeam({ ids: activeScrim.team_a || [], label: '1팀' })}
-            {renderTeam({ ids: activeScrim.team_b || [], label: '2팀' })}
-          </div>
+          {activeScrim.kind === 'casual' ? (
+            renderCasualTeam(activeScrim)
+          ) : (
+            <div className="bet-teams">
+              {renderTeam({ ids: activeScrim.team_a || [], label: '1팀' })}
+              {renderTeam({ ids: activeScrim.team_b || [], label: '2팀' })}
+            </div>
+          )}
 
           {/* 방장이 '다 걸었나?'만 보고 마감할 수 있어야 한다.
               누가 어디에 걸었는지는 마감 전까지 여전히 안 보인다 */}
@@ -795,7 +1006,82 @@ const BetTab = ({
             </button>
           )}
 
-          {canEdit && activeScrim.status === 'locked' && (
+          {canEdit && activeScrim.status === 'locked' && activeScrim.kind === 'casual' && (
+            <div className="bet-result">
+              <h4>경기 결과 넣기</h4>
+              <input
+                className="rooms-input"
+                type="number"
+                min="0"
+                value={kills}
+                placeholder="총 킬 수 (양 팀 합계)"
+                onChange={(e) => setKills(e.target.value)}
+              />
+
+              {/* 첫 킬. 우리가 땄으면 누가 땄는지까지 - 그래야 '누구'에 건
+                  사람들이 정산된다. 상대가 땄으면 사람은 고를 게 없다 */}
+              <div className="seg-tabs" style={{ marginTop: '0.6rem' }}>
+                {SIDES.map((x) => (
+                  <button
+                    key={x.key}
+                    className={`seg-tab ${fbSide === x.key ? 'active' : ''}`}
+                    onClick={() => {
+                      setFbSide(fbSide === x.key ? '' : x.key);
+                      if (x.key === 'them') setFb('');
+                    }}
+                  >
+                    첫 킬 · {x.label}
+                  </button>
+                ))}
+              </div>
+              {fbSide === 'us' && (
+                <select
+                  className="rooms-input"
+                  value={fb}
+                  onChange={(e) => setFb(e.target.value)}
+                  aria-label="첫 킬을 딴 사람"
+                  style={{ marginTop: '0.5rem' }}
+                >
+                  <option value="">누가 땄나요?</option>
+                  {(activeScrim.team_a || []).map((id) => (
+                    <option key={id} value={id}>
+                      {nameOf.get(id) || '?'}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {hasDragon(activeScrim.mode) && (
+                <div className="casual-dragon-pick">
+                  {DRAGONS.map((d) => (
+                    <button
+                      key={d.key}
+                      className={`casual-dragon ${dragon === d.key ? 'is-on' : ''}`}
+                      onClick={() => setDragon(dragon === d.key ? '' : d.key)}
+                      title={d.label}
+                    >
+                      <img src={dragonIcon(d.key)} alt="" />
+                      <span>{d.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                className="primary-btn"
+                style={{ marginTop: '0.7rem' }}
+                onClick={() => settle(activeScrim)}
+              >
+                정산
+              </button>
+              <p className="rooms-hint">
+                비워둔 항목은 그 마켓 전체를 환불합니다. 상대 팀이 첫 킬을 땄으면 사람에 건
+                배팅은 환불이 아니라 낙첨입니다.
+              </p>
+            </div>
+          )}
+
+          {canEdit && activeScrim.status === 'locked' && activeScrim.kind !== 'casual' && (
             <div className="bet-result">
               <h4>경기 결과 넣기</h4>
               <div className="seg-tabs">
@@ -849,6 +1135,25 @@ const BetTab = ({
 
       {/* 여기서부터는 끝난 판. 카드가 똑같이 생겨서 아래로 이어지면
           어디까지가 한 판인지 안 보인다. 선을 긋고 판마다 이름표를 단다 */}
+      {openCasual && (
+        <CasualOpenModal
+          players={players.filter((p) => !p.deleted_at)}
+          onClose={() => setOpenCasual(false)}
+          onOpen={(opts) =>
+            guard(async () => {
+              await openCasualBet({ roomId, ...opts });
+              setOpenCasual(false);
+              toast.success(
+                opts.closeSeconds
+                  ? `또또를 열었어요. ${Math.round(opts.closeSeconds / 60) || 1}분 뒤 자동으로 마감됩니다.`
+                  : '또또를 열었어요. 마감은 직접 눌러야 합니다.'
+              );
+              onChanged();
+            })
+          }
+        />
+      )}
+
       {history.length > 0 && (
         <div className="bet-past-sep">
           <span>지난 또또 {history.length}판</span>
@@ -864,20 +1169,44 @@ const BetTab = ({
               {new Date(s.played_at).toLocaleDateString('ko-KR')}
             </span>
           </div>
-          <h3>
-            {s.winner === 'A' ? '1팀' : '2팀'} 승리
-            <span className="bet-status s-settled">정산 완료</span>
-          </h3>
-          <div className="bet-teams">
-            {renderTeam({ ids: s.team_a || [], label: '1팀', hot: s.winner === 'A' })}
-            {renderTeam({ ids: s.team_b || [], label: '2팀', hot: s.winner === 'B' })}
-          </div>
-          <p className="rooms-hint">
-            총 킬 {s.total_kills ?? '-'} · 첫 킬{' '}
-            {s.first_blood_player_id ? nameOf.get(s.first_blood_player_id) || '?' : '-'} · 또또{' '}
-            {num(s.bet_total)} 끼꼬
-            {s.undo_count > 0 && ` · 정산 ${s.undo_count}번 되돌림`}
-          </p>
+          {s.kind === 'casual' ? (
+            <>
+              <h3>
+                일반 게임
+                <span className="casual-badge">{modeName(s)}</span>
+                <span className="bet-status s-settled">정산 완료</span>
+              </h3>
+              {renderCasualTeam(s)}
+              <p className="rooms-hint">
+                총 킬 {s.total_kills ?? '-'} · 첫 킬{' '}
+                {s.fb_side === 'them'
+                  ? '상대 팀'
+                  : s.first_blood_player_id
+                    ? nameOf.get(s.first_blood_player_id) || '?'
+                    : '-'}
+                {hasDragon(s.mode) && ` · 첫 용 ${s.first_dragon ? dragonLabel(s.first_dragon) : '-'}`}
+                {' · '}또또 {num(s.bet_total)} 끼꼬
+                {s.undo_count > 0 && ` · 정산 ${s.undo_count}번 되돌림`}
+              </p>
+            </>
+          ) : (
+            <>
+              <h3>
+                {s.winner === 'A' ? '1팀' : '2팀'} 승리
+                <span className="bet-status s-settled">정산 완료</span>
+              </h3>
+              <div className="bet-teams">
+                {renderTeam({ ids: s.team_a || [], label: '1팀', hot: s.winner === 'A' })}
+                {renderTeam({ ids: s.team_b || [], label: '2팀', hot: s.winner === 'B' })}
+              </div>
+              <p className="rooms-hint">
+                총 킬 {s.total_kills ?? '-'} · 첫 킬{' '}
+                {s.first_blood_player_id ? nameOf.get(s.first_blood_player_id) || '?' : '-'} ·
+                또또 {num(s.bet_total)} 끼꼬
+                {s.undo_count > 0 && ` · 정산 ${s.undo_count}번 되돌림`}
+              </p>
+            </>
+          )}
           {/* 배팅할 때와 같은 화면을 그대로 다시 보여준다. 적중한 칸은 초록,
               각 칸 아래에 누가 걸어서 얼마를 벌고 잃었는지 붙는다 */}
           {renderMarkets(s)}

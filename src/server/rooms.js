@@ -218,6 +218,9 @@ const amountOf = (v) => ({ k: 'amount', v: `${num(v)} 끼꼬` });
 export const LOG_TAGS = {
   transfer: { label: '끼꼬', tone: 'blue' },
   betting_open: { label: '또또', tone: 'purple' },
+  /* 일반 게임 또또도 '또또' 거르기에 같이 묶인다 */
+  casual_open: { label: '또또', tone: 'purple' },
+  casual_settled: { label: '또또', tone: 'purple' },
   betting_locked: { label: '또또', tone: 'purple' },
   settled: { label: '경기', tone: 'gold' },
   settle_undone: { label: '정정', tone: 'red' },
@@ -288,6 +291,29 @@ export const feedParts = (log) => {
         ],
       };
     }
+    case 'casual_open': {
+      const dur = p.closes_at ? durationText(log.created_at, p.closes_at) : null;
+      return {
+        tag,
+        parts: [
+          nameOf_(p.mode === 'aram' ? '칼바람' : '일반 게임'),
+          t('에 '),
+          { k: 'hot', v: '또또가 열렸어요' },
+          ...(dur ? [t(` · ${dur} 뒤 자동 마감`)] : []),
+        ],
+      };
+    }
+    case 'casual_settled':
+      return {
+        tag,
+        parts: [
+          { k: 'hot', v: '일반 게임 정산' },
+          ...(p.kills == null ? [] : [t(' · 총 킬 '), nameOf_(String(p.kills))]),
+          ...(p.bet_total
+            ? [t(' · 또또 '), amountOf(p.bet_total), t('가 오갔어요')]
+            : [t(' · 정산 끝')]),
+        ],
+      };
     case 'betting_locked':
       return {
         tag,
@@ -1102,7 +1128,9 @@ export const mergeRoomPlayers = (keepId, dropId) =>
 export const firstBloodRates = (scrims = []) => {
   const by = new Map();
   scrims.forEach((s) => {
-    if (s.status !== 'settled' || !s.first_blood_player_id) return;
+    /* 일반 큐 판은 우리 다섯만 있어 '다섯 중 하나'로 세어진다. 섞으면
+       내전(열 명 중 하나) 확률이 부풀려진다 */
+    if (s.status !== 'settled' || !s.first_blood_player_id || s.kind === 'casual') return;
     const roster = [...(s.team_a || []), ...(s.team_b || [])];
     if (roster.length === 0) return;
     roster.forEach((id) => {

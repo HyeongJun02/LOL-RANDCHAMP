@@ -483,7 +483,7 @@ const ScrimRecord = ({
   const live = activeScrim ? (
     <section className={`room-panel sr-live s-${activeScrim.status}`}>
       <h3>
-        <FaDice /> 지금 진행 중
+        <FaDice /> {activeScrim.kind === 'casual' ? '일반 게임 진행 중' : '지금 진행 중'}
         <span className={`bet-status is-live s-${activeScrim.status}`}>
           {activeScrim.status === 'betting' ? '또또 받는 중' : '또또 마감 · 경기 중'}
         </span>
@@ -493,10 +493,14 @@ const ScrimRecord = ({
       </h3>
 
       <div className="sr-live-teams">
-        {[
-          { ids: activeScrim.team_a || [], label: '1팀', accent: 'team-blue' },
-          { ids: activeScrim.team_b || [], label: '2팀', accent: 'team-red' },
-        ].map(({ ids, label, accent }) => (
+        {/* 일반 게임은 우리 다섯뿐이다. 빈 2팀 칸을 그리면 뭔가 빠진 것처럼 보인다 */}
+        {(activeScrim.kind === 'casual'
+          ? [{ ids: activeScrim.team_a || [], label: '우리 팀', accent: 'team-blue' }]
+          : [
+              { ids: activeScrim.team_a || [], label: '1팀', accent: 'team-blue' },
+              { ids: activeScrim.team_b || [], label: '2팀', accent: 'team-red' },
+            ]
+        ).map(({ ids, label, accent }) => (
           <div className={`sr-live-team ${accent}`} key={label}>
             <span className="sr-live-label">{label}</span>
             <span className="sr-live-names">

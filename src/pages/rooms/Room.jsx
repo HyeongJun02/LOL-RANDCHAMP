@@ -1250,6 +1250,7 @@ const Room = () => {
             넘겨야 지난 판에서 그 사람이 '?'로 남지 않는다 */}
         {tab === 'bet' && (
           <BetTab
+            roomId={roomId}
             scrims={scrims}
             activeScrim={activeScrim}
             players={allPlayers}

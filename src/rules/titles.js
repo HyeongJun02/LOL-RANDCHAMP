@@ -35,6 +35,8 @@ const firstBloodsOf = (scrims, players) => {
   const nameOf = new Map((players || []).map((p) => [p.id, p.name]));
   const count = new Map();
   (scrims || []).forEach((s) => {
+    /* 일반 큐 또또는 전적이 아니다. 칭호도 전적에서만 뽑는다 */
+    if (s.kind === 'casual') return;
     const name = nameOf.get(s.first_blood_player_id);
     if (name) count.set(name, (count.get(name) || 0) + 1);
   });
