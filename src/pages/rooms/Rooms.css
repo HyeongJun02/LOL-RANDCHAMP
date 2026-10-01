@@ -4048,3 +4048,69 @@ li.day-sep em {
 .casual-quick svg {
   font-size: 0.7em;
 }
+
+/* 대전 기록: 내전 / 일반 게임 */
+.history-kind {
+  margin-bottom: 0.8rem;
+}
+
+.history-kind .seg-tab em {
+  margin-left: 0.3rem;
+  font-style: normal;
+  font-size: 0.72em;
+  opacity: 0.7;
+}
+
+/* 일반 게임 한 줄. 자리에 이름을 붙여 둔다 - 첫 용이 없는 칼바람에서
+   칸이 밀리지 않게 */
+.casual-row {
+  display: grid;
+  grid-template-columns: 5.4rem minmax(0, 1fr) 6.4rem minmax(0, auto) auto;
+  grid-template-areas: 'meta team score facts del';
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.casual-row-meta { grid-area: meta; display: flex; align-items: center; gap: 0.35rem; }
+.casual-row-team { grid-area: team; display: flex; flex-wrap: wrap; gap: 0.15rem 0.45rem; min-width: 0; }
+.casual-row .hist-facts { grid-area: facts; }
+.casual-row .hist-del { grid-area: del; }
+
+.casual-row-score {
+  grid-area: score;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.casual-row-score b {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.casual-row-score i {
+  font-style: normal;
+  color: #55637a;
+}
+
+.casual-row-score em {
+  margin-left: 0.2rem;
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #6b7a94;
+}
+
+@media (max-width: 640px) {
+  .casual-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'meta score del'
+      'team team team'
+      'facts facts facts';
+  }
+}

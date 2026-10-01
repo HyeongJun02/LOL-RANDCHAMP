@@ -63,6 +63,7 @@ import { ROLES, CAPS, allows } from '../../rules/permissions';
 import ScrimRecord from '../scrimRecord/ScrimRecord';
 import Season from '../season/Season';
 import MatchHistory from './MatchHistory';
+import CasualHistory from './CasualHistory';
 import RoomSwitch from './RoomSwitch';
 import HallOfFame from './HallOfFame';
 import MemberModal from './MemberModal';
@@ -1032,6 +1033,8 @@ const Room = () => {
   const { id } = useParams();
   const roomId = Number(id);
   const navigate = useNavigate();
+  /* 대전 기록: 내전 / 일반 게임 */
+  const [historyKind, setHistoryKind] = useState('scrim');
   const { user, loading: authLoading } = useAuth();
   usePageMeta(PAGE_META.rooms);
 
@@ -1220,18 +1223,57 @@ const Room = () => {
           />
         )}
         {tab === 'history' && (
-          <MatchHistory
-            matches={matches}
-            scrims={scrims}
-            players={players}
-            members={members}
-            myId={user.id}
-            canEdit={can('record')}
-            isOwner={can('undo')}
-            version={room.version}
-            onRemove={unrecord}
-            onChanged={reload}
-          />
+          <>
+            {/* 내전과 일반 게임은 따로 본다. 일반 게임은 전적이 아니라 섞이면
+                승패 기록처럼 읽힌다. 일반 게임 또또는 롤 방에만 있다 */}
+            {room.game === 'lol' && (
+              <div className="seg-tabs history-kind">
+                {[
+                  { key: 'scrim', label: '내전', n: matches.length },
+                  {
+                    key: 'casual',
+                    label: '일반 게임',
+                    n: scrims.filter((s) => s.kind === 'casual' && s.status === 'settled').length,
+                  },
+                ].map((k) => (
+                  <button
+                    key={k.key}
+                    className={`seg-tab ${historyKind === k.key ? 'active' : ''}`}
+                    onClick={() => setHistoryKind(k.key)}
+                  >
+                    {k.label}
+                    <em>{k.n}</em>
+                  </button>
+                ))}
+              </div>
+            )}
+            {historyKind === 'casual' && room.game === 'lol' ? (
+              <CasualHistory
+                scrims={scrims}
+                players={allPlayers}
+                members={members}
+                myId={user.id}
+                canEdit={can('record')}
+                isOwner={can('undo')}
+                version={room.version}
+                onRemove={unrecord}
+                onChanged={reload}
+              />
+            ) : (
+              <MatchHistory
+                matches={matches}
+                scrims={scrims}
+                players={players}
+                members={members}
+                myId={user.id}
+                canEdit={can('record')}
+                isOwner={can('undo')}
+                version={room.version}
+                onRemove={unrecord}
+                onChanged={reload}
+              />
+            )}
+          </>
         )}
         {tab === 'stats' && (
           <>
