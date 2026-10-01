@@ -4342,3 +4342,25 @@ li.day-sep em {
   opacity: 0.45;
   filter: grayscale(0.6);
 }
+
+/* 이름 앞에 붙는 라인 아이콘. 이름이 이미 있으니 글자는 뺀다 */
+.lane-tag.is-icon-only {
+  font-size: 0;
+}
+
+.lane-tag.is-icon-only img {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.casual-team-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+}
+
+.casual-team-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}

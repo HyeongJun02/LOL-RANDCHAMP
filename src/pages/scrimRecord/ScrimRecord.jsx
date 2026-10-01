@@ -19,6 +19,7 @@ import Empty from '../../components/common/Empty';
 import TeamBalance from '../teamBalance/TeamBalance';
 import BetOpenModal from '../rooms/BetOpenModal';
 import BetTimer from '../rooms/BetTimer';
+import LaneTag from '../rooms/LaneTag';
 import { useDialog } from '../../components/common/Dialog';
 import { timeAgo } from '../../lib/timeAgo';
 import {
@@ -505,7 +506,14 @@ const ScrimRecord = ({
             <span className="sr-live-label">{label}</span>
             <span className="sr-live-names">
               {ids.map((id) => (
-                <span key={id}>{players.find((p) => p.id === Number(id))?.name || '?'}</span>
+                <span key={id} className="casual-team-name">
+                  {/* 일반 게임은 라인이 있다. 아이콘을 이름 앞에 */}
+                  {activeScrim.kind === 'casual' && activeScrim.mode !== 'aram' &&
+                    activeScrim.lanes?.[id] && (
+                      <LaneTag lane={activeScrim.lanes[id]} className="is-icon-only" />
+                    )}
+                  {players.find((p) => p.id === Number(id))?.name || '?'}
+                </span>
               ))}
             </span>
           </div>

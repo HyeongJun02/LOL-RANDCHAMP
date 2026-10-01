@@ -11,7 +11,6 @@ import {
   CASUAL_MODES,
   hasLanes,
   hasDragon,
-  laneLabel,
   dragonIcon,
   dragonLabel,
 } from '../../rules/casual';
@@ -107,7 +106,7 @@ const CasualHistory = ({
     const fb =
       s.fb_side === 'them'
         ? s.fb_enemy_lane
-          ? `상대 ${laneLabel(s.fb_enemy_lane)}`
+          ? <LaneTag lane={s.fb_enemy_lane} prefix="상대 " />
           : '상대 팀'
         : s.first_blood_player_id
           ? nameOf.get(s.first_blood_player_id) || '?'

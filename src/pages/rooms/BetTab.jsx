@@ -43,7 +43,6 @@ import {
   CASUAL_MODES,
   hasDragon,
   hasLanes,
-  laneLabel,
   dragonIcon,
   dragonLabel,
   firstBloodOdds,
@@ -528,7 +527,7 @@ const BetTab = ({
   const selectionLabel = (market, selection) => {
     if (market === 'first_blood') {
       const enemy = enemyLaneOf(selection);
-      return enemy ? `상대 ${laneLabel(enemy)}` : nameOf.get(Number(selection)) || '?';
+      return enemy ? <LaneTag lane={enemy} prefix="상대 " /> : nameOf.get(Number(selection)) || '?';
     }
     if (market === 'kills_parity') return PARITY.find((x) => x.key === selection)?.label;
     if (market === 'fb_side') return SIDES.find((x) => x.key === selection)?.label;
@@ -557,13 +556,16 @@ const BetTab = ({
     <div className="bet-teams">
       <div className="bet-team">
         <strong>우리 팀</strong>
-        <span>
-          {(scrim.team_a || [])
-            .map((id) => {
-              const lane = hasLanes(scrim.mode) && scrim.lanes?.[id];
-              return `${nameOf.get(id) || '?'}${lane ? ` (${laneLabel(lane)})` : ''}`;
-            })
-            .join(', ')}
+        <span className="casual-team-names">
+          {(scrim.team_a || []).map((id) => {
+            const lane = hasLanes(scrim.mode) && scrim.lanes?.[id];
+            return (
+              <span key={id} className="casual-team-name">
+                {lane && <LaneTag lane={lane} className="is-icon-only" />}
+                {nameOf.get(id) || '?'}
+              </span>
+            );
+          })}
         </span>
       </div>
     </div>
@@ -1676,7 +1678,7 @@ const BetTab = ({
                 {s.total_kills != null && ` (총 ${s.total_kills})`} · 첫 킬{' '}
                 {s.fb_side === 'them'
                   ? s.fb_enemy_lane
-                    ? `상대 ${laneLabel(s.fb_enemy_lane)}`
+                    ? <LaneTag lane={s.fb_enemy_lane} prefix="상대 " />
                     : '상대 팀'
                   : s.first_blood_player_id
                     ? nameOf.get(s.first_blood_player_id) || '?'
