@@ -416,13 +416,16 @@ test('평균대로 따면 그대로, 많이 따면 아주 조금만 낮아진다
 test('언더오버는 기준 배당에서 몰린 만큼만 움직인다', () => {
   const body = fnBody('lock_betting');
   expect(body).toContain(
-    `round(${KILLS_ODDS} * power(0.5 / (bp.total_amount::numeric / pool), ${KILLS_SHADE}), 2)`
+    `round(${KILLS_ODDS} * power(0.5 / (bp.total_amount::numeric / t.pool), ${KILLS_SHADE}), 2)`
   );
   expect(body).toContain(
     `greatest(${KILLS_ODDS_RANGE.min.toFixed(2)}, least(${KILLS_ODDS_RANGE.max.toFixed(2)},`
   );
   /* 아무도 안 걸린 쪽은 기준값 그대로 (0으로 나누면 터진다) */
-  expect(body).toContain(`when pool = 0 or bp.total_amount = 0 then ${KILLS_ODDS}`);
+  expect(body).toContain(`when t.pool = 0 or bp.total_amount = 0 then ${KILLS_ODDS}`);
+  /* 두 갈래 마켓이 여럿이다 (언더오버·짝홀·어느 팀). 다 합쳐서 비중을
+     재면 짝홀에 몰린 돈이 언더오버 배당을 흔든다 */
+  expect(body).toContain('group by bp.market');
 });
 
 /* 굴려보면 이렇게 나온다. 수식을 고치면 여기가 먼저 깨진다 */
@@ -1012,7 +1015,15 @@ test('취소는 로그에 남는다 (남의 돈이 오간 일이다)', () => {
 test('배팅 상한이 tuning.js와 DB에서 같다', () => {
   const { BET_CAP } = require('../rules/tuning');
   const body = fnBody('place_bets');
-  const sqlOf = { winner: "= 'winner' then", first_blood: "= 'first_blood' then", kills: "like 'kills%' then" };
+  const sqlOf = {
+    winner: "= 'winner' then",
+    first_blood: "= 'first_blood' then",
+    kills: "like 'kills%' then",
+    /* 일반 게임 또또 */
+    kills_parity: "like 'kills%' then",
+    fb_side: "= 'fb_side' then",
+    dragon: "= 'dragon' then",
+  };
 
   Object.entries(BET_CAP).forEach(([market, cap]) => {
     expect(sqlOf[market]).toBeDefined();
@@ -1999,4 +2010,62 @@ test('진행 중인 판이 있으면 계절을 넘기지 않는다', () => {
   expect(snap).toBeGreaterThan(guard);
   /* 잊고 안 끝낸 판이 계절을 영원히 붙들면 아무도 초기화되지 않는다 */
   expect(body).toMatch(/played_at > now\(\) - interval '\d+ hours'/);
+});
+
+/* ---------- 일반 게임 또또 ---------- */
+
+/* 돈이 오가는 길이라, 한 줄만 어긋나도 방 끼꼬가 조용히 새거나 불어난다 */
+describe('일반 게임 또또 (SQL)', () => {
+  const settle = fnBody('settle_casual');
+  const lock = fnBody('lock_betting');
+  const open = fnBody('open_casual_bet');
+
+  /* 상대가 첫 킬을 땄을 때 '누구' 마켓을 환불하면, 배당(8.5배 언저리)이
+     이미 '상대가 딸 절반'을 값에 넣고 있어서 걸기만 해도 이득이 된다 */
+  test('첫 킬(사람)은 상대가 땄을 때 환불이 아니라 낙첨이다', () => {
+    expect(settle).toContain('fb_void := p_fb_side is null;');
+    expect(settle).not.toContain('fb_void := p_first_blood is null');
+  });
+
+  /* 전적에 안 들어가는 판에 참여 끼꼬를 주면, 일반 큐만 돌려도 끼꼬가 생긴다 */
+  test('참여 끼꼬를 주지 않는다', () => {
+    expect(settle).not.toMatch(/perform public\.award_participation/);
+  });
+
+  /* 'kills_parity'가 언더오버 가지에 먼저 걸리면 'parity'::numeric에서 터진다 */
+  test('짝홀은 언더오버 가지에 안 걸린다', () => {
+    expect(settle).toContain("b.market like 'kills%' and b.market <> 'kills_parity' and (");
+    /* 마감 때 기준선을 박는 자리도 같은 함정이 있다 */
+    expect(lock).toContain("bp.market like 'kills%' and bp.market <> 'kills_parity'");
+  });
+
+  /* 화면에 '7.08배'라고 해놓고 서버가 다른 배당으로 주면 안 된다 */
+  test('라인 몫과 첫 용 배당이 tuning.js와 같다', () => {
+    const { FIRST_BLOOD_LANE_SHARE, FIRST_DRAGON_ODDS } = require('../rules/tuning');
+    Object.entries(FIRST_BLOOD_LANE_SHARE).forEach(([lane, share]) => {
+      expect(lock).toContain(`when '${lane}' then ${share}`);
+    });
+    expect(lock).toContain(`set odds = ${FIRST_DRAGON_ODDS}`);
+    /* 칼바람은 라인이 없어 다섯이 똑같이 나눈다 */
+    expect(lock).toContain("when s.mode = 'aram' then 0.2");
+  });
+
+  /* 아무 id나 받으면 남의 방 사람에게 배당이 걸린다 */
+  test('이 방 참가자만 고를 수 있고 다섯 명까지다', () => {
+    expect(open).toContain('rp.room_id = p_room and rp.deleted_at is null');
+    expect(open).toContain('jsonb_array_length(p_players) > 5');
+  });
+
+  /* 내전 정산 함수로 일반 게임을 정산하면 '이긴 팀'을 요구한다. 거꾸로도
+     막아야 한다 */
+  test('일반 게임만 이쪽으로 정산한다', () => {
+    expect(settle).toContain("if s.kind <> 'casual' then");
+  });
+
+  test('없는 마켓이나 엉뚱한 쪽 마켓은 받지 않는다', () => {
+    const place = fnBody('place_bets');
+    expect(place).toContain("raise exception '없는 항목이에요.'");
+    expect(place).toContain("s.kind = 'casual' and b->>'market' = 'winner'");
+    expect(place).toContain("b->>'market' = 'dragon' and s.mode = 'aram'");
+  });
 });

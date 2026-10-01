@@ -76,6 +76,9 @@ export const firstBloodOdds = (lane, mode) => {
 /* 반반인 마켓(짝홀·우리팀/상대팀)은 언더오버와 같은 기준 배당을 쓴다 */
 export const evenOdds = () => KILLS_ODDS;
 
+/* 첫 용 배당. 고정이라 마감 전에도 그대로 보여준다 */
+export const dragonOdds = () => FIRST_DRAGON_ODDS;
+
 /* 일반 게임 또또에 열리는 마켓. 모드에 따라 다르다 */
 export const casualMarkets = (mode, line) => [
   { key: `kills_${line}`, label: `총 킬 ${line}`, kind: 'kills' },
@@ -85,16 +88,38 @@ export const casualMarkets = (mode, line) => [
   ...(hasDragon(mode) ? [{ key: 'dragon', label: '첫 용', kind: 'dragon' }] : []),
 ];
 
-/* 정산이 끝난 뒤 이 마켓의 정답.
+/* 정산이 끝난 뒤 이 마켓의 정답. 일반 게임 또또의 마켓 전부를 여기서
+   판단한다 - 화면 세 곳(선택지 색, 내 배팅, 참여자 목록)이 같은 기준을
+   봐야 한다.
    결과를 안 넣은 마켓은 null이고, 그러면 전액 환불된다 (내전과 같다) */
 export const casualAnswer = (scrim, market) => {
   if (!scrim || scrim.status !== 'settled') return null;
+
   if (market === 'kills_parity') {
     if (scrim.total_kills == null) return null;
     return scrim.total_kills % 2 === 0 ? 'even' : 'odd';
   }
+  /* 'kills_parity'가 아래 가지에 먼저 걸리면 'parity'를 숫자로 읽어
+     NaN과 비교하게 된다. 순서가 중요하다 */
+  if (market.startsWith('kills_')) {
+    if (scrim.total_kills == null) return null;
+    return scrim.total_kills > Number(market.split('_')[1]) ? 'over' : 'under';
+  }
   if (market === 'fb_side') return scrim.fb_side ?? null;
   if (market === 'dragon') return scrim.first_dragon ?? null;
+
+  /* 첫 킬 - 누구.
+     상대가 땄으면 우리 쪽에 건 사람은 전부 낙첨이다. 환불이 아니다 -
+     배당(8.5배 언저리)이 이미 '상대가 딸 확률 절반'을 값에 넣고 있어서,
+     상대가 땄을 때 돌려주면 걸기만 해도 이득인 마켓이 된다.
+     아무 선택지와도 안 맞는 값을 돌려줘서 전부 낙첨으로 그린다 */
+  if (market === 'first_blood') {
+    if (!scrim.fb_side) return null;
+    if (scrim.fb_side === 'them') return 'them';
+    return scrim.first_blood_player_id == null
+      ? null
+      : String(scrim.first_blood_player_id);
+  }
   return null;
 };
 

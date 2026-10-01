@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
 import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP, PRIOR_GAMES } from '../rules/tuning';
 import { getGame, getMode, defaultTierOf, fitTier } from '../rules/games';
+import { casualAnswer } from '../rules/casual';
 
 /* 내전 방. 여기부터는 localStorage가 없다.
 
@@ -556,7 +557,9 @@ export const toMatches = (scrims = [], players = [], game) => {
   const nameOf = new Map(players.map((p) => [p.id, p.name]));
   const names = (ids) => (ids || []).map((id) => nameOf.get(id)).filter(Boolean);
   return scrims
-    .filter((s) => s.winner === 'A' || s.winner === 'B')
+    /* 일반 큐 또또는 전적이 아니다. 승자를 안 남기므로 어차피 빠지지만,
+       나중에 누가 casual에 winner를 넣더라도 새지 않게 못 박아둔다 */
+    .filter((s) => s.kind !== 'casual' && (s.winner === 'A' || s.winner === 'B'))
     .map((s) => ({
       id: s.id,
       mode: s.mode,
@@ -742,6 +745,9 @@ const ROOM_SELECT =
      - kill_line이 없으면 방장이 직접 정한 기준선이 무시되고
        인원으로 계산한 값이 뜬다 (저장은 되는데 안 읽는 것) */
   'first_blood_player_id,bet_total,bet_count,undo_count,locked_at,' +
+  /* 일반 큐 또또. kind를 안 받으면 전적에서 걸러낼 수가 없고,
+     fb_side·first_dragon·lanes가 없으면 결과와 배당을 못 그린다 */
+  'kind,fb_side,first_dragon,lanes,' +
   'betting_closes_at,kill_line)';
 
 /* 탭이 보일 때만. 실시간 구독이 없어 폴링이 불가피한데 방 전체를 매번
@@ -967,6 +973,8 @@ export const isKillMarket = (market) => market.startsWith('kills_');
    한 군데서만 판단한다. 결과를 안 넣은 마켓은 null(=전액 환불) */
 export const winningSelection = (scrim, market) => {
   if (!scrim || scrim.status !== 'settled') return null;
+  /* 일반 게임 또또는 마켓이 다르다. 한 군데서만 판단한다 (rules/casual) */
+  if (scrim.kind === 'casual') return casualAnswer(scrim, market);
   if (market === 'winner') return scrim.winner ?? null;
   if (market === 'first_blood')
     return scrim.first_blood_player_id == null ? null : String(scrim.first_blood_player_id);
@@ -988,6 +996,9 @@ export const capOf = (market) =>
 export const marketLabel = (market) => {
   if (market === 'winner') return '승리팀';
   if (market === 'first_blood') return '첫 킬';
+  if (market === 'kills_parity') return '킬 짝/홀';
+  if (market === 'fb_side') return '첫 킬 - 어느 팀';
+  if (market === 'dragon') return '첫 용';
   if (isKillMarket(market)) return `총 킬 ${killLineOf(market)}`;
   return market;
 };
@@ -1027,6 +1038,29 @@ export const placeBets = (scrimId, bets) =>
   rpc('place_bets', { p_scrim: scrimId, p_bets: bets });
 
 export const lockBetting = (scrimId) => rpc('lock_betting', { p_scrim: scrimId });
+
+/* 일반 게임 또또 열기. 내전과 달리 팀이 하나뿐이고(우리 다섯) 라인을
+   같이 넘긴다 - 첫 킬 배당이 라인마다 다르다 */
+export const openCasualBet = ({ roomId, mode, playerIds, lanes, closeSeconds, killLine }) =>
+  rpc('open_casual_bet', {
+    p_room: roomId,
+    p_mode: mode,
+    p_players: playerIds,
+    p_lanes: lanes || {},
+    p_close_seconds: closeSeconds ?? null,
+    p_kill_line: killLine,
+  });
+
+/* 일반 게임 또또 정산. 내전과 함수가 다르다 - 내전은 '이긴 팀'이 반드시
+   있어야 하고 마켓도 서로 다르다 */
+export const settleCasual = (scrimId, { totalKills, firstBloodPlayerId, fbSide, dragon }) =>
+  rpc('settle_casual', {
+    p_scrim: scrimId,
+    p_total_kills: totalKills ?? null,
+    p_first_blood: firstBloodPlayerId ?? null,
+    p_fb_side: fbSide ?? null,
+    p_dragon: dragon ?? null,
+  });
 
 export const settleScrim = (scrimId, winner, totalKills, firstBloodPlayerId) =>
   rpc('settle_scrim', {

@@ -84,3 +84,39 @@ describe('정답 판정', () => {
     expect(casualAnswer({ status: 'betting', total_kills: 30 }, 'kills_parity')).toBeNull();
   });
 });
+
+/* 상대가 첫 킬을 땄을 때 우리 쪽에 건 사람을 환불해주면, 배당이 이미
+   '상대가 딸 확률 절반'을 값에 넣고 있으므로 걸기만 해도 이득인 마켓이
+   된다. 방 끼꼬가 조용히 불어난다 */
+describe('첫 킬 - 누구', () => {
+  const settled = (over) => ({ status: 'settled', ...over });
+
+  test('상대가 땄으면 우리 쪽은 전부 낙첨 (환불 아님)', () => {
+    const answer = casualAnswer(settled({ fb_side: 'them' }), 'first_blood');
+    /* 환불은 null이다. null이 아니면서 어느 참가자 id와도 안 맞아야 한다 */
+    expect(answer).not.toBeNull();
+    expect(answer).toBe('them');
+    expect(Number.isFinite(Number(answer))).toBe(false);
+  });
+
+  test('우리가 땄으면 그 사람만 적중', () => {
+    const answer = casualAnswer(
+      settled({ fb_side: 'us', first_blood_player_id: 12 }),
+      'first_blood'
+    );
+    expect(answer).toBe('12');
+  });
+
+  test('어느 팀인지조차 안 넣었으면 환불', () => {
+    expect(casualAnswer(settled({}), 'first_blood')).toBeNull();
+  });
+});
+
+/* kills_parity가 'kills_' 가지에 먼저 걸리면 'parity'를 숫자로 읽어
+   NaN과 비교하고, 총 킬이 몇이든 '언더'가 되어 버린다 */
+test('짝홀이 언더오버 가지에 먼저 걸리지 않는다', () => {
+  const s = { status: 'settled', total_kills: 31 };
+  expect(casualAnswer(s, 'kills_parity')).toBe('odd');
+  expect(casualAnswer(s, 'kills_29.5')).toBe('over');
+  expect(casualAnswer({ ...s, total_kills: 20 }, 'kills_29.5')).toBe('under');
+});
