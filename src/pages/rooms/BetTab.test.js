@@ -202,8 +202,8 @@ test('배팅 묶기를 켜면 배당이 곱해지고 한 칸에만 적는다', a
 
   /* 1.98 × 5.5 = 10.89 */
   expect(el.querySelector('.parlay-sum strong').textContent).toBe('10.89배');
-  /* 버는 끼꼬 30000을 넘지 않게: floor(30000 / 9.89) = 3033 */
-  expect(el.querySelector('.parlay-sum em').textContent).toContain('3,033');
+  /* 버는 끼꼬 35000을 넘지 않게: floor(35000 / 9.89) = 3538 */
+  expect(el.querySelector('.parlay-sum em').textContent).toContain('3,538');
   /* 금액 칸은 하나뿐 */
   expect(el.querySelectorAll('.bet-cart .bet-amount')).toHaveLength(1);
 });
@@ -244,4 +244,24 @@ test('낱개로 담아도 배당과 적중 금액이 보인다', async () => {
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
   expect(el.querySelector('.bet-if').textContent.replace(/\s/g, '')).toBe('적중시+4,500');
+});
+
+/* 낮은 배당으로 묶고 '최대'를 누른 뒤, 높은 배당으로 바꾸면 상한을 넘는다.
+   단추만 잠기면 왜 안 되는지 모른다 */
+test('묶음이 상한을 넘으면 적중 금액이 빨개지고 이유를 말한다', async () => {
+  const el = await render({ active: casual() });
+  await click(optionFor(el, '홀'));
+  await click(optionFor(el, '우리 팀'));
+  await click(el.querySelector('.parlay-toggle'));
+  await click([...el.querySelectorAll('.bet-chip')].find((b) => b.textContent === '최대'));
+  expect(el.querySelector('.bet-cart-total').className).not.toContain('is-too-much');
+
+  /* 우리 팀 → 철수(미드 7.08배). 같은 무리라 우리 팀은 빠지고 배당이 뛴다 */
+  await click(optionFor(el, '철수'));
+  expect(el.querySelector('.bet-cart-total').className).toContain('is-too-much');
+  expect(el.querySelector('.bet-over-msg').textContent).toContain('35,000');
+  expect(el.querySelector('.bet-over-msg').textContent).toContain('초기화');
+  expect(
+    [...el.querySelectorAll('.bet-cart button')].find((b) => b.textContent === '묶어서 걸기').disabled
+  ).toBe(true);
 });

@@ -3943,3 +3943,8 @@ li.day-sep em {
 .bet-cap + .bet-if {
   margin-left: 0.6rem;
 }
+
+/* 묶음의 적중 금액이 상한을 넘었다. 단추만 잠기면 왜 안 되는지 모른다 */
+.bet-cart-total.is-too-much strong {
+  color: #f97362;
+}

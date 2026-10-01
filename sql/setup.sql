@@ -1660,7 +1660,7 @@ end; $fn$;
 
 -- 배팅 묶기. 담은 것들의 배당을 곱한 한 장으로 건다.
 -- 배당이 곱으로 커지는 만큼 한 번에 거는 끼꼬를 줄인다 - 버는 끼꼬(지급에서
--- 건 돈을 뺀 것)가 30000을 넘지 않게 상한을 배당에서 거꾸로 구한다.
+-- 건 돈을 뺀 것)가 35000을 넘지 않게 상한을 배당에서 거꾸로 구한다.
 -- src/rules/tuning.js의 PARLAY_MAX_WIN과 같아야 한다 (테스트가 대조한다)
 --
 -- bets에 market='parlay' 한 줄로 넣는다. 그러면 판 취소(cascade)·정산
@@ -1726,7 +1726,7 @@ begin
   if p_amount is null or p_amount <= 0 then
     raise exception '배팅 금액은 1 이상이어야 해요.';
   end if;
-  cap := floor(30000 / (o - 1));
+  cap := floor(35000 / (o - 1));
   if p_amount > cap then
     raise exception '이 묶음은 한 번에 % 끼꼬까지 걸 수 있어요.', cap;
   end if;

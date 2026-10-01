@@ -58,7 +58,7 @@ import {
   FB_ROW_ORDER,
 } from '../../rules/casual';
 import { timeAgo } from '../../lib/timeAgo';
-import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS } from '../../rules/tuning';
+import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS, PARLAY_MAX_WIN } from '../../rules/tuning';
 import { useGameKey } from '../../lib/GameContext';
 
 const num = (n) => Number(n || 0).toLocaleString();
@@ -251,6 +251,11 @@ const BetTab = ({
     ? bets.find((b) => b.scrim_id === activeScrim.id && b.user_id === myId && b.market === 'parlay')
     : null;
   const parlayNum = Number(parlayAmt) || 0;
+  const parlayWin = combo && parlayNum > 0 ? Math.floor(parlayNum * combo) - parlayNum : 0;
+  /* 금액을 먼저 적고 나서 담은 걸 바꾸면 배당이 커져 상한을 넘는다.
+     단추만 잠그면 왜 안 되는지 모른다. 이유를 따로 말한다 */
+  const parlayBroke = parlayNum > (me?.points ?? 0);
+  const parlayTooMuch = !parlayBroke && parlayWin > PARLAY_MAX_WIN;
 
   /* 낱개로 걸 때 보여줄 배당. 첫 킬·첫 용은 고정이라 그대로, 두 갈래 항목은
      몰리면 움직이니 '약', 승리팀은 걸린 돈으로 나눠 갖는 거라 마감 전엔 모른다 */
@@ -1204,15 +1209,11 @@ const BetTab = ({
                   </div>
 
                   <div
-                    className={`bet-cart-foot ${parlayNum > (me?.points ?? 0) ? 'is-over' : ''}`}
+                    className={`bet-cart-foot ${parlayBroke || parlayTooMuch ? 'is-over' : ''}`}
                   >
-                    <span className="bet-cart-total">
+                    <span className={`bet-cart-total ${parlayTooMuch ? 'is-too-much' : ''}`}>
                       <i>적중 시</i>
-                      <strong>
-                        {combo && parlayNum > 0
-                          ? `+${num(Math.floor(parlayNum * combo) - parlayNum)}`
-                          : '-'}
-                      </strong>
+                      <strong>{parlayWin > 0 ? `+${num(parlayWin)}` : '-'}</strong>
                     </span>
                     <span className="bet-cart-left">
                       {num(me?.points)}
@@ -1227,6 +1228,17 @@ const BetTab = ({
                       묶어서 걸기
                     </button>
                   </div>
+                  {parlayTooMuch && (
+                    <p className="bet-over-msg">
+                      적중 시 버는 끼꼬는 최대 {num(PARLAY_MAX_WIN)}을 넘을 수 없어요. 이 묶음은{' '}
+                      {num(comboCap)} 끼꼬까지 걸 수 있습니다 — 금액을 초기화하고 다시 정해주세요.
+                    </p>
+                  )}
+                  {parlayBroke && (
+                    <p className="bet-over-msg">
+                      잔액보다 {num(parlayNum - (me?.points ?? 0))} 끼꼬 더 걸었어요.
+                    </p>
+                  )}
                   <p className="rooms-hint">
                     전부 맞아야 받습니다. 하나라도 틀리면 전부 잃어요. 결과를 안 넣은 항목은 그
                     항목만 빼고 계산합니다. 배당은 거는 순간 박힙니다 — 언더오버처럼 몰리면
