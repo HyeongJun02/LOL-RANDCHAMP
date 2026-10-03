@@ -93,6 +93,32 @@ export const enemyPick = (lane) => `them_${lane}`;
 export const enemyLaneOf = (sel) =>
   typeof sel === 'string' && sel.startsWith('them_') ? sel.slice(5) : null;
 
+/* 우리 팀인데 우리 명단에 없는 사람 (3인큐면 나머지 둘).
+
+   이 사람이 첫 킬을 따면 예전에는 정산에서 고를 게 없었다. 우리 사람도
+   아니고 상대도 아니라서.
+
+   우리 사람 라인이 전부 정해졌으면 남는 라인이 곧 그 사람 자리다. 그 줄을
+   상대 라인처럼 걸 수 있게 연다 ('ally_SUPPORT').
+   하나라도 미정이면 남는 라인이 어디인지 모른다. 그때는 걸 칸을 안 만들고,
+   정산에서만 '우리 팀 다른 사람'으로 고를 수 있게 한다 */
+export const ALLY_ANY = 'ANY';
+export const allyPick = (lane) => `ally_${lane}`;
+export const allyLaneOf = (sel) =>
+  typeof sel === 'string' && sel.startsWith('ally_') ? sel.slice(5) : null;
+
+/* 다섯이 다 우리 사람이면 '다른 사람'이 없다 */
+export const hasStrangers = (ids = []) => ids.length < CASUAL_TEAM_SIZE;
+
+/* 우리 아닌 우리 팀원에게 걸 수 있는 라인들. 조건이 하나라도 안 맞으면 빈 배열.
+   sql/setup.sql의 ally_lanes와 같은 규칙이다 */
+export const allyLanes = (ids = [], lanes = {}, mode) => {
+  if (!hasLanes(mode) || !hasStrangers(ids)) return [];
+  const taken = ids.map((id) => lanes?.[id]);
+  if (taken.some((l) => !l)) return [];
+  return FB_ROW_ORDER.filter((l) => !taken.includes(l));
+};
+
 /* 라인 순서는 어디서나 탑 · 정글 · 미드 · 원딜 · 서폿 */
 export const FB_ROW_ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
 
@@ -156,7 +182,8 @@ export const tierFactor = (tier) => {
 /* tier는 우리 쪽 사람에게만 준다. 상대 라인은 티어를 모른다 */
 export const firstBloodOdds = (lane, mode, tier) => {
   const share = hasLanes(mode)
-    ? FIRST_BLOOD_LANE_SHARE[enemyLaneOf(lane) || lane] ?? 1 / CASUAL_TEAM_SIZE
+    ? FIRST_BLOOD_LANE_SHARE[enemyLaneOf(lane) || allyLaneOf(lane) || lane] ??
+      1 / CASUAL_TEAM_SIZE
     : 1 / CASUAL_TEAM_SIZE;
   if (!(share > 0)) return null;
   return Math.round(((CASUAL_FB_RATE / (0.5 * share)) * tierFactor(tier)) * 100) / 100;
@@ -212,6 +239,11 @@ export const casualAnswer = (scrim, market) => {
     if (scrim.fb_side === 'them') {
       return scrim.fb_enemy_lane ? enemyPick(scrim.fb_enemy_lane) : 'them';
     }
+    /* 우리 팀인데 우리 명단에 없는 사람이 땄다. 우리 사람에 건 것은 낙첨이다 -
+       상대가 땄을 때와 같은 이유다 */
+    if (scrim.fb_ally_lane) {
+      return scrim.fb_ally_lane === ALLY_ANY ? 'ally' : allyPick(scrim.fb_ally_lane);
+    }
     return scrim.first_blood_player_id == null
       ? null
       : String(scrim.first_blood_player_id);
@@ -222,9 +254,9 @@ export const casualAnswer = (scrim, market) => {
 /* 정산이 끝난 판에서 이 선택이 어떻게 됐나. 'win' · 'lose' · 'void'(환불).
    sql/setup.sql의 leg_result와 같은 규칙이다.
 
-   정답 하나로는 말할 수 없는 경우가 하나 있다 - 상대가 첫 킬을 땄는데
-   어느 라인인지 모를 때. 상대 라인에 건 것은 돌려주고, 우리 쪽 사람에
-   건 것은 그대로 낙첨이다 */
+   정답 하나로는 말할 수 없는 경우가 둘 있다 - 상대가, 또는 우리 명단에 없는
+   우리 팀원이 첫 킬을 땄는데 어느 라인인지 모를 때. 그 라인 칸에 건 것은
+   돌려주고, 우리 사람에 건 것은 그대로 낙첨이다 */
 export const casualOutcome = (scrim, market, selection) => {
   if (!scrim || scrim.status !== 'settled') return null;
   if (
@@ -232,6 +264,16 @@ export const casualOutcome = (scrim, market, selection) => {
     scrim.fb_side === 'them' &&
     !scrim.fb_enemy_lane &&
     enemyLaneOf(selection)
+  ) {
+    return 'void';
+  }
+  /* 우리 쪽도 같다. '우리 팀 다른 사람'인데 어느 라인인지 모르면 남는 라인에
+     건 것만 돌려준다 */
+  if (
+    market === 'first_blood' &&
+    scrim.fb_side === 'us' &&
+    scrim.fb_ally_lane === ALLY_ANY &&
+    allyLaneOf(selection)
   ) {
     return 'void';
   }

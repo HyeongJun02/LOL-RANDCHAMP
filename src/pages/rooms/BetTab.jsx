@@ -52,6 +52,11 @@ import {
   fbRows,
   enemyPick,
   enemyLaneOf,
+  allyPick,
+  allyLaneOf,
+  allyLanes,
+  hasStrangers,
+  ALLY_ANY,
   parlayCap,
   parlayOdds,
   casualOutcome,
@@ -232,11 +237,12 @@ const BetTab = ({
     if (market === 'dragon') return dragonOdds();
     if (market === 'first_blood') {
       if (scrim.kind === 'casual') {
-        const enemy = enemyLaneOf(selection);
+        /* 상대 라인·우리 명단 밖 라인은 사람을 모르니 티어도 모른다 */
+        const lane = enemyLaneOf(selection) || allyLaneOf(selection);
         return firstBloodOdds(
-          enemy || scrim.lanes?.[selection],
+          lane || scrim.lanes?.[selection],
           scrim.mode,
-          enemy ? null : tierOf(Number(selection))
+          lane ? null : tierOf(Number(selection))
         );
       }
       const n = (scrim.team_a?.length || 0) + (scrim.team_b?.length || 0);
@@ -444,18 +450,24 @@ const BetTab = ({
           toast.error('킬 수를 숫자로 적어주세요.');
           return;
         }
-        /* 우리가 땄다면서 아무도 안 고르면 '누구' 마켓이 영원히 안 정해진다.
-           서버도 막지만, 눌러보기 전에 알려준다 */
-        if (fbSide === 'us' && fb === '') {
+        /* 우리 명단에 없는 우리 팀원(3인큐면 나머지 둘)이 있으면, 사람을 안
+           고른 '우리 팀'은 '그 사람들 중 누가 땄다'로 본다 - 상대 팀처럼.
+           다섯이 다 우리 사람이면 비워둘 수 없다. '누구' 마켓이 영원히
+           안 정해진다. 서버도 막지만 눌러보기 전에 알려준다 */
+        const strangers = hasStrangers(scrim.team_a || []);
+        if (fbSide === 'us' && fb === '' && !strangers) {
           toast.error('우리 팀이 땄으면 누가 땄는지도 골라주세요.');
           return;
         }
+        const ally =
+          fbSide === 'us' ? (fb === '' ? ALLY_ANY : allyLaneOf(fb)) : null;
         await settleCasual(scrim.id, {
           ourKills: ours,
           oppKills: opp,
           fbSide: fbSide || null,
-          firstBloodPlayerId: fbSide === 'us' && fb !== '' ? Number(fb) : null,
+          firstBloodPlayerId: fbSide === 'us' && fb !== '' && !ally ? Number(fb) : null,
           fbLane: fbSide === 'them' && fbLane ? fbLane : null,
+          fbAlly: ally,
           dragon: dragon || null,
         });
         setOurK('');
@@ -528,7 +540,10 @@ const BetTab = ({
   const selectionLabel = (market, selection) => {
     if (market === 'first_blood') {
       const enemy = enemyLaneOf(selection);
-      return enemy ? <LaneTag lane={enemy} prefix="상대 " /> : nameOf.get(Number(selection)) || '?';
+      if (enemy) return <LaneTag lane={enemy} prefix="상대 " />;
+      const ally = allyLaneOf(selection);
+      if (ally) return <LaneTag lane={ally} prefix="우리 " />;
+      return nameOf.get(Number(selection)) || '?';
     }
     if (market === 'kills_parity') return PARITY.find((x) => x.key === selection)?.label;
     if (market === 'fb_side') return SIDES.find((x) => x.key === selection)?.label;
@@ -755,6 +770,21 @@ const BetTab = ({
     const lanes = scrim.lanes || {};
     const ours = scrim.team_a || [];
     const laned = hasLanes(scrim.mode);
+    /* 3인큐처럼 우리 명단에 없는 우리 팀원이 있고, 우리 사람 라인이 다
+       정해졌으면 남는 라인이 그 사람들 자리다. 빈 줄에 걸 칸을 연다.
+       라인이 하나라도 미정이면 어디가 남는지 몰라서 안 연다 */
+    const spare = new Set(allyLanes(ours, lanes, scrim.mode));
+
+    /* 첫 킬 - 우리 명단에 없는 우리 팀원 한 칸 (라인으로 건다) */
+    const allyCell = (lane) =>
+      renderOption({
+        key: `a${lane}`,
+        scrim,
+        market: 'first_blood',
+        selection: allyPick(lane),
+        label: <LaneTag lane={lane} prefix="우리 " />,
+        fixed: firstBloodOdds(lane, scrim.mode),
+      });
 
     /* 첫 킬 - 우리 쪽 사람 한 칸 */
     const ourCell = (id) =>
@@ -833,7 +863,11 @@ const BetTab = ({
             {laned
               ? fbRows(ours, lanes, scrim.mode).map((row) => (
                   <React.Fragment key={row.lane}>
-                    {row.id != null ? ourCell(row.id) : <span className="fb-empty" />}
+                    {row.id != null
+                      ? ourCell(row.id)
+                      : spare.has(row.lane)
+                        ? allyCell(row.lane)
+                        : <span className="fb-empty" />}
                     {renderOption({
                       key: `e${row.lane}`,
                       scrim,
@@ -855,6 +889,11 @@ const BetTab = ({
           <p className="rooms-hint">
             '우리 팀'은 우리 중 누가 따든 맞습니다. 사람을 고르면 배당이 훨씬 크지만,
             다른 사람이 따면 낙첨입니다. 한 번에 {num(capOf('first_blood'))} 끼꼬까지.
+            {hasStrangers(ours) &&
+              (spare.size > 0
+                ? ' 우리 명단에 없는 우리 팀원은 남는 라인으로 걸 수 있습니다.'
+                : laned &&
+                  ' 우리 명단에 없는 우리 팀원은 라인을 다 정해야 걸 수 있습니다.')}
           </p>
         </div>
 
@@ -1517,11 +1556,27 @@ const BetTab = ({
                             <button
                               key={id}
                               className={`result-chip ${String(fb) === String(id) ? 'is-on' : ''}`}
-                              onClick={() => setFb(String(id))}
+                              onClick={() => setFb(String(fb) === String(id) ? '' : String(id))}
                             >
                               {nameOf.get(id) || '?'}
                             </button>
                           ))}
+                          {/* 우리 명단에 없는 우리 팀원. 라인을 다 정해둔 판이면
+                              남는 라인을 고를 수 있다 */}
+                          {allyLanes(activeScrim.team_a || [], activeScrim.lanes, activeScrim.mode).map(
+                            (lane) => (
+                              <button
+                                key={lane}
+                                className={`result-chip ${fb === allyPick(lane) ? 'is-on' : ''}`}
+                                onClick={() => setFb(fb === allyPick(lane) ? '' : allyPick(lane))}
+                              >
+                                <LaneTag lane={lane} prefix="우리 " />
+                              </button>
+                            )
+                          )}
+                          {hasStrangers(activeScrim.team_a || []) && (
+                            <span className="result-hint">우리 명단 밖 사람이 땄으면 비워두기</span>
+                          )}
                         </div>
                       )}
                       {/* 상대 라인은 몰라도 된다. 비우면 상대 라인에 건 것만 돌려준다 */}
@@ -1681,6 +1736,10 @@ const BetTab = ({
                   ? s.fb_enemy_lane
                     ? <LaneTag lane={s.fb_enemy_lane} prefix="상대 " />
                     : '상대 팀'
+                  : s.fb_ally_lane
+                    ? s.fb_ally_lane === ALLY_ANY
+                      ? '우리 팀 (명단 밖)'
+                      : <LaneTag lane={s.fb_ally_lane} prefix="우리 " />
                   : s.first_blood_player_id
                     ? (
                         <>

@@ -203,3 +203,68 @@ test('첫 킬 배당은 티어가 낮을수록 높다', () => {
   expect(firstBloodOdds('MID', 'normal')).toBe(firstBloodOdds('MID', 'normal', 'GOLD'));
   expect(tierFactor('IRON')).toBeCloseTo(1.12, 5);
 });
+
+/* ---------- 우리 명단에 없는 우리 팀원 (3인큐면 나머지 둘) ----------
+   이 사람이 첫 킬을 따면 예전에는 정산에서 고를 게 없었다 */
+describe('우리 명단 밖 우리 팀원의 첫 킬', () => {
+  const {
+    allyLanes,
+    allyPick,
+    hasStrangers,
+    casualOutcome: outcome,
+    ALLY_ANY,
+  } = require('./casual');
+  const lanes = { 1: 'TOP', 2: 'JUNGLE', 3: 'MID' };
+
+  test('우리 사람 라인이 다 정해졌으면 남는 라인에 걸 수 있다', () => {
+    expect(allyLanes([1, 2, 3], lanes, 'normal')).toEqual(['ADC', 'SUPPORT']);
+  });
+
+  test('하나라도 미정이면 남는 라인이 어디인지 몰라서 안 연다', () => {
+    expect(allyLanes([1, 2, 3], { 1: 'TOP', 2: 'JUNGLE' }, 'normal')).toEqual([]);
+  });
+
+  test('다섯이 다 우리 사람이면 명단 밖 팀원이 없다', () => {
+    const five = { ...lanes, 4: 'ADC', 5: 'SUPPORT' };
+    expect(hasStrangers([1, 2, 3, 4, 5])).toBe(false);
+    expect(allyLanes([1, 2, 3, 4, 5], five, 'normal')).toEqual([]);
+  });
+
+  test('칼바람은 라인이 없어서 안 연다 (정산에서 고르는 건 된다)', () => {
+    expect(allyLanes([1, 2, 3], lanes, 'aram')).toEqual([]);
+    expect(hasStrangers([1, 2, 3])).toBe(true);
+  });
+
+  /* 사람을 모르는 칸이라 상대 라인과 같은 값이어야 한다. 다르면 같은 자리에
+     우리 쪽이냐 상대 쪽이냐만으로 배당이 갈린다 */
+  test('남는 라인 배당은 같은 라인 상대 칸과 같다', () => {
+    expect(firstBloodOdds(allyPick('SUPPORT'), 'normal')).toBe(
+      firstBloodOdds('them_SUPPORT', 'normal')
+    );
+  });
+
+  test('누가 땄는지 알면 그 라인만 적중, 우리 사람은 낙첨', () => {
+    const s = { status: 'settled', fb_side: 'us', fb_ally_lane: 'ADC' };
+    expect(outcome(s, 'first_blood', allyPick('ADC'))).toBe('win');
+    expect(outcome(s, 'first_blood', allyPick('SUPPORT'))).toBe('lose');
+    expect(outcome(s, 'first_blood', '1')).toBe('lose');
+    expect(outcome(s, 'first_blood', 'them_ADC')).toBe('lose');
+    /* 우리 팀이 딴 건 맞다 */
+    expect(outcome(s, 'fb_side', 'us')).toBe('win');
+  });
+
+  /* 상대가 땄는데 라인을 모를 때와 같은 규칙이다 */
+  test('누군지 모르면 남는 라인 배팅만 환불, 우리 사람은 그대로 낙첨', () => {
+    const s = { status: 'settled', fb_side: 'us', fb_ally_lane: ALLY_ANY };
+    expect(outcome(s, 'first_blood', allyPick('ADC'))).toBe('void');
+    expect(outcome(s, 'first_blood', '1')).toBe('lose');
+    expect(outcome(s, 'first_blood', 'them_TOP')).toBe('lose');
+    expect(outcome(s, 'fb_side', 'us')).toBe('win');
+  });
+
+  test('우리 사람이 땄으면 남는 라인은 낙첨', () => {
+    const s = { status: 'settled', fb_side: 'us', first_blood_player_id: 1 };
+    expect(outcome(s, 'first_blood', '1')).toBe('win');
+    expect(outcome(s, 'first_blood', allyPick('ADC'))).toBe('lose');
+  });
+});

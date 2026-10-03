@@ -2200,3 +2200,46 @@ test('일반 게임 첫 킬 티어 보정이 tuning.js와 같다', () => {
   const { CASUAL_FB_TIER_BONUS } = require('../rules/tuning');
   expect(fnBody('casual_fb_odds')).toContain(`(1 + (3 - coalesce(idx, 3)) * ${CASUAL_FB_TIER_BONUS})`);
 });
+
+/* ---------- 일반 게임: 우리 명단 밖 우리 팀원의 첫 킬 ---------- */
+
+test('명단 밖 팀원 첫 킬을 저장하고 읽는다', () => {
+  expect(sql).toContain('alter table public.scrims add column if not exists fb_ally_lane');
+  const src = fs.readFileSync(path.join(__dirname, 'rooms.js'), 'utf8');
+  const select = src.slice(src.indexOf('const ROOM_SELECT'), src.indexOf('const POLL_MS'));
+  /* 빼먹으면 저장은 되는데 화면이 결과를 못 그린다 (kill_line 때 한 번 당했다) */
+  expect(select).toContain('fb_ally_lane');
+});
+
+test('남는 라인은 우리 사람 라인이 다 정해졌을 때만 연다 (화면과 같은 규칙)', () => {
+  const body = fnBody('ally_lanes');
+  expect(body).toContain("s.mode = 'aram'");
+  expect(body).toContain('jsonb_array_length(s.team_a) >= 5');
+  expect(body).toContain("coalesce(s.lanes ->> x, '') = ''");
+  expect(fnBody('check_bet_pick')).toContain('= any (public.ally_lanes(s))');
+});
+
+test('남는 라인 배당은 상대 라인처럼 라인 몫으로 낸다', () => {
+  expect(fnBody('casual_fb_odds')).toMatch(/sel like 'them\\_%' or sel like 'ally\\_%'/);
+});
+
+test('명단 밖 팀원이 땄는데 누군지 모르면 남는 라인 배팅만 환불', () => {
+  const body = fnBody('leg_result');
+  expect(body).toMatch(/s\.fb_ally_lane = 'ANY' and sel like 'ally\\_%' then\s+return 'void'/);
+  expect(body).toContain("'ally_' || s.fb_ally_lane");
+});
+
+test('정산 함수가 명단 밖 팀원을 받고, 옛 시그니처는 지운다', () => {
+  expect(sql).toContain(
+    'drop function if exists public.settle_casual(bigint, int, int, bigint, text, text, text);'
+  );
+  expect(sql).toContain('public.settle_casual(bigint, int, int, bigint, text, text, text, text)');
+  const body = fnBody('settle_casual');
+  expect(body).toContain('fb_ally_lane = p_fb_ally');
+  /* 다섯이 다 우리 사람이면 명단 밖 팀원은 있을 수 없다 */
+  expect(body).toContain("raise exception '우리 팀 다섯이 다 이 판에 있어요.'");
+});
+
+test('정산을 되돌리면 명단 밖 팀원 결과도 지운다', () => {
+  expect(fnBody('unsettle_scrim')).toContain('fb_ally_lane = null');
+});

@@ -14,6 +14,7 @@ import {
   byLane,
   dragonIcon,
   dragonLabel,
+  ALLY_ANY,
 } from '../../rules/casual';
 
 /* 대전 기록 탭의 '일반 게임'.
@@ -109,6 +110,10 @@ const CasualHistory = ({
         ? s.fb_enemy_lane
           ? <LaneTag lane={s.fb_enemy_lane} prefix="상대 " />
           : '상대 팀'
+        : s.fb_ally_lane
+          ? s.fb_ally_lane === ALLY_ANY
+            ? '우리 팀 (명단 밖)'
+            : <LaneTag lane={s.fb_ally_lane} prefix="우리 " />
         : s.first_blood_player_id
           ? (
               /* 우리 쪽이 땄어도 라인 아이콘을 붙인다. 상대만 아이콘이 있으면

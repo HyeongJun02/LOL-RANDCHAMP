@@ -1250,6 +1250,13 @@ alter table public.scrims add column if not exists our_kills int;
 alter table public.scrims add column if not exists opp_kills int;
 alter table public.scrims add column if not exists fb_enemy_lane text;
 
+-- 첫 킬을 '우리 팀인데 우리 명단에 없는 사람'이 땄을 때 (3인큐면 나머지 둘).
+--   'TOP'·…·'SUPPORT'  그 라인의 사람이 땄다
+--   'ANY'               누군지(어느 라인인지) 모른다
+--   null                우리 사람이 땄거나(first_blood_player_id) 우리가 아니다
+-- 이게 없을 때는 이 경우 정산에서 고를 게 없었다
+alter table public.scrims add column if not exists fb_ally_lane text;
+
 alter table public.scrims drop constraint if exists scrims_status_chk;
 alter table public.scrims add constraint scrims_status_chk
   check (status in ('betting', 'locked', 'settled'));
@@ -1454,6 +1461,28 @@ returns numeric language sql immutable as $fn$
 $fn$;
 
 
+-- 우리 명단에 없는 우리 팀원에게 걸 수 있는 라인들.
+-- 다섯이 다 우리 사람이거나, 우리 사람 중 하나라도 라인이 미정이면 없다
+-- (미정이면 남는 라인이 어디인지 모른다). src/rules/casual.js의 allyLanes와 같다
+create or replace function public.ally_lanes(s scrims)
+returns text[] language sql immutable as $fn$
+  select case
+    when s.kind <> 'casual' or s.mode = 'aram' then array[]::text[]
+    when jsonb_array_length(s.team_a) >= 5 then array[]::text[]
+    when exists (
+      select 1 from jsonb_array_elements_text(s.team_a) x
+       where coalesce(s.lanes ->> x, '') = ''
+    ) then array[]::text[]
+    else array(
+      select l from unnest(array['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']) l
+       where not exists (
+         select 1 from jsonb_array_elements_text(s.team_a) x where s.lanes ->> x = l
+       )
+    )
+  end;
+$fn$;
+
+
 -- 일반 게임 첫 킬(사람) 배당.
 -- 상대 팀이 딸 확률 절반을 먼저 떼고, 남은 절반을 라인 몫으로 가른다.
 -- 우리 쪽은 참가자 id, 상대 쪽은 'them_TOP'처럼 라인으로 고른다.
@@ -1465,7 +1494,7 @@ declare lane text; idx int;
 begin
   if s.mode = 'aram' then
     lane := null;
-  elsif sel like 'them\_%' then
+  elsif sel like 'them\_%' or sel like 'ally\_%' then
     lane := substr(sel, 6);
   else
     lane := s.lanes ->> sel;
@@ -1510,6 +1539,10 @@ begin
     -- 상대 라인은 일반 게임, 그것도 라인이 있는 모드에서만
     if s.kind = 'casual' and s.mode <> 'aram'
        and sel in ('them_TOP', 'them_JUNGLE', 'them_MID', 'them_ADC', 'them_SUPPORT') then
+      return;
+    end if;
+    -- 우리 명단에 없는 우리 팀원. 남는 라인일 때만
+    if sel like 'ally\_%' and substr(sel, 6) = any (public.ally_lanes(s)) then
       return;
     end if;
     raise exception '없는 선택지예요.';
@@ -1621,7 +1654,15 @@ begin
       if s.fb_side = 'them' and s.fb_enemy_lane is null and sel like 'them\_%' then
         return 'void';
       end if;
-      ans := case when s.fb_side = 'us' then s.first_blood_player_id::text
+      -- 우리 명단에 없는 우리 팀원이 땄는데 어느 라인인지 모르면 같은 이유로
+      -- 남는 라인에 건 것만 돌려준다
+      if s.fb_side = 'us' and s.fb_ally_lane = 'ANY' and sel like 'ally\_%' then
+        return 'void';
+      end if;
+      ans := case when s.fb_side = 'us' and s.fb_ally_lane = 'ANY' then 'ally'
+                  when s.fb_side = 'us' and s.fb_ally_lane is not null
+                    then 'ally_' || s.fb_ally_lane
+                  when s.fb_side = 'us' then s.first_blood_player_id::text
                   when s.fb_enemy_lane is not null then 'them_' || s.fb_enemy_lane
                   else 'them' end;
     else
@@ -1859,9 +1900,10 @@ end; $fn$;
 -- 인자를 바꾸면 옛 함수가 남아 오버로드가 된다. PostgREST가 어느 것을
 -- 부를지 못 골라 ambiguous 오류를 내므로 먼저 지운다.
 drop function if exists public.settle_casual(bigint, int, bigint, text, text);
+drop function if exists public.settle_casual(bigint, int, int, bigint, text, text, text);
 create or replace function public.settle_casual(
   p_scrim bigint, p_our_kills int, p_opp_kills int, p_first_blood bigint,
-  p_fb_side text, p_fb_lane text, p_dragon text)
+  p_fb_side text, p_fb_lane text, p_dragon text, p_fb_ally text default null)
 returns void language plpgsql security definer set search_path = public as $fn$
 declare s scrims;
 begin
@@ -1887,9 +1929,25 @@ begin
   if p_fb_side is not null and p_fb_side not in ('us', 'them') then
     raise exception '첫 킬은 우리 팀 또는 상대 팀이에요.';
   end if;
-  -- 우리가 땄다면서 아무도 안 고르면 '첫 킬 - 누구'가 영원히 안 정해진다
-  if p_fb_side = 'us' and p_first_blood is null then
+  -- 우리가 땄다면서 아무도 안 고르면 '첫 킬 - 누구'가 영원히 안 정해진다.
+  -- 우리 사람이거나, 우리 명단에 없는 우리 팀원이거나 - 둘 중 하나만
+  if p_fb_side = 'us' and p_first_blood is null and p_fb_ally is null then
     raise exception '우리 팀이 땄으면 누가 땄는지도 골라주세요.';
+  end if;
+  if p_first_blood is not null and p_fb_ally is not null then
+    raise exception '첫 킬은 한 사람만 고를 수 있어요.';
+  end if;
+  if p_fb_ally is not null then
+    if p_fb_side is distinct from 'us' then
+      raise exception '우리 팀이 땄을 때만 고를 수 있어요.';
+    end if;
+    -- 다섯이 다 우리 사람이면 '우리 팀 다른 사람'이 있을 수 없다
+    if jsonb_array_length(s.team_a) >= 5 then
+      raise exception '우리 팀 다섯이 다 이 판에 있어요.';
+    end if;
+    if p_fb_ally <> 'ANY' and not (p_fb_ally = any (public.ally_lanes(s))) then
+      raise exception '그 라인은 우리 사람이 있거나, 라인이 안 정해졌어요.';
+    end if;
   end if;
   if p_fb_side is distinct from 'us' and p_first_blood is not null then
     raise exception '우리 팀이 땄을 때만 사람을 고를 수 있어요.';
@@ -1928,6 +1986,7 @@ begin
          first_blood_player_id = p_first_blood,
          fb_side = p_fb_side,
          fb_enemy_lane = p_fb_lane,
+         fb_ally_lane = p_fb_ally,
          first_dragon = p_dragon,
          status = 'settled', settled_at = now()
    where id = p_scrim
@@ -2518,7 +2577,7 @@ begin
          -- 일반 게임 또또의 결과도 같이 비운다. 남겨두면 다시 정산하기 전까지
          -- 화면이 지난 결과(첫 용 등)를 적중으로 그린다
          fb_side = null, first_dragon = null,
-         our_kills = null, opp_kills = null, fb_enemy_lane = null,
+         our_kills = null, opp_kills = null, fb_enemy_lane = null, fb_ally_lane = null,
          status = 'locked', settled_at = null, undo_count = undo_count + 1
    where id = p_scrim;
 
@@ -2545,7 +2604,7 @@ grant execute on function
   public.lock_betting(bigint),
   public.settle_scrim(bigint, text, int, bigint),
   public.open_casual_bet(bigint, text, jsonb, jsonb, int, numeric),
-  public.settle_casual(bigint, int, int, bigint, text, text, text),
+  public.settle_casual(bigint, int, int, bigint, text, text, text, text),
   public.place_parlay(bigint, jsonb, int),
   public.unsettle_scrim(bigint)
 to authenticated;

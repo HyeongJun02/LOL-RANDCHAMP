@@ -773,7 +773,7 @@ const ROOM_SELECT =
   'first_blood_player_id,bet_total,bet_count,undo_count,locked_at,' +
   /* 일반 큐 또또. kind를 안 받으면 전적에서 걸러낼 수가 없고,
      fb_side·first_dragon·lanes가 없으면 결과와 배당을 못 그린다 */
-  'kind,fb_side,first_dragon,lanes,our_kills,opp_kills,fb_enemy_lane,' +
+  'kind,fb_side,first_dragon,lanes,our_kills,opp_kills,fb_enemy_lane,fb_ally_lane,' +
   'betting_closes_at,kill_line)';
 
 /* 탭이 보일 때만. 실시간 구독이 없어 폴링이 불가피한데 방 전체를 매번
@@ -1086,7 +1086,7 @@ export const openCasualBet = ({ roomId, mode, playerIds, lanes, closeSeconds, ki
    있어야 하고 마켓도 서로 다르다 */
 export const settleCasual = (
   scrimId,
-  { ourKills, oppKills, firstBloodPlayerId, fbSide, fbLane, dragon }
+  { ourKills, oppKills, firstBloodPlayerId, fbSide, fbLane, fbAlly, dragon }
 ) =>
   rpc('settle_casual', {
     p_scrim: scrimId,
@@ -1096,6 +1096,8 @@ export const settleCasual = (
     p_fb_side: fbSide ?? null,
     p_fb_lane: fbLane ?? null,
     p_dragon: dragon ?? null,
+    /* 우리 명단에 없는 우리 팀원이 땄을 때: 그 라인, 또는 'ANY'(모름) */
+    p_fb_ally: fbAlly ?? null,
   });
 
 /* 배팅 묶기. 다리마다 { market, selection }만 보낸다 - 배당은 서버가 다시
