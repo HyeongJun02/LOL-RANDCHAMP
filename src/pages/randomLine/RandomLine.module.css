@@ -223,6 +223,45 @@
   font-weight: 700;
 }
 
+/* 돌아는 가지만 자리가 사람보다 많다 - 비는 역할이 생긴다 */
+.capsOver {
+  color: #facc15;
+  font-weight: 700;
+}
+
+/* 롤 '꼭 있어야 할 라인' 칩. 정원 줄과 같은 모양에 체크만 */
+.needCap {
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.needBox {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 4px;
+  background: transparent;
+  color: #0b1220;
+  font-size: 0.6rem;
+  cursor: pointer;
+}
+
+.needBox:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.needOn {
+  border-color: var(--role, #8b98ae);
+  background: var(--role, #8b98ae);
+}
+
 .capsList {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -267,7 +306,7 @@
   display: flex;
   align-items: center;
   gap: 0.2rem;
-  margin-left: auto;
+  margin-left: 0.3rem;
 }
 
 .capStep button {

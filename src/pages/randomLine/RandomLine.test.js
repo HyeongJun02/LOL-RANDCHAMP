@@ -293,3 +293,64 @@ test('타격대만 켜두면 다섯 자리가 채워지고 타격대가 둘이 �
   expect(count('타격대')).toBe(2);
   ['척후대', '감시자', '전략가'].forEach((r) => expect(count(r)).toBe(1));
 });
+
+/* ---------- 꼭 있어야 할 역할 ---------- */
+
+const needChips = () => [...document.querySelectorAll('button[aria-pressed][class*="needCap"]')];
+const countClass = (el) => el.querySelector('[class*="capsCount"]')?.className || '';
+const typeName = (el, i, name) =>
+  setValue(el.querySelectorAll('.rowWrapper .nameInput')[i], name);
+
+test('롤 꼭 있어야 할 라인은 기본으로 다 체크', () => {
+  const el = render();
+  expect(needChips()).toHaveLength(5);
+  expect(needChips().every((b) => b.getAttribute('aria-pressed') === 'true')).toBe(true);
+  expect(seatText(el)).toContain('자리 5 / 5명');
+  expect(countClass(el)).not.toMatch(/capsOver|capsShort/);
+});
+
+test('셋만 넣고 정글 · 미드만 체크하면 둘은 꼭 들어가고 셋만 뽑힌다', () => {
+  const el = render();
+  click(byText(el, '한눈에'));
+  typeName(el, 0, '가');
+  typeName(el, 1, '나');
+  typeName(el, 2, '다');
+
+  /* 셋인데 라인 다섯이 다 꼭이면 못 돌린다 - 빨강 */
+  expect(seatText(el)).toContain('자리 5 / 3명');
+  expect(countClass(el)).toMatch(/capsShort/);
+
+  ['탑', '원딜', '서폿'].forEach((n) => click(needChips().find((b) => b.textContent.includes(n))));
+  /* 돌아는 가지만 자리가 남는다 - 노랑 */
+  expect(countClass(el)).toMatch(/capsOver/);
+
+  for (let k = 0; k < 20; k += 1) {
+    click(byText(el, '전체 초기화'));
+    click(el.querySelector('[class*="assignAll"]'));
+    const tags = [...el.querySelectorAll('.rowWrapper .lineTag')].map((n) => n.textContent.trim());
+    expect(tags).toHaveLength(3);
+    expect(tags.some((t) => t.includes('정글'))).toBe(true);
+    expect(tags.some((t) => t.includes('미드'))).toBe(true);
+  }
+});
+
+test('발로란트 정원을 늘려 자리가 남으면 노랑, 체크한 역할은 그래도 다 나온다', () => {
+  const el = render();
+  goValorant(el);
+  click(byText(el, '한눈에'));
+
+  click(capRows(el)[1].plus);
+  click(capRows(el)[1].plus);
+  expect(seatText(el)).toContain('자리 7 / 5명');
+  expect(countClass(el)).toMatch(/capsOver/);
+
+  for (let k = 0; k < 20; k += 1) {
+    click(byText(el, '전체 초기화'));
+    click(el.querySelector('[class*="assignAll"]'));
+    const tags = [...el.querySelectorAll('.rowWrapper .lineTag')].map((n) => n.textContent.trim());
+    expect(tags).toHaveLength(5);
+    ['타격대', '척후대', '감시자', '전략가'].forEach((r) =>
+      expect(tags.some((t) => t.includes(r))).toBe(true)
+    );
+  }
+});

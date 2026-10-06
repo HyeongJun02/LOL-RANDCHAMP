@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useRoster } from '../../server/roster';
-import { FaThLarge, FaListUl, FaMinus, FaPlus } from 'react-icons/fa';
+import { FaThLarge, FaListUl, FaMinus, FaPlus, FaCheck } from 'react-icons/fa';
 import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
 import PageHeader from '../../components/common/PageHeader';
@@ -49,6 +49,9 @@ export default function RandomLinePage() {
   /* 겹쳐도 되는 게임에서 '둘까지 받는 역할'. 롤은 쓰지 않는다 */
   /* 역할마다 몇 명까지 받을지. 롤은 다 1이라 안 쓴다 */
   const [caps, setCaps] = useState(() => ({ ...(getGame(DEFAULT_GAME).defaultCaps || {}) }));
+  /* 꼭 한 명은 맡아야 하는 역할. 기본은 전부. 셋이서 큐를 돌릴 때
+     정글 · 미드만 꼭 채우고 나머지는 비어도 되게 고른다 */
+  const [required, setRequired] = useState(() => new Set(roleNamesOf(DEFAULT_GAME)));
   const roster = useRoster(gameKey);
   usePageMeta(PAGE_META.randomLine);
   const [subtitle] = useState(
@@ -123,11 +126,34 @@ export default function RandomLinePage() {
 
   const seats = ROLES.reduce((sum, l) => sum + capOf(l), 0);
 
-  const checkCelebrate = (arr) => {
-    if (arr.every(Boolean)) {
+  const toggleRequired = (role) =>
+    setRequired((prev) => {
+      const next = new Set(prev);
+      if (next.has(role)) next.delete(role);
+      else next.add(role);
+      return next;
+    });
+
+  /* 정원이 0인 역할은 꼭 있을 수가 없다 */
+  const need = ROLES.filter((l) => required.has(l) && capOf(l) > 0);
+
+  /* 이름을 넣은 사람만 뛴다. 아무도 안 넣었으면 다섯 칸 다 (예전처럼) */
+  const named = players.map((p, i) => (p.name.trim() ? i : -1)).filter((i) => i >= 0);
+  const active = named.length ? named : players.map((_, i) => i);
+
+  /* 못 돌리는 판은 빨강, 돌아는 가지만 자리가 남는 판은 노랑 */
+  const fit =
+    seats < active.length || need.length > active.length
+      ? styles.capsShort
+      : seats > active.length
+        ? styles.capsOver
+        : '';
+
+  const checkCelebrate = (arr, who = active) => {
+    if (who.every((i) => arr[i])) {
       /* 방의 일반 게임 또또가 이어받는다 (롤만 - 라인이 다섯이라 그대로 맞는다) */
       if (gameKey === 'lol') {
-        saveLastLines(players.map((p, i) => ({ name: p.name.trim(), lane: arr[i] })));
+        saveLastLines(who.map((i) => ({ name: players[i].name.trim(), lane: arr[i] })));
       }
       setCelebrate(true);
       setTimeout(() => setCelebrate(false), 3200);
@@ -142,7 +168,17 @@ export default function RandomLinePage() {
        '남이 가져간 라인은 뺀다'와 같은 말이 된다 */
     const countOf = (l) => used.filter((x) => x === l).length;
     const fresh = open.filter((l) => countOf(l) < capOf(l));
-    const allow = game.uniqueRoles ? fresh : fresh.length ? fresh : open;
+    let allow = game.uniqueRoles ? fresh : fresh.length ? fresh : open;
+
+    /* 남은 사람 수만큼만 꼭 있어야 할 역할이 비어 있으면 그쪽으로 몬다.
+       아니면 마지막 사람까지 가서 채울 수 없게 된다 */
+    const who = active.includes(i) ? active : [...active, i];
+    const left = who.filter((j) => j === i || !assigned[j]).length;
+    const unmet = need.filter((l) => countOf(l) === 0);
+    if (unmet.length && unmet.length >= left) {
+      const must = allow.filter((l) => unmet.includes(l));
+      if (must.length) allow = must;
+    }
 
     if (!allow.length) {
       toast.error(`갈 수 있는 ${game.roleLabel}이 없습니다. 밴을 풀어주세요.`);
@@ -161,7 +197,7 @@ export default function RandomLinePage() {
     tg[i] += 1;
     setTriggers(tg);
 
-    checkCelebrate(asg);
+    checkCelebrate(asg, who);
   };
 
   const shuffle = (arr) => {
@@ -175,7 +211,7 @@ export default function RandomLinePage() {
   const assignAll = () => {
     const allowed = players.map((p) => ROLES.filter((l) => !p.disabled.includes(l)));
 
-    for (let i = 0; i < allowed.length; i++) {
+    for (const i of active) {
       if (allowed[i].length === 0) {
         toast.error(`${i + 1}번 플레이어가 갈 수 있는 ${game.roleLabel}이 없습니다.`);
         return;
@@ -184,14 +220,20 @@ export default function RandomLinePage() {
 
     /* 자리가 사람보다 적으면 애초에 못 채운다. 배정을 돌려보고
        '안 된다'고 하는 것보다, 무엇을 고쳐야 하는지 먼저 말해준다 */
-    if (seats < players.length) {
+    if (seats < active.length) {
       toast.error(
-        `자리가 ${seats}개뿐이라 ${players.length}명을 못 넣어요. 역할 정원을 늘려주세요.`
+        `자리가 ${seats}개뿐이라 ${active.length}명을 못 넣어요. 역할 정원을 늘려주세요.`
+      );
+      return;
+    }
+    if (need.length > active.length) {
+      toast.error(
+        `꼭 있어야 할 ${game.roleLabel}이 ${need.length}개인데 ${active.length}명뿐이에요. 체크를 풀어주세요.`
       );
       return;
     }
 
-    const order = Array.from({ length: players.length }, (_, i) => i).sort(
+    const order = [...active].sort(
       (a, b) => allowed[a].length - allowed[b].length
     );
 
@@ -200,7 +242,10 @@ export default function RandomLinePage() {
     /* 쓴 횟수를 센다. 정원이 1이면 예전의 Set과 똑같이 굴러간다 */
     const used = new Map();
 
+    /* 꼭 있어야 할 역할이 남은 사람보다 많아지면 더 볼 것도 없다 */
+    const unmet = () => need.filter((l) => !used.get(l)).length;
     const dfs = (k) => {
+      if (unmet() > order.length - k) return false;
       if (k === order.length) return true;
       const i = order[k];
       for (const line of choices[i]) {
@@ -216,13 +261,17 @@ export default function RandomLinePage() {
     };
 
     if (!dfs(0)) {
-      toast.error(`이 밴 조합으로는 다섯 명을 모두 배정할 수 없습니다.`);
+      toast.error(
+        need.length
+          ? `이 밴 조합으로는 꼭 있어야 할 ${game.roleLabel}을 채우며 모두 배정할 수 없습니다.`
+          : '이 밴 조합으로는 모두 배정할 수 없습니다.'
+      );
       return;
     }
 
     setAssigned(result);
-    setQuotes(result.map((line) => randomQuote(line)));
-    setTriggers((trigs) => trigs.map((v) => v + 1));
+    setQuotes(result.map((line) => (line ? randomQuote(line) : '')));
+    setTriggers((trigs) => trigs.map((v, i) => (result[i] ? v + 1 : v)));
     checkCelebrate(result);
   };
 
@@ -232,6 +281,7 @@ export default function RandomLinePage() {
     if (next === gameKey) return;
     setGameKey(next);
     setCaps({ ...(getGame(next).defaultCaps || {}) });
+    setRequired(new Set(roleNamesOf(next)));
     setPlayers((prev) => prev.map((p) => ({ ...p, disabled: [] })));
     setAssigned(Array(5).fill(null));
     setQuotes(Array(5).fill(''));
@@ -287,19 +337,51 @@ export default function RandomLinePage() {
         </div>
       </PageHeader>
 
-      {/* 역할이 사람보다 적은 게임에서만. 롤은 다섯 자리 다섯 명이라
-          고를 게 없다 */}
+      {/* 롤은 정원이 다 1이라 꼭 있어야 할 라인만 고른다 */}
+      {game.uniqueRoles && (
+        <div className={styles.caps}>
+          <div className={styles.capsHead}>
+            <span className={styles.capsLabel}>꼭 있어야 할 {game.roleLabel}</span>
+            <span className={`${styles.capsCount} ${fit}`}>
+              자리 {seats} / {active.length}명
+            </span>
+          </div>
+          <div className={styles.capsList}>
+            {ROLES.map((name) => {
+              const role = getRole(gameKey, name);
+              const on = required.has(name);
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  className={`${styles.cap} ${styles.needCap} ${on ? '' : styles.capOff}`}
+                  style={on ? { '--role': role?.color } : undefined}
+                  aria-pressed={on}
+                  onClick={() => toggleRequired(name)}
+                >
+                  <RoleIcon role={role} style={on ? { color: role?.color } : undefined} />
+                  <span className={styles.capName}>{name}</span>
+                  <span className={`${styles.needBox} ${on ? styles.needOn : ''}`}>
+                    {on && <FaCheck />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className={styles.capsHint}>
+            체크를 풀면 그 {game.roleLabel}은 비어도 됩니다. 이름을 넣은 사람만 뽑아요.
+          </p>
+        </div>
+      )}
+
+      {/* 역할이 사람보다 적은 게임에서만 정원을 숫자로 고른다 */}
       {!game.uniqueRoles && (
         <div className={styles.caps}>
           <div className={styles.capsHead}>
             <span className={styles.capsLabel}>역할 정원</span>
             {/* 자리가 몇 개인지가 먼저 보여야 무엇을 고쳐야 할지 안다 */}
-            <span
-              className={`${styles.capsCount} ${
-                seats < players.length ? styles.capsShort : ''
-              }`}
-            >
-              자리 {seats} / {players.length}명
+            <span className={`${styles.capsCount} ${fit}`}>
+              자리 {seats} / {active.length}명
             </span>
           </div>
 
@@ -315,6 +397,19 @@ export default function RandomLinePage() {
                 >
                   <RoleIcon role={role} style={n > 0 ? { color: role?.color } : undefined} />
                   <span className={styles.capName}>{name}</span>
+                  <button
+                    type="button"
+                    className={`${styles.needBox} ${
+                      n > 0 && required.has(name) ? styles.needOn : ''
+                    }`}
+                    disabled={n === 0}
+                    aria-pressed={n > 0 && required.has(name)}
+                    aria-label={`${name} 꼭 한 명은`}
+                    title="꼭 한 명은 맡기"
+                    onClick={() => toggleRequired(name)}
+                  >
+                    {n > 0 && required.has(name) && <FaCheck />}
+                  </button>
                   <div className={styles.capStep}>
                     <button
                       type="button"
@@ -340,7 +435,8 @@ export default function RandomLinePage() {
           </div>
 
           <p className={styles.capsHint}>
-            0으로 두면 그 역할은 아무도 안 맡습니다. 자리가 인원보다 적으면 못 돌립니다.
+            0으로 두면 그 역할은 아무도 안 맡습니다. 체크한 역할은 꼭 한 명은 맡아요.
+            자리가 인원보다 적으면 못 돌립니다.
           </p>
         </div>
       )}
