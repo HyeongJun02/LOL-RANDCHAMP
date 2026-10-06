@@ -958,6 +958,15 @@ const BetTab = ({
     if (scrim.kind === 'casual') return renderCasualMarkets(scrim);
     const roster = [...(scrim.team_a || []), ...(scrim.team_b || [])];
     const fixedFb = (roster.length * FIRST_BLOOD_RATE).toFixed(2);
+    /* 배당이 낮은 사람(딸 것 같은 사람)부터. 같으면 이름순이라 새로고침해도
+       자리가 안 바뀐다 */
+    const byOdds = (ids) =>
+      [...ids].sort(
+        (a, b) =>
+          (legOdds(scrim, 'first_blood', String(a)) ?? Infinity) -
+            (legOdds(scrim, 'first_blood', String(b)) ?? Infinity) ||
+          (nameOf.get(a) || '').localeCompare(nameOf.get(b) || '')
+      );
     return (
       <>
         <div className="bet-market">
@@ -982,16 +991,29 @@ const BetTab = ({
             판수가 적을수록 '아무나 딸 확률' 쪽으로 당긴 값입니다 — 한 판 한 번을
             100%로 쓰면 그 사람에게 돈이 몰려요.
           </p>
-          <div className="bet-opts bet-opts-grid">
-            {roster.map((id) =>
-              renderOption({
-                key: id,
-                scrim,
-                market: 'first_blood',
-                selection: String(id),
-                label: nameOf.get(id) || '?',
-              })
-            )}
+          {/* 한 통에 열 명을 섞어 두면 누가 어느 팀인지 다시 찾아야 했다.
+              팀별로 나란히, 위에서부터 배당이 낮은 순 */}
+          <div className="fb-teams">
+            {[
+              ['A', '1팀', scrim.team_a || []],
+              ['B', '2팀', scrim.team_b || []],
+            ].map(([k, label, ids]) => (
+              <div className="fb-team" key={k}>
+                <div className="fb-team-head">
+                  <strong>{label}</strong>
+                  <em>{ids.length}명</em>
+                </div>
+                {byOdds(ids).map((id) =>
+                  renderOption({
+                    key: id,
+                    scrim,
+                    market: 'first_blood',
+                    selection: String(id),
+                    label: nameOf.get(id) || '?',
+                  })
+                )}
+              </div>
+            ))}
           </div>
           <p className="rooms-hint">한 번에 {num(capOf('first_blood'))} 끼꼬까지.</p>
         </div>

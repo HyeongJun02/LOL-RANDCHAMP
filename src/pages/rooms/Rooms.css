@@ -4493,3 +4493,54 @@ li.day-sep em {
 .bet-opt-meta .bet-odds {
   margin-left: auto;
 }
+
+/* 내전 첫 킬. 1팀 | 2팀 두 줄로 나란히, 팀 안에서는 배당 낮은 순.
+   칸 사이(0.35rem)는 일반 게임 첫 킬 표(.fb-table)와 같게 맞춘다 */
+.fb-teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.fb-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.fb-team-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.15rem 0.15rem;
+}
+
+.fb-team-head strong {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+.fb-team-head em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #6b7a94;
+}
+
+/* 이름 · 확률 · 배당을 한 줄에. 좁아도 배당은 늘 오른쪽 끝 */
+.fb-team .bet-opt {
+  width: 100%;
+}
+
+/* 폰에서 두 칸이면 이름이 두 글자만 남는다. 위아래로 */
+@media (max-width: 420px) {
+  .fb-teams {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

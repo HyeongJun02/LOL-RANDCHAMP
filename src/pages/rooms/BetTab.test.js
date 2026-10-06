@@ -306,3 +306,20 @@ test('끝난 일반 게임은 칸마다 실제 킬과 적중이 보인다', asyn
   expect(cols[0].querySelector('.is-over').className).toContain('won');
   expect(cols[2].querySelector('.is-under').className).toContain('won');
 });
+
+/* ---------- 내전 첫 킬: 1팀 | 2팀 ---------- */
+
+test('내전 첫 킬은 1팀과 2팀으로 나뉘어 나온다', async () => {
+  const el = await render({
+    active: casual({ kind: 'scrim', team_a: [3, 1], team_b: [2], lanes: {}, kill_line: 53.5 }),
+  });
+  const teams = [...el.querySelectorAll('.fb-teams .fb-team')];
+  expect(teams.map((t) => t.querySelector('.fb-team-head strong').textContent)).toEqual([
+    '1팀',
+    '2팀',
+  ]);
+  const names = (t) => [...t.querySelectorAll('.bet-opt-text')].map((n) => n.textContent);
+  /* 배당이 같으면 이름순 (배당 낮은 순이 먼저다) */
+  expect(names(teams[0])).toEqual(['민수', '철수']);
+  expect(names(teams[1])).toEqual(['영희']);
+});
