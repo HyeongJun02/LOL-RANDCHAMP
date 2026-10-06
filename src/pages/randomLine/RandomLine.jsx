@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useRoster } from '../../server/roster';
-import { FaThLarge, FaListUl, FaMinus, FaPlus, FaCheck } from 'react-icons/fa';
+import { FaThLarge, FaListUl, FaMinus, FaPlus, FaCheck, FaQuestionCircle } from 'react-icons/fa';
 import PlayerCard from './components/PlayerCard';
 import PlayerRow from './components/PlayerRow';
 import PageHeader from '../../components/common/PageHeader';
@@ -341,7 +341,14 @@ export default function RandomLinePage() {
       {game.uniqueRoles && (
         <div className={styles.caps}>
           <div className={styles.capsHead}>
-            <span className={styles.capsLabel}>꼭 있어야 할 {game.roleLabel}</span>
+            {/* 설명은 한 줄 더 차지하지 않게 이름표에 얹는다. 이 칸이 길어지면
+                정작 중요한 라인 뽑기가 아래로 밀린다 */}
+            <span
+              className={styles.capsLabel}
+              title={`체크를 풀면 그 ${game.roleLabel}은 비어도 됩니다. 이름을 넣은 사람만 뽑아요.`}
+            >
+              꼭 있어야 할 {game.roleLabel} <FaQuestionCircle className={styles.capsHelp} />
+            </span>
             <span className={`${styles.capsCount} ${fit}`}>
               자리 {seats} / {active.length}명
             </span>
@@ -368,9 +375,6 @@ export default function RandomLinePage() {
               );
             })}
           </div>
-          <p className={styles.capsHint}>
-            체크를 풀면 그 {game.roleLabel}은 비어도 됩니다. 이름을 넣은 사람만 뽑아요.
-          </p>
         </div>
       )}
 
@@ -378,7 +382,12 @@ export default function RandomLinePage() {
       {!game.uniqueRoles && (
         <div className={styles.caps}>
           <div className={styles.capsHead}>
-            <span className={styles.capsLabel}>역할 정원</span>
+            <span
+              className={styles.capsLabel}
+              title="0으로 두면 그 역할은 아무도 안 맡습니다. 체크한 역할은 꼭 한 명은 맡아요. 자리가 인원보다 적으면 못 돌립니다."
+            >
+              역할 정원 <FaQuestionCircle className={styles.capsHelp} />
+            </span>
             {/* 자리가 몇 개인지가 먼저 보여야 무엇을 고쳐야 할지 안다 */}
             <span className={`${styles.capsCount} ${fit}`}>
               자리 {seats} / {active.length}명
@@ -433,11 +442,6 @@ export default function RandomLinePage() {
               );
             })}
           </div>
-
-          <p className={styles.capsHint}>
-            0으로 두면 그 역할은 아무도 안 맡습니다. 체크한 역할은 꼭 한 명은 맡아요.
-            자리가 인원보다 적으면 못 돌립니다.
-          </p>
         </div>
       )}
 
