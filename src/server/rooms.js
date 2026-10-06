@@ -773,7 +773,7 @@ const ROOM_SELECT =
   'first_blood_player_id,bet_total,bet_count,undo_count,locked_at,' +
   /* 일반 큐 또또. kind를 안 받으면 전적에서 걸러낼 수가 없고,
      fb_side·first_dragon·lanes가 없으면 결과와 배당을 못 그린다 */
-  'kind,fb_side,first_dragon,lanes,our_kills,opp_kills,fb_enemy_lane,fb_ally_lane,' +
+  'kind,fb_side,first_dragon,lanes,our_kills,opp_kills,fb_enemy_lane,fb_ally_lane,our_win,' +
   'betting_closes_at,kill_line)';
 
 /* 탭이 보일 때만. 실시간 구독이 없어 폴링이 불가피한데 방 전체를 매번
@@ -1027,6 +1027,7 @@ export const marketLabel = (market) => {
   if (market === 'kills_parity') return '킬 짝/홀';
   if (market === 'fb_side') return '첫 킬 - 어느 팀';
   if (market === 'dragon') return '첫 용';
+  if (market === 'our_win') return '우리 팀 승리';
   if (market === 'parlay') return '묶음';
   if (market.startsWith('ourkills_')) return `우리 팀 킬 ${killLineOf(market)}`;
   if (market.startsWith('oppkills_')) return `상대 팀 킬 ${killLineOf(market)}`;
@@ -1086,7 +1087,7 @@ export const openCasualBet = ({ roomId, mode, playerIds, lanes, closeSeconds, ki
    있어야 하고 마켓도 서로 다르다 */
 export const settleCasual = (
   scrimId,
-  { ourKills, oppKills, firstBloodPlayerId, fbSide, fbLane, fbAlly, dragon }
+  { ourKills, oppKills, firstBloodPlayerId, fbSide, fbLane, fbAlly, dragon, ourWin }
 ) =>
   rpc('settle_casual', {
     p_scrim: scrimId,
@@ -1098,6 +1099,8 @@ export const settleCasual = (
     p_dragon: dragon ?? null,
     /* 우리 명단에 없는 우리 팀원이 땄을 때: 그 라인, 또는 'ANY'(모름) */
     p_fb_ally: fbAlly ?? null,
+    /* true 이김 · false 짐 · null 안 넣음 (우리 팀 승리 환불) */
+    p_our_win: ourWin ?? null,
   });
 
 /* 배팅 묶기. 다리마다 { market, selection }만 보낸다 - 배당은 서버가 다시

@@ -132,14 +132,26 @@ test('첫 킬 사람마다 라인 배당이 미리 보인다', async () => {
 /* '우리 팀'과 '누구'는 둘 중 하나만 건다 */
 test('첫 킬은 팀과 사람 중 하나만 담긴다', async () => {
   const el = await render({ active: casual() });
+  /* '우리 팀 승리'도 '우리 팀'을 품고 있어서 첫 킬 표 안에서 찾는다 */
+  const us = () => el.querySelector('.fb-table .bet-opt');
 
-  await click(optionFor(el, '우리 팀'));
-  expect(optionFor(el, '우리 팀').className).toContain('picked');
+  await click(us());
+  expect(us().className).toContain('picked');
 
   await click(optionFor(el, '철수'));
   expect(optionFor(el, '철수').className).toContain('picked');
   /* 사람을 고르는 순간 팀 쪽은 빠진다 */
-  expect(optionFor(el, '우리 팀').className).not.toContain('picked');
+  expect(us().className).not.toContain('picked');
+});
+
+test('일반 게임은 우리 팀 승리에만 걸 수 있다 (상대 팀 승리는 없다)', async () => {
+  const el = await render({ active: casual() });
+  const win = optionFor(el, '우리 팀 승리');
+  expect(win).toBeDefined();
+  expect(win.textContent).toContain('1.96');
+  expect(optionFor(el, '상대 팀 승리')).toBeUndefined();
+  await click(win);
+  expect(win.className).toContain('picked');
 });
 
 /* ---------- 킬 언더오버 · 첫 킬 표 · 배팅 묶기 ---------- */

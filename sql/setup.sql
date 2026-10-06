@@ -1257,6 +1257,10 @@ alter table public.scrims add column if not exists fb_enemy_lane text;
 -- 이게 없을 때는 이 경우 정산에서 고를 게 없었다
 alter table public.scrims add column if not exists fb_ally_lane text;
 
+-- 일반 게임에서 우리가 이겼나. null이면 결과를 안 넣었다 (우리 팀 승리 환불).
+-- winner를 쓰지 않는 건 내전 쪽(전적·정산)이 winner를 '1팀/2팀'으로 읽기 때문이다
+alter table public.scrims add column if not exists our_win boolean;
+
 alter table public.scrims drop constraint if exists scrims_status_chk;
 alter table public.scrims add constraint scrims_status_chk
   check (status in ('betting', 'locked', 'settled'));
@@ -1548,6 +1552,13 @@ begin
     raise exception '없는 선택지예요.';
   end if;
 
+  -- 일반 게임의 '우리 팀 승리'. 상대 팀 승리는 없다 - 선택지가 하나다
+  if m = 'our_win' then
+    if s.kind <> 'casual' then raise exception '내전에는 없는 항목이에요.'; end if;
+    if sel <> 'us' then raise exception '없는 선택지예요.'; end if;
+    return;
+  end if;
+
   if m in ('kills_parity', 'fb_side', 'dragon') then
     if s.kind <> 'casual' then raise exception '내전에는 없는 항목이에요.'; end if;
     if m = 'kills_parity' and sel not in ('odd', 'even') then raise exception '없는 선택지예요.'; end if;
@@ -1615,6 +1626,11 @@ begin
   if m = 'winner' then
     if s.winner is null then return 'void'; end if;
     return case when sel = s.winner then 'win' else 'lose' end;
+  end if;
+
+  if m = 'our_win' then
+    if s.our_win is null then return 'void'; end if;
+    return case when s.our_win then 'win' else 'lose' end;
   end if;
 
   if m = 'kills_parity' then
@@ -1901,9 +1917,11 @@ end; $fn$;
 -- 부를지 못 골라 ambiguous 오류를 내므로 먼저 지운다.
 drop function if exists public.settle_casual(bigint, int, bigint, text, text);
 drop function if exists public.settle_casual(bigint, int, int, bigint, text, text, text);
+drop function if exists public.settle_casual(bigint, int, int, bigint, text, text, text, text);
 create or replace function public.settle_casual(
   p_scrim bigint, p_our_kills int, p_opp_kills int, p_first_blood bigint,
-  p_fb_side text, p_fb_lane text, p_dragon text, p_fb_ally text default null)
+  p_fb_side text, p_fb_lane text, p_dragon text, p_fb_ally text default null,
+  p_our_win boolean default null)
 returns void language plpgsql security definer set search_path = public as $fn$
 declare s scrims;
 begin
@@ -1988,6 +2006,7 @@ begin
          fb_enemy_lane = p_fb_lane,
          fb_ally_lane = p_fb_ally,
          first_dragon = p_dragon,
+         our_win = p_our_win,
          status = 'settled', settled_at = now()
    where id = p_scrim
    returning * into s;
@@ -2023,7 +2042,7 @@ begin
   -- 참여 끼꼬는 주지 않는다. 전적에 안 들어가는 판이라, 주면 일반 큐를
   -- 돌리는 것만으로 끼꼬가 생긴다 (award_participation을 아예 안 부른다)
   perform public.log_room(s.room_id, 'casual_settled', jsonb_build_object(
-    'scrim', p_scrim, 'kills', s.total_kills,
+    'scrim', p_scrim, 'kills', s.total_kills, 'our_win', p_our_win,
     'fb_side', p_fb_side, 'dragon', p_dragon, 'bet_total', s.bet_total));
 end; $fn$;
 
@@ -2126,6 +2145,7 @@ begin
       when b->>'market' = 'first_blood' then 1000
       when b->>'market' = 'dragon' then 1000
       when b->>'market' = 'fb_side' then 3000
+      when b->>'market' = 'our_win' then 2000
       when b->>'market' like 'kills%' then 3000
       when b->>'market' like 'ourkills%' then 3000
       when b->>'market' like 'oppkills%' then 3000
@@ -2390,7 +2410,7 @@ begin
     update bet_pools set odds = 1.96
      where scrim_id = p_scrim
        and (market like 'kills%' or market like 'ourkills%'
-            or market like 'oppkills%' or market = 'fb_side');
+            or market like 'oppkills%' or market = 'fb_side' or market = 'our_win');
 
     update bet_pools bp
        set odds = public.casual_fb_odds(s, bp.selection)
@@ -2578,6 +2598,7 @@ begin
          -- 화면이 지난 결과(첫 용 등)를 적중으로 그린다
          fb_side = null, first_dragon = null,
          our_kills = null, opp_kills = null, fb_enemy_lane = null, fb_ally_lane = null,
+         our_win = null,
          status = 'locked', settled_at = null, undo_count = undo_count + 1
    where id = p_scrim;
 
@@ -2604,7 +2625,7 @@ grant execute on function
   public.lock_betting(bigint),
   public.settle_scrim(bigint, text, int, bigint),
   public.open_casual_bet(bigint, text, jsonb, jsonb, int, numeric),
-  public.settle_casual(bigint, int, int, bigint, text, text, text, text),
+  public.settle_casual(bigint, int, int, bigint, text, text, text, text, boolean),
   public.place_parlay(bigint, jsonb, int),
   public.unsettle_scrim(bigint)
 to authenticated;

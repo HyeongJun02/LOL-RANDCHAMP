@@ -1024,6 +1024,7 @@ test('배팅 상한이 tuning.js와 DB에서 같다', () => {
     fb_side: "= 'fb_side' then",
     dragon: "= 'dragon' then",
     team_kills: "like 'ourkills%' then",
+    our_win: "= 'our_win' then",
   };
   /* 상대 팀 킬도 같은 상한 */
   expect(body).toContain(`like 'oppkills%' then ${BET_CAP.team_kills}`);
@@ -2233,7 +2234,7 @@ test('정산 함수가 명단 밖 팀원을 받고, 옛 시그니처는 지운�
   expect(sql).toContain(
     'drop function if exists public.settle_casual(bigint, int, int, bigint, text, text, text);'
   );
-  expect(sql).toContain('public.settle_casual(bigint, int, int, bigint, text, text, text, text)');
+  expect(sql).toContain('public.settle_casual(bigint, int, int, bigint, text, text, text, text, boolean)');
   const body = fnBody('settle_casual');
   expect(body).toContain('fb_ally_lane = p_fb_ally');
   /* 다섯이 다 우리 사람이면 명단 밖 팀원은 있을 수 없다 */
@@ -2242,4 +2243,30 @@ test('정산 함수가 명단 밖 팀원을 받고, 옛 시그니처는 지운�
 
 test('정산을 되돌리면 명단 밖 팀원 결과도 지운다', () => {
   expect(fnBody('unsettle_scrim')).toContain('fb_ally_lane = null');
+});
+
+/* ---------- 일반 게임 우리 팀 승리 ---------- */
+
+test('우리 팀 승리: 일반 게임에만, 선택지는 우리 하나', () => {
+  expect(fnBody('check_bet_pick')).toMatch(
+    /if m = 'our_win' then\s+if s\.kind <> 'casual' then raise exception '내전에는 없는 항목이에요\.'; end if;\s+if sel <> 'us' then/
+  );
+});
+
+test('우리 팀 승리: 이기면 적중, 지면 낙첨, 안 넣으면 환불', () => {
+  expect(fnBody('leg_result')).toMatch(
+    /if m = 'our_win' then\s+if s\.our_win is null then return 'void'; end if;\s+return case when s\.our_win then 'win' else 'lose' end;/
+  );
+});
+
+test('우리 팀 승리: 1.96 고정, 정산 · 되돌리기에서 결과를 다룬다', () => {
+  expect(fnBody('lock_betting')).toContain("or market = 'fb_side' or market = 'our_win');");
+  expect(fnBody('settle_casual')).toContain('our_win = p_our_win');
+  expect(fnBody('unsettle_scrim')).toContain('our_win = null');
+  expect(sql).toContain(
+    'drop function if exists public.settle_casual(bigint, int, int, bigint, text, text, text, text);'
+  );
+  expect(sql).toContain(
+    'public.settle_casual(bigint, int, int, bigint, text, text, text, text, boolean)'
+  );
 });

@@ -197,6 +197,7 @@ export const dragonOdds = () => FIRST_DRAGON_ODDS;
 
 /* 일반 게임 또또에 열리는 마켓. 모드에 따라 다르다 */
 export const casualMarkets = (mode, line) => [
+  { key: 'our_win', label: '우리 팀 승리', kind: 'win' },
   { key: `kills_${line}`, label: `총 킬 ${line}`, kind: 'kills' },
   { key: 'kills_parity', label: '킬 짝/홀', kind: 'parity' },
   { key: 'fb_side', label: '첫 킬 - 어느 팀', kind: 'side' },
@@ -227,6 +228,8 @@ export const casualAnswer = (scrim, market) => {
     return v > Number(market.split('_')[1]) ? 'over' : 'under';
   }
   if (market === 'fb_side') return scrim.fb_side ?? null;
+  /* 선택지가 '우리'(us) 하나뿐이다. 졌으면 아무것도 안 맞는 값 */
+  if (market === 'our_win') return scrim.our_win == null ? null : scrim.our_win ? 'us' : 'them';
   if (market === 'dragon') return scrim.first_dragon ?? null;
 
   /* 첫 킬 - 누구.

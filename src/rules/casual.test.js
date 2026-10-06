@@ -268,3 +268,12 @@ describe('우리 명단 밖 우리 팀원의 첫 킬', () => {
     expect(outcome(s, 'first_blood', allyPick('ADC'))).toBe('lose');
   });
 });
+
+test('우리 팀 승리: 이기면 적중, 지면 낙첨, 안 넣으면 환불', () => {
+  const { casualOutcome } = require('./casual');
+  const base = { status: 'settled', kind: 'casual' };
+  expect(casualOutcome({ ...base, our_win: true }, 'our_win', 'us')).toBe('win');
+  expect(casualOutcome({ ...base, our_win: false }, 'our_win', 'us')).toBe('lose');
+  expect(casualOutcome({ ...base, our_win: null }, 'our_win', 'us')).toBe('void');
+  expect(casualMarkets('normal', 44.5).map((m) => m.key)).toContain('our_win');
+});

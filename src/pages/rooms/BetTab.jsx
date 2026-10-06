@@ -438,6 +438,8 @@ const BetTab = ({
   const [ourK, setOurK] = useState('');
   const [oppK, setOppK] = useState('');
   const [fbLane, setFbLane] = useState('');
+  /* 일반 게임 승패. 'win' · 'lose' · '' (안 넣음 - 우리 팀 승리 환불) */
+  const [ourWin, setOurWin] = useState('');
   const [openCasual, setOpenCasual] = useState(false);
 
   const settle = (scrim) =>
@@ -469,7 +471,9 @@ const BetTab = ({
           fbLane: fbSide === 'them' && fbLane ? fbLane : null,
           fbAlly: ally,
           dragon: dragon || null,
+          ourWin: ourWin === '' ? null : ourWin === 'win',
         });
+        setOurWin('');
         setOurK('');
         setOppK('');
         setFb('');
@@ -548,6 +552,7 @@ const BetTab = ({
     if (market === 'kills_parity') return PARITY.find((x) => x.key === selection)?.label;
     if (market === 'fb_side') return SIDES.find((x) => x.key === selection)?.label;
     if (market === 'dragon') return dragonLabel(selection);
+    if (market === 'our_win') return '우리 팀 승리';
     if (selection === 'A') return '1팀';
     if (selection === 'B') return '2팀';
     if (selection === 'over') return '오버';
@@ -810,6 +815,29 @@ const BetTab = ({
 
     return (
       <>
+        {/* 상대 팀 승리는 없다. 우리끼리 상대에 걸면 지는 쪽에 거는 셈이라
+            일부러 질 이유가 생긴다 */}
+        <div className="bet-market">
+          <h4>
+            {marketLabel('our_win')}
+            <em>{KILLS_ODDS}배 고정</em>
+          </h4>
+          <div className="bet-opts is-compact">
+            {renderOption({
+              key: 'us',
+              scrim,
+              market: 'our_win',
+              selection: 'us',
+              label: '우리 팀 승리',
+              tone: 'is-side',
+              fixed: KILLS_ODDS,
+            })}
+          </div>
+          <p className="rooms-hint">
+            지면 낙첨입니다. 한 번에 {num(capOf('our_win'))} 끼꼬까지.
+          </p>
+        </div>
+
         <div className="bet-market">
           <h4>
             킬 언더/오버
@@ -1499,6 +1527,24 @@ const BetTab = ({
               {activeScrim.kind === 'casual' ? (
                 <>
                   <div className="result-field">
+                    <span className="result-label">승패</span>
+                    <div className="seg-tabs">
+                      {[
+                        ['win', '우리 팀 승리'],
+                        ['lose', '패배'],
+                      ].map(([k, label]) => (
+                        <button
+                          key={k}
+                          className={`seg-tab ${ourWin === k ? 'active' : ''}`}
+                          onClick={() => setOurWin(ourWin === k ? '' : k)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="result-field">
                     <span className="result-label">킬</span>
                     <div className="result-score">
                       <label>
@@ -1730,6 +1776,7 @@ const BetTab = ({
               </h3>
               {renderCasualTeam(s)}
               <p className="rooms-hint">
+                {s.our_win != null && (s.our_win ? '승리 · ' : '패배 · ')}
                 킬 {s.our_kills ?? '-'} : {s.opp_kills ?? '-'}
                 {s.total_kills != null && ` (총 ${s.total_kills})`} · 첫 킬{' '}
                 {s.fb_side === 'them'
