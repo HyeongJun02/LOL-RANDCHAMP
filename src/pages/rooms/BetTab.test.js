@@ -323,3 +323,13 @@ test('내전 첫 킬은 1팀과 2팀으로 나뉘어 나온다', async () => {
   expect(names(teams[0])).toEqual(['민수', '철수']);
   expect(names(teams[1])).toEqual(['영희']);
 });
+
+test('내전 첫 킬은 고정 배당이라 배팅 중에도 배당이 보인다', async () => {
+  const el = await render({
+    active: casual({ kind: 'scrim', team_a: [1, 2], team_b: [3], lanes: {}, kill_line: 53.5 }),
+  });
+  /* 서버 배당을 못 받아도(여기선 네트워크가 없다) 같은 식으로 계산해 보여준다.
+     세 명, 전원 골드, 기록 없음 → 3 × 0.85 */
+  const odds = [...el.querySelectorAll('.fb-teams .bet-odds')].map((n) => n.textContent);
+  expect(odds).toEqual(['2.55배', '2.55배', '2.55배']);
+});

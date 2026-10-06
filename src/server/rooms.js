@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { neon, isNeonConfigured } from './neon';
-import { KILLS_PER_PLAYER, DEFAULT_KILL_LINE, BET_CAP, PRIOR_GAMES } from '../rules/tuning';
+import {
+  KILLS_PER_PLAYER,
+  DEFAULT_KILL_LINE,
+  BET_CAP,
+  PRIOR_GAMES,
+  FIRST_BLOOD_RATE,
+  FIRST_BLOOD_TIER_BONUS,
+  FIRST_BLOOD_RATE_TILT,
+  FIRST_BLOOD_TILT_CLAMP,
+} from '../rules/tuning';
 import { getGame, getMode, defaultTierOf, fitTier } from '../rules/games';
 import { casualAnswer } from '../rules/casual';
 
@@ -1150,6 +1159,23 @@ export const mergeRoomPlayers = (keepId, dropId) =>
    1판 1퍼블을 100%라고 내보내면 그 사람에게 돈이 몰린다. 순위표에서 쓰는
    것과 같은 베이지안 스무딩으로, 판수가 적으면 '아무나 딸 확률'(10인이면
    10%) 쪽으로 끌어당긴다. 판이 쌓이면 실제 비율로 수렴한다 */
+/* 내전 첫 킬 배당. sql/setup.sql의 fb_odds와 같은 식이다.
+     인원 × 0.85 × 티어(골드 기준 한 칸당 2%) × 첫 킬 비율(±5%)
+   화면은 서버 값(fb_odds)을 먼저 쓴다. 이건 서버 값이 아직 안 왔거나 못
+   받았을 때 배당 칸이 비지 않게 하는 것 - 고정 배당이라 걸 때 보여야 한다.
+   stat은 firstBloodRates의 한 줄 ({ games, rate }) */
+export const scrimFbOdds = ({ size, tierIdx, stat }) => {
+  const idx = tierIdx == null || tierIdx < 0 ? 3 : tierIdx;
+  const tier = 1 + (3 - idx) * FIRST_BLOOD_TIER_BONUS;
+  const tilt = !stat?.games
+    ? 1
+    : Math.max(
+        FIRST_BLOOD_TILT_CLAMP.min,
+        Math.min(FIRST_BLOOD_TILT_CLAMP.max, 1 - FIRST_BLOOD_RATE_TILT * (stat.rate * size - 1))
+      );
+  return Math.round(size * FIRST_BLOOD_RATE * tier * tilt * 100) / 100;
+};
+
 export const firstBloodRates = (scrims = []) => {
   const by = new Map();
   scrims.forEach((s) => {

@@ -2270,3 +2270,19 @@ test('우리 팀 승리: 1.96 고정, 정산 · 되돌리기에서 결과를 다
     'public.settle_casual(bigint, int, int, bigint, text, text, text, text, boolean)'
   );
 });
+
+/* ---------- 내전 첫 킬 배당: 화면 계산이 fb_odds와 같은 식 ---------- */
+
+test('내전 첫 킬 배당을 화면에서도 같은 식으로 낸다', () => {
+  const { scrimFbOdds } = require('./rooms');
+  /* 여섯 명, 골드, 기록 없음 → 6 × 0.85 */
+  expect(scrimFbOdds({ size: 6, tierIdx: 3, stat: null })).toBe(5.1);
+  /* 두 칸 아래(실버 아래 브론즈)는 +4% */
+  expect(scrimFbOdds({ size: 6, tierIdx: 1, stat: null })).toBe(5.3);
+  /* 평균의 2배로 따면 -3% (tuning.js 주석의 예) */
+  expect(scrimFbOdds({ size: 6, tierIdx: 3, stat: { games: 10, rate: 2 / 6 } })).toBe(4.95);
+  /* 아무리 많이 따도 -5%까지 */
+  expect(scrimFbOdds({ size: 6, tierIdx: 3, stat: { games: 10, rate: 1 } })).toBe(4.85);
+  /* 명단에서 지운 사람(티어 모름)은 골드로 */
+  expect(scrimFbOdds({ size: 6, tierIdx: -1, stat: null })).toBe(5.1);
+});

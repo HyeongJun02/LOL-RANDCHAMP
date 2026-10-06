@@ -29,6 +29,7 @@ import {
   removeScrim,
   fetchBetting,
   fetchFbOdds,
+  scrimFbOdds,
   firstBloodRates,
 } from '../../server/rooms';
 import { useDialog } from '../../components/common/Dialog';
@@ -65,6 +66,7 @@ import {
 } from '../../rules/casual';
 import { timeAgo } from '../../lib/timeAgo';
 import { BET_BUMPS, FIRST_BLOOD_RATE, KILLS_ODDS, PARLAY_MAX_WIN } from '../../rules/tuning';
+import { getGame } from '../../rules/games';
 import { useGameKey } from '../../lib/GameContext';
 
 const num = (n) => Number(n || 0).toLocaleString();
@@ -171,6 +173,15 @@ const BetTab = ({
   /* 사람마다 퍼블을 얼마나 따는지. 지난 판 기록으로만 센다 */
   const fbRate = firstBloodRates(scrims);
 
+  /* 서버 배당(fb_odds)을 못 받았을 때 같은 식으로 계산한 값 */
+  const ladder = getGame(gameKey).tiers.map((t) => t.key);
+  const scrimFb = (scrim, selection) =>
+    scrimFbOdds({
+      size: (scrim.team_a?.length || 0) + (scrim.team_b?.length || 0),
+      tierIdx: ladder.indexOf(tierOf(selection)),
+      stat: fbRate.get(Number(selection)),
+    });
+
   const poolOf = (scrimId, market, selection) =>
     pools.find((p) => p.scrim_id === scrimId && p.market === market && p.selection === selection);
 
@@ -245,8 +256,7 @@ const BetTab = ({
           lane ? null : tierOf(Number(selection))
         );
       }
-      const n = (scrim.team_a?.length || 0) + (scrim.team_b?.length || 0);
-      return fbOdds.get(Number(selection)) ?? Math.round(n * FIRST_BLOOD_RATE * 100) / 100;
+      return fbOdds.get(Number(selection)) ?? scrimFb(scrim, selection);
     }
     return KILLS_ODDS;
   };
@@ -628,8 +638,8 @@ const BetTab = ({
         ? Number(p.odds)
         : fixed != null
           ? fixed
-          : market === 'first_blood' && scrim.id === liveId
-            ? fbOdds.get(Number(selection))
+          : market === 'first_blood' && scrim.kind !== 'casual' && scrim.status !== 'settled'
+            ? legOdds(scrim, market, selection)
             : null;
 
     /* 일반 게임은 정답 하나로 말할 수 없는 경우가 있다 (상대가 땄는데 라인을
