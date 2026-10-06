@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { FaTimes, FaCoins, FaChevronRight, FaGamepad, FaBolt } from 'react-icons/fa';
+import { FaTimes, FaCoins, FaChevronRight, FaGamepad, FaBolt, FaDragon } from 'react-icons/fa';
 import { useDialog } from '../../components/common/Dialog';
 import Modal from '../../components/common/Modal';
 import Empty from '../../components/common/Empty';
@@ -103,91 +103,113 @@ const CasualHistory = ({
     days.get(k).push(s);
   });
 
+  /* 첫 킬을 누가 땄나. 우리 쪽이 땄어도 라인 아이콘을 붙인다 - 상대만
+     아이콘이 있으면 같은 칸인데 모양이 달라 보인다 */
+  const firstKill = (s) => {
+    const laned = hasLanes(s.mode);
+    if (s.fb_side === 'them') {
+      return s.fb_enemy_lane ? <LaneTag lane={s.fb_enemy_lane} prefix="상대 " /> : '상대 팀';
+    }
+    /* 우리 명단에 없는 우리 팀원 (3인큐면 나머지 둘) */
+    if (s.fb_ally_lane) {
+      return s.fb_ally_lane === ALLY_ANY ? (
+        '우리 팀 (명단 밖)'
+      ) : (
+        <LaneTag lane={s.fb_ally_lane} prefix="우리 " />
+      );
+    }
+    if (!s.first_blood_player_id) return null;
+    return (
+      <>
+        {laned && s.lanes?.[s.first_blood_player_id] && (
+          <LaneTag lane={s.lanes[s.first_blood_player_id]} className="is-icon-only" />
+        )}
+        {nameOf.get(s.first_blood_player_id) || '?'}
+      </>
+    );
+  };
+
+  /* 한 판 = 작은 카드 하나. 예전에는 한 줄 격자에 첫 킬 · 첫 용 칩을 고정
+     폭 칸에 욱여넣어서, '화학공학 드래곤'처럼 긴 값이 오면 칩이 접히거나
+     칸을 뚫고 나갔다. 윗줄에 '언제 · 결과', 아래에 '누가 · 무슨 일'을 둔다 */
   const row = (s) => {
     const laned = hasLanes(s.mode);
-    const fb =
-      s.fb_side === 'them'
-        ? s.fb_enemy_lane
-          ? <LaneTag lane={s.fb_enemy_lane} prefix="상대 " />
-          : '상대 팀'
-        : s.fb_ally_lane
-          ? s.fb_ally_lane === ALLY_ANY
-            ? '우리 팀 (명단 밖)'
-            : <LaneTag lane={s.fb_ally_lane} prefix="우리 " />
-        : s.first_blood_player_id
-          ? (
-              /* 우리 쪽이 땄어도 라인 아이콘을 붙인다. 상대만 아이콘이 있으면
-                 같은 칸인데 모양이 달라 보인다 */
-              <>
-                {laned && s.lanes?.[s.first_blood_player_id] && (
-                  <LaneTag lane={s.lanes[s.first_blood_player_id]} className="is-icon-only" />
-                )}
-                {nameOf.get(s.first_blood_player_id) || '?'}
-              </>
-            )
-          : null;
+    const fb = firstKill(s);
     return (
-      <li key={s.id} className="casual-row">
-        <span className="casual-row-meta">
+      <li key={s.id} className="casual-card">
+        <div className="casual-head">
           <span className="hist-time" title={timeAgo(new Date(s.played_at).getTime())}>
             {hhmm(s.played_at)}
           </span>
           <span className="casual-badge">
             {CASUAL_MODES.find((m) => m.key === s.mode)?.label || ''}
           </span>
-        </span>
+          {s.our_win != null && (
+            <span className={`casual-result ${s.our_win ? 'is-win' : 'is-lose'}`}>
+              {s.our_win ? '승리' : '패배'}
+            </span>
+          )}
+          {/* 이긴 팀보다 킬 수가 먼저 보이는 판이다 */}
+          <span className="casual-row-score">
+            <b>{s.our_kills ?? '-'}</b>
+            <i>:</i>
+            <b>{s.opp_kills ?? '-'}</b>
+            {s.total_kills != null && <em>총 {s.total_kills}</em>}
+          </span>
+          <span className="casual-head-end">
+            {s.bet_count > 0 && (
+              <button className="hist-fact is-bet" onClick={() => setOpen(s)} title="또또 결과 보기">
+                <FaCoins />
+                {num(s.bet_total)}
+                <FaChevronRight className="hist-more" />
+              </button>
+            )}
+            {canEdit && (
+              <button className="icon-btn hist-del" onClick={() => remove(s)} aria-label="기록 삭제">
+                <FaTimes />
+              </button>
+            )}
+          </span>
+        </div>
 
-        {/* 한 줄에 다섯을 늘어놓으면 이름이 줄마다 다르게 접혀서 열이 안
-            맞았다. 세로로 길어지더라도 탑 · 정글 · 미드 · 원딜 · 서폿 순서로
-            한 줄에 한 명 */}
+        {/* 탑 · 정글 · 미드 · 원딜 · 서폿 순서로 한 줄에 한 명 */}
         <span className="casual-row-team">
-          {byLane(s.team_a || [], s.lanes)
-            .map((id) => (
-              <span key={id} className="casual-member">
-                {laned && s.lanes?.[id] ? (
-                  <LaneTag lane={s.lanes[id]} className="is-icon-only" />
+          {byLane(s.team_a || [], s.lanes).map((id) => (
+            <span key={id} className="casual-member">
+              {laned && s.lanes?.[id] ? (
+                <LaneTag lane={s.lanes[id]} className="is-icon-only" />
+              ) : (
+                laned && <i className="casual-member-blank" />
+              )}
+              {nameOf.get(Number(id)) || '?'}
+            </span>
+          ))}
+        </span>
+
+        {/* 이름표 | 값. 없는 값은 '-'로 둔다 - 칸이 사라지면 판마다 줄이 어긋난다 */}
+        <dl className="casual-facts">
+          <dt>
+            <FaBolt /> 첫 킬
+          </dt>
+          <dd>{fb || '-'}</dd>
+          {hasDragon(s.mode) && (
+            <>
+              <dt>
+                <FaDragon /> 첫 용
+              </dt>
+              <dd>
+                {s.first_dragon ? (
+                  <>
+                    <img className="bet-opt-icon" src={dragonIcon(s.first_dragon)} alt="" />
+                    {dragonLabel(s.first_dragon)}
+                  </>
                 ) : (
-                  laned && <i className="casual-member-blank" />
+                  '-'
                 )}
-                {nameOf.get(Number(id)) || '?'}
-              </span>
-            ))}
-        </span>
-
-        {/* 이긴 팀이 없는 판이라 킬 수가 결과다 */}
-        <span className="casual-row-score">
-          <b>{s.our_kills ?? '-'}</b>
-          <i>:</i>
-          <b>{s.opp_kills ?? '-'}</b>
-          {s.total_kills != null && <em>총 {s.total_kills}</em>}
-        </span>
-
-        <span className="hist-facts">
-          {fb && (
-            <span className="hist-fact" title="첫 킬">
-              <FaBolt /> {fb}
-            </span>
+              </dd>
+            </>
           )}
-          {hasDragon(s.mode) && s.first_dragon && (
-            <span className="hist-fact" title="첫 용">
-              <img className="bet-opt-icon" src={dragonIcon(s.first_dragon)} alt="" />
-              {dragonLabel(s.first_dragon)}
-            </span>
-          )}
-          {s.bet_count > 0 && (
-            <button className="hist-fact is-bet" onClick={() => setOpen(s)} title="또또 결과 보기">
-              <FaCoins />
-              {num(s.bet_total)}
-              <FaChevronRight className="hist-more" />
-            </button>
-          )}
-        </span>
-
-        {canEdit && (
-          <button className="icon-btn hist-del" onClick={() => remove(s)} aria-label="기록 삭제">
-            <FaTimes />
-          </button>
-        )}
+        </dl>
       </li>
     );
   };

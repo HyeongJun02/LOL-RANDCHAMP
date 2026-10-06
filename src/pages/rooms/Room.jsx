@@ -1275,8 +1275,9 @@ const Room = () => {
             )}
           </>
         )}
+        {/* 다른 탭과 같은 틀(.room-settings)이라 패널 사이가 똑같이 1rem */}
         {tab === 'stats' && (
-          <>
+          <div className="room-settings">
             <HallOfFame rows={hofRows} matches={matches} members={members} />
             {/* 달별 끼꼬는 시즌이 넘어갈 때 박제해둔 값(hofRows)에 있고,
                 이번 달은 아직 박제 전이라 지갑(members)을 봐야 한다 */}
@@ -1286,7 +1287,7 @@ const Room = () => {
               hofRows={hofRows}
               members={members}
             />
-          </>
+          </div>
         )}
         {/* BetTab의 players는 이름을 붙이는 데만 쓴다. 지운 사람까지
             넘겨야 지난 판에서 그 사람이 '?'로 남지 않는다 */}

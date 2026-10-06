@@ -4072,31 +4072,121 @@ li.day-sep em {
   opacity: 0.7;
 }
 
-/* 일반 게임 한 줄. 자리에 이름을 붙여 둔다 - 첫 용이 없는 칼바람에서
-   칸이 밀리지 않게 */
-.casual-row {
+/* 일반 게임 한 판 = 카드 하나 (CasualHistory.jsx 주석).
+     19:42 일반 [승리] 12 : 8 총 20 ··········· [또또] ✕
+     [탑] 가나다          │ 첫 킬  [미드] 가나다
+     [정글] 라마바        │ 첫 용  🐉 화학공학
+   글자 크기는 내전 줄(.hist-side 0.82rem)과 같다 - 안 주면 두 탭을 오갈 때
+   글씨가 들쭉날쭉했다 */
+.history-list li.casual-card {
   display: grid;
-  /* 내전 줄(.hist-side 0.82rem)과 같은 글자 크기. 안 주면 본문 크기로
-     커져서 두 탭을 오갈 때 글씨가 들쭉날쭉했다 */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    'head head'
+    'team facts';
+  gap: 0.55rem 1rem;
+  padding: 0.6rem 0.75rem 0.7rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.055);
   font-size: 0.82rem;
-  /* 줄마다 따로 그리는 격자라 auto 칸이 있으면 줄마다 폭이 달라져 열이
-     어긋났다. 이름 칸(1fr) 말고는 전부 고정 폭 */
-  grid-template-columns: 3.6rem minmax(0, 1fr) 6rem 15rem 1.8rem;
-  grid-template-areas: 'meta team score facts del';
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.55rem 0.4rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.casual-row-meta {
-  grid-area: meta;
-  align-self: start;
+.casual-head {
+  grid-area: head;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
 }
+
+/* 또또 · 삭제는 늘 오른쪽 끝 */
+.casual-head-end {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.casual-result {
+  flex: none;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.casual-result.is-win {
+  background: rgba(74, 222, 128, 0.14);
+  color: #86efac;
+}
+
+.casual-result.is-lose {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fca5a5;
+}
+
+/* 이름표 | 값. 이름표 폭을 박아서 판마다 값의 시작점이 같다.
+   값은 길면 줄을 넘기지 않고 말줄임 - 칩처럼 접히면 줄 높이가 판마다 달라진다 */
+.casual-facts {
+  grid-area: facts;
+  align-self: start;
+  display: grid;
+  grid-template-columns: 4.2rem minmax(0, 1fr);
+  gap: 0.3rem 0.5rem;
+  margin: 0;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.casual-facts dt {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #6b7a94;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.casual-facts dt svg {
+  font-size: 0.65rem;
+}
+
+.casual-facts dd {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #cbd5e5;
+  font-weight: 600;
+}
+
+.casual-facts dd .bet-opt-icon {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .history-list li.casual-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'team'
+      'facts';
+  }
+
+  /* 위아래로 쌓이면 왼쪽 선 대신 위쪽 선 */
+  .casual-facts {
+    padding: 0.5rem 0 0;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+}
+
 .casual-row-team {
   grid-area: team;
   display: grid;
@@ -4121,11 +4211,8 @@ li.day-sep em {
   width: 0.95rem;
   height: 0.95rem;
 }
-.casual-row .hist-facts { grid-area: facts; }
-.casual-row .hist-del { grid-area: del; }
 
 .casual-row-score {
-  grid-area: score;
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -4149,16 +4236,6 @@ li.day-sep em {
   font-style: normal;
   font-size: 0.68rem;
   color: #6b7a94;
-}
-
-@media (max-width: 640px) {
-  .casual-row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas:
-      'meta score del'
-      'team team team'
-      'facts facts facts';
-  }
 }
 
 /* 결과 넣는 동안 패널이 흐려지지 않게. 이 패널의 is-locked는 '배팅 마감'
@@ -4409,21 +4486,6 @@ li.day-sep em {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-}
-
-/* 일반 게임 줄의 사실 칸: 고정 폭 안에서 오른쪽 정렬, 넘치면 줄바꿈 */
-.casual-row .hist-facts {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-@media (max-width: 640px) {
-  .casual-row .hist-facts {
-    justify-content: flex-start;
-  }
 }
 
 /* 배당은 늘 칸 오른쪽 끝. 첫 킬 확률(%)이 있는 사람만 배당이 오른쪽에
