@@ -723,7 +723,13 @@ const BetTab = ({
               )}
               {/* 마감 뒤에는 내가 고른 것만이 아니라 전부 보여준다.
                   다른 쪽이 얼마였는지 모르면 내 배당이 좋은 건지도 모른다 */}
-              {odds != null && <em className="bet-odds">{odds.toFixed(2)}배</em>}
+              {/* 마감 뒤 아무도 안 건 칸은 회색으로 죽인다. 전부 금색이면 눈이 갈
+                  데가 없다 - 사람들이 실제로 건 칸만 색이 남는다 */}
+              {odds != null && (
+                <em className={`bet-odds ${!open && !(p?.total_amount > 0) ? 'is-quiet' : ''}`}>
+                  {odds.toFixed(2)}배
+                </em>
+              )}
               {noOdds && (
                 <em className="bet-odds is-none" title="아무도 안 걸어서 배당이 없어요">
                   -

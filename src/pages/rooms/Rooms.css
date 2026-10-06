@@ -4550,3 +4550,9 @@ li.day-sep em {
   color: #5b6b85;
   font-weight: 600;
 }
+
+/* 마감 뒤 아무도 안 건 칸의 배당. 값은 그대로, 색만 뺀다 */
+.bet-odds.is-quiet {
+  color: #6b7a94;
+  font-weight: 600;
+}
