@@ -4544,3 +4544,9 @@ li.day-sep em {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* 마감 뒤 아무도 안 건 쪽 (나눠 갖는 배당이라 계산할 수 없다) */
+.bet-odds.is-none {
+  color: #5b6b85;
+  font-weight: 600;
+}

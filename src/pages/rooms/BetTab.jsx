@@ -173,13 +173,28 @@ const BetTab = ({
   /* 사람마다 퍼블을 얼마나 따는지. 지난 판 기록으로만 센다 */
   const fbRate = firstBloodRates(scrims);
 
-  /* 서버 배당(fb_odds)을 못 받았을 때 같은 식으로 계산한 값 */
+  /* 서버 배당(fb_odds)을 못 받았거나, 마감 뒤 아무도 안 건 사람 칸에 쓰는 값.
+     fb_odds처럼 그 판 이전 기록만 센다 - 끝난 판에서 그 판 결과까지 넣으면
+     그때 배당과 숫자가 달라진다. 판마다 한 번만 센다 */
   const ladder = getGame(gameKey).tiers.map((t) => t.key);
+  const ratesBefore = new Map();
+  const rateBefore = (scrim) => {
+    if (!ratesBefore.has(scrim.id)) {
+      const at = new Date(scrim.played_at).getTime();
+      ratesBefore.set(
+        scrim.id,
+        firstBloodRates(
+          scrims.filter((x) => x.id !== scrim.id && new Date(x.played_at).getTime() <= at)
+        )
+      );
+    }
+    return ratesBefore.get(scrim.id);
+  };
   const scrimFb = (scrim, selection) =>
     scrimFbOdds({
       size: (scrim.team_a?.length || 0) + (scrim.team_b?.length || 0),
       tierIdx: ladder.indexOf(tierOf(selection)),
-      stat: fbRate.get(Number(selection)),
+      stat: rateBefore(scrim).get(Number(selection)),
     });
 
   const poolOf = (scrimId, market, selection) =>
@@ -256,7 +271,10 @@ const BetTab = ({
           lane ? null : tierOf(Number(selection))
         );
       }
-      return fbOdds.get(Number(selection)) ?? scrimFb(scrim, selection);
+      /* fbOdds는 지금 열린 판 것이다. 사람 id로만 찾으니 지난 판에 쓰면
+         그 판이 아니라 지금 판 배당이 붙는다 */
+      return (scrim.id === liveId ? fbOdds.get(Number(selection)) : undefined) ??
+        scrimFb(scrim, selection);
     }
     return KILLS_ODDS;
   };
@@ -638,9 +656,12 @@ const BetTab = ({
         ? Number(p.odds)
         : fixed != null
           ? fixed
-          : market === 'first_blood' && scrim.kind !== 'casual' && scrim.status !== 'settled'
+          : market === 'first_blood' && scrim.kind !== 'casual'
             ? legOdds(scrim, market, selection)
             : null;
+    /* 마감 뒤에는 칸마다 배당을 다 보여준다. 승리팀 · 내전 언더오버는 걸린
+       돈으로 나눠 정하는데, 아무도 안 건 쪽은 0으로 나누는 셈이라 값이 없다 */
+    const noOdds = !open && odds == null;
 
     /* 일반 게임은 정답 하나로 말할 수 없는 경우가 있다 (상대가 땄는데 라인을
        모를 때 - 상대 라인에 건 것만 환불). 결과를 선택지마다 따로 본다 */
@@ -684,7 +705,7 @@ const BetTab = ({
           </span>
           {/* 숫자는 한 덩어리로 묶는다. 퍼블 칸에서는 이 덩어리가 통째로
               이름 아래 줄로 내려가고, 나머지 마켓에서는 오른쪽에 붙는다 */}
-          {(fbShown || odds != null) && (
+          {(fbShown || odds != null || noOdds) && (
             <span className="bet-opt-meta">
               {/* 이름만 보고 고르면 찍기다. 지난 판에서 얼마나 땄는지를 붙인다.
                   실제 횟수를 title에만 숨겨뒀더니, 한 판도 못 딴 사람에게
@@ -703,6 +724,11 @@ const BetTab = ({
               {/* 마감 뒤에는 내가 고른 것만이 아니라 전부 보여준다.
                   다른 쪽이 얼마였는지 모르면 내 배당이 좋은 건지도 모른다 */}
               {odds != null && <em className="bet-odds">{odds.toFixed(2)}배</em>}
+              {noOdds && (
+                <em className="bet-odds is-none" title="아무도 안 걸어서 배당이 없어요">
+                  -
+                </em>
+              )}
             </span>
           )}
         </button>

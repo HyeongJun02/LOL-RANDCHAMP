@@ -333,3 +333,24 @@ test('내전 첫 킬은 고정 배당이라 배팅 중에도 배당이 보인다
   const odds = [...el.querySelectorAll('.fb-teams .bet-odds')].map((n) => n.textContent);
   expect(odds).toEqual(['2.55배', '2.55배', '2.55배']);
 });
+
+test('마감 뒤에는 아무도 안 건 칸도 배당이 나오고, 계산이 안 되는 칸은 -', async () => {
+  const el = await render({
+    active: casual({
+      kind: 'scrim',
+      status: 'locked',
+      team_a: [1, 2],
+      team_b: [3],
+      lanes: {},
+      kill_line: 53.5,
+    }),
+  });
+  const oddsOf = (text) => optionFor(el, text)?.querySelector('.bet-odds')?.textContent;
+  /* 승리팀은 걸린 돈으로 나눠 정한다. 아무도 안 걸었으면 0으로 나누는 셈 */
+  expect(oddsOf('1팀 승리')).toBe('-');
+  expect(oddsOf('2팀 승리')).toBe('-');
+  /* 첫 킬은 고정 배당이라 그대로 */
+  expect(oddsOf('철수')).toBe('2.55배');
+  /* 언더오버도 몰린 만큼 정해지는 배당이라 걸린 게 없으면 - */
+  expect(oddsOf('오버')).toBe('-');
+});
