@@ -337,9 +337,10 @@
   white-space: nowrap;
 }
 
+/* 권한 없는 랭킹(TFT · 발로)은 안 그린다. 남은 만큼 폭을 나눠 갖는다 */
 .riot-rank-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
 }
 
@@ -1098,10 +1099,6 @@
 
 @media (max-width: 900px) {
   .riot-cols {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .riot-rank-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

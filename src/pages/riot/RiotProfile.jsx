@@ -11,6 +11,7 @@ import {
   clock,
   CHALLENGE_CATEGORIES,
   tierName,
+  denied,
 } from '../../rules/riot';
 import RiotPart from './RiotPart';
 import MatchList from './MatchList';
@@ -158,6 +159,7 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
             )}
           </section>
 
+          {!denied(d.mastery) && (
           <section className="riot-panel">
             <h2 className="riot-h">
               <FaStar /> 챔피언 숙련도
@@ -181,6 +183,9 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
             </RiotPart>
           </section>
 
+          )}
+
+          {!denied(d.challenges) && (
           <section className="riot-panel">
             <h2 className="riot-h">
               <FaMedal /> 도전 과제
@@ -223,18 +228,24 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
               )}
             </RiotPart>
           </section>
+          )}
         </aside>
 
         <section className="riot-panel">
-          <div className="seg-tabs riot-tabs">
-            <button className={`seg-tab ${tab === 'lol' ? 'active' : ''}`} onClick={() => setTab('lol')}>
-              롤 최근 매치
-            </button>
-            <button className={`seg-tab ${tab === 'tft' ? 'active' : ''}`} onClick={() => setTab('tft')}>
-              TFT 최근 매치
-            </button>
-          </div>
-          {tab === 'lol' ? (
+          {/* TFT 권한이 없는 키면 탭 없이 롤만 */}
+          {denied(d.tftMatches) ? (
+            <h2 className="riot-h">최근 매치</h2>
+          ) : (
+            <div className="seg-tabs riot-tabs">
+              <button className={`seg-tab ${tab === 'lol' ? 'active' : ''}`} onClick={() => setTab('lol')}>
+                롤 최근 매치
+              </button>
+              <button className={`seg-tab ${tab === 'tft' ? 'active' : ''}`} onClick={() => setTab('tft')}>
+                TFT 최근 매치
+              </button>
+            </div>
+          )}
+          {tab === 'lol' || denied(d.tftMatches) ? (
             <RiotPart part={d.matches} empty="최근 매치가 없어요.">
               {(ids) => <MatchList ids={ids} me={me} champs={champs} onSearch={onSearch} />}
             </RiotPart>

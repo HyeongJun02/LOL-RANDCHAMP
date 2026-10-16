@@ -106,6 +106,11 @@ export const winRate = (wins, losses) => {
   return n === 0 ? null : Math.round((wins / n) * 100);
 };
 
+/* 이 키에 권한이 없는 API. 개인 키는 게임마다 따로라(발로란트는 아예 없다)
+   롤 키로는 TFT · 발로가 늘 403이다. 늘 실패할 칸은 그리지 않는다 -
+   나중에 권한이 생기면 저절로 나타난다 */
+export const denied = (part) => part?.error === 401 || part?.error === 403;
+
 /* 서버(api/_riot.js)가 돌려주는 실패 코드 → 화면 말 */
 export const errorText = (code) => {
   if (code === 'no_key') return 'API 키가 아직 설정되지 않았어요.';

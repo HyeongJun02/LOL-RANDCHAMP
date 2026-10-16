@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FaSyncAlt, FaServer, FaCrown, FaGift } from 'react-icons/fa';
 import { riotGet, champIconUrl } from '../../server/riot';
-import { errorText } from '../../rules/riot';
+import { errorText, denied } from '../../rules/riot';
 import { timeAgo } from '../../lib/timeAgo';
 import RiotPart from './RiotPart';
 
@@ -80,7 +80,7 @@ const RiotHome = ({ champs, onSearch }) => {
           </button>
         </h2>
         <div className="riot-status">
-          {STATUS_GAMES.map(([k, label]) => {
+          {STATUS_GAMES.filter(([k]) => !denied(d.status[k])).map(([k, label]) => {
             const part = d.status[k];
             const issues = part.data || [];
             const tone = part.error !== undefined ? 'is-unknown' : issues.length ? 'is-issue' : 'is-ok';
@@ -150,6 +150,7 @@ const RiotHome = ({ champs, onSearch }) => {
           </RiotPart>
         </section>
 
+        {!denied(d.tftChallenger) && (
         <section className="riot-panel">
           <h2 className="riot-h">
             <FaCrown /> TFT 챌린저
@@ -160,7 +161,9 @@ const RiotHome = ({ champs, onSearch }) => {
             )}
           </RiotPart>
         </section>
+        )}
 
+        {!denied(d.valorant.leaderboard) && (
         <section className="riot-panel">
           <h2 className="riot-h">
             <FaCrown /> 발로란트 리더보드
@@ -172,8 +175,10 @@ const RiotHome = ({ champs, onSearch }) => {
             )}
           </RiotPart>
         </section>
+        )}
       </div>
 
+      {!denied(d.valorant.content) && (
       <section className="riot-panel">
         <h2 className="riot-h">발로란트 요원 · 맵</h2>
         <RiotPart part={d.valorant.content}>
@@ -203,6 +208,7 @@ const RiotHome = ({ champs, onSearch }) => {
           )}
         </RiotPart>
       </section>
+      )}
     </div>
   );
 };

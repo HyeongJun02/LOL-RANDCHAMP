@@ -40,7 +40,8 @@ const PROFILE = {
   challenges: { error: 403 },
   matches: { data: [] },
   tftLeagues: { data: [] },
-  tftMatches: { data: [] },
+  /* 롤 키라 TFT는 403 - 탭 없이 롤만 */
+  tftMatches: { error: 403 },
 };
 
 let act;
@@ -75,15 +76,17 @@ beforeEach(() => {
   });
 });
 
-test('첫 화면: 로테이션 · 챌린저가 보이고, 권한 없는 칸만 이유를 적는다', async () => {
+test('첫 화면: 로테이션 · 챌린저가 보이고, 권한 없는 칸(403)은 아예 안 그린다', async () => {
   const el = await render('/info');
   expect(el.textContent).toContain('아리');
   expect(el.textContent).toContain('Faker');
   expect(el.textContent).toContain('1,500 LP');
-  /* TFT는 점검 알림, 발로는 확인 불가 */
+  /* TFT는 점검 알림. 발로 서버 상태 · TFT 챌린저 · 발로 칸은 403이라 없다 */
   expect(el.textContent).toContain('알림 1건');
-  expect(el.textContent).toContain('확인 불가');
-  expect(el.textContent).toContain('이 API 키로는 볼 수 없는 정보예요.');
+  expect(el.textContent).not.toContain('발로란트 리더보드');
+  expect(el.textContent).not.toContain('요원 · 맵');
+  expect(el.textContent).not.toContain('TFT 챌린저');
+  expect(el.textContent).not.toContain('이 API 키로는 볼 수 없는 정보예요.');
   /* 라이엇 API를 쓰면 달아야 하는 문구 */
   expect(el.querySelector('.riot-legal')).not.toBeNull();
 });
@@ -96,6 +99,8 @@ test('주소에 라이엇 ID가 있으면 그 사람 프로필, 최근 검색에
   expect(el.textContent).toContain('레벨 700');
   expect(el.textContent).toContain('챌린저');
   expect(el.textContent).toContain('123,456');
+  expect(el.textContent).not.toContain('TFT 최근 매치');
+  expect(el.textContent).toContain('최근 매치');
   expect(JSON.parse(localStorage.getItem('lrc.riotRecent'))).toEqual(['Faker#KR1']);
 });
 
