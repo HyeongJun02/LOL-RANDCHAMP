@@ -70,8 +70,8 @@ const Teams = ({ m, me, champs, onSearch }) => {
 /* 펼친 칸 안에서 고르는 보기. 두 팀(가볍게)이 먼저, 게임 상세는 눌렀을 때만
    받는다 (타임라인이 커서) */
 const OPEN_VIEWS = [
-  { key: 'teams', label: '두 팀' },
-  { key: 'detail', label: '게임 상세' },
+  { key: 'teams', label: '간단히' },
+  { key: 'detail', label: '상세 정보' },
 ];
 
 const MatchRow = ({ m, me, champs, onSearch }) => {
@@ -110,9 +110,8 @@ const MatchRow = ({ m, me, champs, onSearch }) => {
           <strong>
             {p.k} / <i>{p.d}</i> / {p.a}
           </strong>
-          <em>
-            {kdaRatio(p.k, p.d, p.a)} KDA · 관여 {kp}%
-          </em>
+          <em>{kdaRatio(p.k, p.d, p.a)} KDA</em>
+          <em>킬 관여 {kp}%</em>
         </span>
         <span className="riot-match-stat">
           <em>
@@ -168,6 +167,15 @@ const MatchRow = ({ m, me, champs, onSearch }) => {
 
 const MatchList = ({ puuid, me, champs, onSearch, fresh = false }) => {
   const [tab, setTab] = useState('all');
+  const top = useRef(null);
+
+  /* 큐를 바꾸면 목록 맨 위로. 스크롤이 그대로면 바뀐 목록의 중간부터 보여서
+     무엇이 바뀌었는지 모른다. 이미 목록 위쪽이 보이면 움직이지 않는다 */
+  const pickTab = (key) => {
+    setTab(key);
+    const el = top.current;
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  };
   /* 큐마다 { ids, more, busy, error } */
   const [lists, setLists] = useState({});
   const [matches, setMatches] = useState({});
@@ -218,8 +226,8 @@ const MatchList = ({ puuid, me, champs, onSearch, fresh = false }) => {
   const sum = (f) => mine.reduce((s, x) => s + x.p[f], 0);
 
   return (
-    <div className="riot-matches">
-      {/* 위 '최근 매치 | 게임 상세' 바로 밑에 붙어 같이 따라온다 */}
+    <div className="riot-matches" ref={top}>
+      {/* 스크롤을 따라온다 (TFT 탭이 있으면 그 밑에) */}
       <div className="riot-queue-tabs riot-stick is-sub" role="tablist" aria-label="큐 고르기">
         {MATCH_TABS.map((t) => (
           <button
@@ -228,7 +236,7 @@ const MatchList = ({ puuid, me, champs, onSearch, fresh = false }) => {
             role="tab"
             aria-selected={tab === t.key}
             className={`riot-queue-tab ${tab === t.key ? 'is-on' : ''}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => pickTab(t.key)}
           >
             {t.label}
           </button>

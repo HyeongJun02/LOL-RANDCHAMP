@@ -166,7 +166,7 @@ const click = (node) =>
   });
 const buttonWith = (el, text) => [...el.querySelectorAll('button')].find((b) => b.textContent.includes(text));
 
-test('판을 펼치면 두 팀, 그 칸 안에서 "게임 상세"로 바꾸면 요약 · 종합 · 팀 분석 · 오브젝트 · 타임라인', async () => {
+test('판을 펼치면 간단히(두 팀), 그 칸 안에서 "상세 정보"로 바꾸면 요약 · 종합 · 팀 분석 · 오브젝트 · 타임라인', async () => {
   const el = await render('/info?id=Faker%23KR1');
   /* 큐 탭이 있고 목록이 왔다 */
   expect(buttonWith(el, '솔로 랭크')).toBeDefined();
@@ -174,7 +174,7 @@ test('판을 펼치면 두 팀, 그 칸 안에서 "게임 상세"로 바꾸면 �
   /* 위쪽 탭에는 게임 상세가 없다 - 펼친 칸 안에서 바꾼다 */
   expect([...el.querySelectorAll('.riot-tabs button')].some((b) => b.textContent.includes('게임 상세'))).toBe(false);
   expect(el.querySelector('.riot-match-open .riot-team')).not.toBeNull();
-  await click([...el.querySelectorAll('.riot-open-tabs button')].find((b) => b.textContent === '게임 상세'));
+  await click([...el.querySelectorAll('.riot-open-tabs button')].find((b) => b.textContent === '상세 정보'));
   expect(el.querySelector('.riot-match-open .riot-full')).not.toBeNull();
 
   expect(el.textContent).toContain('16.20 패치');
@@ -193,11 +193,12 @@ test('판을 펼치면 두 팀, 그 칸 안에서 "게임 상세"로 바꾸면 �
   await click(buttonWith(el, '제어 와드'));
   expect([...el.querySelectorAll('.riot-bar-val')].map((n) => n.textContent)).toEqual(['3', '3']);
   /* 킬 관여는 팀 합계가 뜻이 없지만 줄은 자리를 지킨다 (막대가 들썩이지 않게) */
-  await click(buttonWith(el, '킬 관여'));
+  await click([...el.querySelectorAll('.riot-analysis button')].find((b) => b.textContent === '킬 관여'));
   expect(el.querySelector('.riot-share.is-blank')).not.toBeNull();
-  /* 탭은 스크롤을 따라온다: 1단(최근 매치) · 2단(큐 탭) · 3단(펼친 판의 상세 탭) */
-  expect(el.querySelectorAll('.riot-stick')).toHaveLength(3);
-  expect(el.querySelector('.riot-match-open .riot-views.riot-stick.is-sub2')).not.toBeNull();
+  /* 스크롤을 따라오는 건 큐 탭뿐 (TFT 권한이 없어 1단 탭이 없고, 펼친 판의 상세 탭은 안 따라온다) */
+  expect([...el.querySelectorAll('.riot-stick')].map((n) => n.className)).toEqual([
+    'riot-queue-tabs riot-stick is-sub',
+  ]);
 
   /* 오브젝트: 블루팀이 잡은 화염 용은 가운데 줄 왼쪽 */
   await click(buttonWith(el, '오브젝트'));

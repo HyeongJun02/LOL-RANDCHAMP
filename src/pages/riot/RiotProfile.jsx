@@ -295,15 +295,15 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
           )}
         </aside>
 
-        <section className="riot-panel riot-main">
+        <section className={`riot-panel riot-main ${denied(d.tftMatches) ? 'is-solo' : ''}`}>
           {/* 최근 매치 | TFT. 스크롤해도 헤더 밑에 붙어 따라온다.
               게임 상세는 여기 탭이 아니라 판을 펼친 칸 안에서 바꾼다.
               TFT 권한이 없는 키면 탭 없이 제목만 (자리 높이는 같게 - 아래 붙는
               탭들이 이 높이만큼 내려 붙는다) */}
-          <div className="riot-stick">
-            {denied(d.tftMatches) ? (
-              <h2 className="riot-h">최근 매치</h2>
-            ) : (
+          {denied(d.tftMatches) ? (
+            <h2 className="riot-h">최근 매치</h2>
+          ) : (
+            <div className="riot-stick">
               <div className="seg-tabs riot-tabs">
                 <button className={`seg-tab ${tab === 'lol' ? 'active' : ''}`} onClick={() => setTab('lol')}>
                   최근 매치
@@ -312,8 +312,8 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
                   TFT <em className="riot-beta">베타</em>
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* 목록은 탭을 옮겨도 내려두지 않고 숨긴다. 내리면 고른 큐 · 더 받은 판 ·
               펼쳐 둔 판이 전부 날아가서, TFT를 보고 돌아올 때마다 처음부터다 */}

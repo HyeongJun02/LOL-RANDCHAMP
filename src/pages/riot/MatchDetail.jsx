@@ -561,8 +561,7 @@ const MatchDetail = ({ id, ids = [], me, champs, onSearch, onPick }) => {
         ))}
       </div>
 
-      {/* 큐 탭 바로 밑에 붙어 따라온다 (3단) */}
-      <div className="riot-views riot-stick is-sub2" role="tablist" aria-label="상세 보기">
+      <div className="riot-views" role="tablist" aria-label="상세 보기">
         {VIEWS.map((v) => (
           <button
             key={v.key}
