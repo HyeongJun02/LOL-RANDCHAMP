@@ -5,7 +5,6 @@ import {
   FaTrophy,
   FaStar,
   FaRegStar,
-  FaBroadcastTower,
   FaMedal,
 } from 'react-icons/fa';
 import Empty from '../../components/common/Empty';
@@ -15,19 +14,18 @@ import {
   LEAGUE_QUEUES,
   tierText,
   winRate,
-  queueName,
-  clock,
   CHALLENGE_CATEGORIES,
   tierName,
   denied,
   tierIconOf,
+  opggUrl,
 } from '../../rules/riot';
 import RiotPart from './RiotPart';
 import MatchList from './MatchList';
+import LiveGame from './LiveGame';
 import TftList from './TftList';
 import { AliasInput } from './FavPanel';
 import { useFold } from './RiotBits';
-import { useAliasOf } from './useRiotFavs';
 
 /* 라이엇 ID 하나로 보는 것 전부. 서버 함수가 한 번에 모아 준다(api/_riot.js의
    profile). 매치 상세는 목록에서 한 판씩 따로 받는다 - 한 판이 커서 */
@@ -117,43 +115,6 @@ const ChallengeBox = ({ ch }) => {
   );
 };
 
-/* 지금 게임 중. 관전 API는 게임 시작 3분 뒤부터 잡힌다 */
-const LiveGame = ({ g, champs, me }) => {
-  const aliasOf = useAliasOf();
-  const elapsed = g.start ? Math.max(0, (Date.now() - g.start) / 1000) : g.length;
-  return (
-    <section className="riot-panel riot-live">
-      <h2 className="riot-h">
-        <FaBroadcastTower /> 지금 게임 중
-        <em className="riot-h-sub">
-          {queueName(g.queue, g.mode)} · {clock(elapsed)}
-        </em>
-      </h2>
-      <div className="riot-live-teams">
-        {[100, 200].map((team) => (
-          <ul key={team} className={`riot-live-team ${team === 100 ? 'is-blue' : 'is-red'}`}>
-            {g.players
-              .filter((p) => p.team === team)
-              .map((p) => {
-                const c = champs?.byKey.get(p.champId);
-                return (
-                  <li key={p.puuid || p.name} className={p.puuid === me ? 'is-me' : ''}>
-                    {c && <img src={champIconUrl(champs.version, c.id)} alt="" />}
-                    <span className="riot-live-name">
-                      {p.name || '?'}
-                      {aliasOf(p.name) && <em className="riot-alias">{aliasOf(p.name)}</em>}
-                    </span>
-                    <em>{c?.name || ''}</em>
-                  </li>
-                );
-              })}
-          </ul>
-        ))}
-      </div>
-    </section>
-  );
-};
-
 const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(true);
@@ -217,6 +178,17 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
           <h2>
             {d.account.name}
             <em>#{d.account.tag}</em>
+            {/* 나가는 길이라 일부러 작고 흐리게. 새 탭으로 열어 여기는 남는다 */}
+            <a
+              className="riot-opgg"
+              href={opggUrl(d.account)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="OP.GG에서 보기 (새 탭)"
+            >
+              <img src={`${process.env.PUBLIC_URL || ''}/site_icon/opgg_icon.png`} alt="" />
+              OP.GG
+            </a>
           </h2>
           {d.summoner.data && <span className="riot-muted">레벨 {d.summoner.data.level}</span>}
           {/* 즐겨찾기에 있으면 별명을 바로 적을 수 있다 */}
@@ -251,7 +223,7 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
         </button>
       </section>
 
-      {d.live.data && <LiveGame g={d.live.data} champs={champs} me={me} />}
+      {d.live.data && <LiveGame g={d.live.data} champs={champs} me={me} onSearch={onSearch} />}
 
       <div className="riot-cols">
         <aside className="riot-side">

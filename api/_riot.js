@@ -113,9 +113,16 @@ const slimLive = (g) => ({
   length: g.gameLength || 0,
   players: (g.participants || []).map((p) => ({
     puuid: p.puuid,
+    // 'name#tag' 한 덩어리로 온다
     name: p.riotId || '',
     champId: p.championId,
     team: p.teamId,
+    bot: Boolean(p.bot),
+    spells: [p.spell1Id, p.spell2Id],
+    // 핵심 룬 하나와 두 계열(주 · 보조)만. 나머지 룬은 화면에 안 그린다
+    keystone: p.perks?.perkIds?.[0] ?? null,
+    runeStyle: p.perks?.perkStyle ?? null,
+    runeSub: p.perks?.perkSubStyle ?? null,
   })),
   bans: (g.bannedChampions || []).map((b) => ({ champId: b.championId, team: b.teamId })),
 });
@@ -464,6 +471,28 @@ const matchIds = async ({ lol: key }, { puuid, filter = 'all', start = '0' }) =>
   return { maxAge: 2 * MIN, body: { ids: r.data, more: r.data.length === PAGE } };
 };
 
+/* 지금 게임 중인 열 명의 랭크. 관전 화면에서 따로 부른다 (프로필을 안 늦추게).
+   솔로 랭크가 없으면 자유 랭크, 둘 다 없으면 null */
+const liveRanks = async ({ lol: key }, { puuids = '' }) => {
+  const list = String(puuids).split(',').filter(Boolean);
+  if (list.length === 0 || list.length > 10 || !list.every((p) => PUUID_RE.test(p))) {
+    return { status: 400, body: { error: 'bad_id' } };
+  }
+  const rows = await Promise.all(
+    list.map((p) => call(key, `${PLATFORM}/lol/league/v4/entries/by-puuid/${p}`))
+  );
+  const pick = (entries = []) =>
+    entries.find((e) => e.queueType === 'RANKED_SOLO_5x5') ||
+    entries.find((e) => e.queueType === 'RANKED_FLEX_SR') ||
+    null;
+  const body = {};
+  list.forEach((p, i) => {
+    const e = rows[i].data ? pick(rows[i].data) : null;
+    body[p] = e ? slimLeague([e])[0] : null;
+  });
+  return { maxAge: 5 * MIN, body };
+};
+
 const match = async ({ lol: key }, { id }) => {
   if (!validMatchId(id)) return { status: 400, body: { error: 'bad_id' } };
   const r = await call(key, `${REGION}/lol/match/v5/matches/${id}`);
@@ -487,7 +516,7 @@ const tftMatch = async ({ tft: key }, { id }) => {
 };
 
 /* 화면이 붙이는 v=(응답 모양 버전)는 캐시를 가르는 데만 쓰고 여기서는 안 본다 */
-const FNS = { home, profile, matchIds, match, timeline, tftMatch };
+const FNS = { home, profile, matchIds, match, timeline, tftMatch, liveRanks };
 
 /* 어느 서버에서 부르든 같은 모양으로 돌려준다: { status, headers, body }
    keys: { lol, tft }. 키 하나(문자열)를 주면 둘 다 그 키로 본다.

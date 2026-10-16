@@ -8,7 +8,7 @@ const cache = new Map();
 /* 서버 응답 모양(api/_riot.js)을 바꾸면 이 숫자를 올린다. 주소가 달라져서
    브라우저 · CDN에 남은 옛 응답(하루 캐시)을 안 쓴다. 안 올리면 새 칸이 없는
    옛 매치가 와서 화면이 죽는다 (받은 피해 칸이 그랬다) */
-const API_VERSION = '2';
+const API_VERSION = '3';
 
 /* 한 번에 나가는 요청 수. 매치 20판을 한꺼번에 부르면 라이엇 한도(1초 20번)에
    바로 닿는다 - 서버 캐시를 못 탄 판이 많을수록. 다섯씩 줄 세운다 */
@@ -71,3 +71,36 @@ export const profileIconUrl = (version, icon) =>
   version && icon != null ? `${DDRAGON}/${version}/img/profileicon/${icon}.png` : null;
 export const itemIconUrl = (version, item) =>
   version && item ? `${DDRAGON}/${version}/img/item/${item}.png` : null;
+
+/* 소환사 주문 · 룬 이름과 그림. 관전 화면에서만 쓰여서 그때 한 번 받는다 */
+let gameData = null;
+export const loadGameData = (version) => {
+  if (!version) return Promise.resolve({ spells: new Map(), runes: new Map() });
+  if (!gameData) {
+    gameData = Promise.all([
+      fetch(`${DDRAGON}/${version}/data/ko_KR/summoner.json`).then((r) => r.json()),
+      fetch(`${DDRAGON}/${version}/data/ko_KR/runesReforged.json`).then((r) => r.json()),
+    ])
+      .then(([sum, runes]) => {
+        const spells = new Map(
+          Object.values(sum.data || {}).map((x) => [
+            Number(x.key),
+            { name: x.name, icon: `${DDRAGON}/${version}/img/spell/${x.image.full}` },
+          ])
+        );
+        const byId = new Map();
+        (runes || []).forEach((style) => {
+          byId.set(style.id, { name: style.name, icon: `${DDRAGON}/img/${style.icon}` });
+          style.slots.forEach((slot) =>
+            slot.runes.forEach((r) => byId.set(r.id, { name: r.name, icon: `${DDRAGON}/img/${r.icon}` }))
+          );
+        });
+        return { spells, runes: byId };
+      })
+      .catch(() => {
+        gameData = null;
+        return { spells: new Map(), runes: new Map() };
+      });
+  }
+  return gameData;
+};

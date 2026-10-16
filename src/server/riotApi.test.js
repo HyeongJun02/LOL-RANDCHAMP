@@ -285,3 +285,49 @@ test('TFT 키가 따로 있으면 TFT 요청은 그 키로, puuid도 그 키로 
     });
   calls.filter(([u]) => u.includes('/lol/')).forEach(([, k]) => expect(k).toBe('LOL'));
 });
+
+test('관전: 주문 · 룬 · 라이엇 ID를 추린다, 열 명 랭크는 따로 (솔로 없으면 자유)', async () => {
+  global.fetch = jest.fn((url) => {
+    if (url.includes('/accounts/by-riot-id/')) return reply(200, { puuid: PUUID, gameName: 'A', tagLine: 'KR1' });
+    if (url.includes('/spectator/')) {
+      return reply(200, {
+        gameQueueConfigId: 420,
+        gameStartTime: 1,
+        participants: [
+          {
+            puuid: PUUID,
+            teamId: 100,
+            championId: 202,
+            riotId: 'A#KR1',
+            spell1Id: 21,
+            spell2Id: 4,
+            perks: { perkIds: [8021, 1, 2], perkStyle: 8000, perkSubStyle: 8300 },
+          },
+        ],
+      });
+    }
+    return reply(200, []);
+  });
+  const prof = await riot.run({ fn: 'profile', name: 'A', tag: 'KR1' }, 'KEY');
+  expect(prof.body.live.data.players[0]).toMatchObject({
+    name: 'A#KR1',
+    spells: [21, 4],
+    keystone: 8021,
+    runeStyle: 8000,
+    runeSub: 8300,
+  });
+
+  const other = PUUID.replace(/^Q/, 'Z');
+  global.fetch = jest.fn((url) =>
+    reply(
+      200,
+      url.includes(PUUID)
+        ? [{ queueType: 'RANKED_FLEX_SR', tier: 'GOLD', rank: 'II', leaguePoints: 40, wins: 3, losses: 2 }]
+        : []
+    )
+  );
+  const ranks = await riot.run({ fn: 'liveRanks', puuids: `${PUUID},${other}` }, 'KEY');
+  expect(ranks.body[PUUID]).toMatchObject({ queue: 'RANKED_FLEX_SR', tier: 'GOLD', rank: 'II', lp: 40 });
+  expect(ranks.body[other]).toBeNull();
+  expect((await riot.run({ fn: 'liveRanks', puuids: 'x/../y' }, 'KEY')).status).toBe(400);
+});

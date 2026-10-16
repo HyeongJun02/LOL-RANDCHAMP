@@ -294,3 +294,37 @@ test('즐겨찾기 편집: 순서 바꾸기 · 빼기', async () => {
   await click(el.querySelector('[aria-label="A#KR1 즐겨찾기에서 빼기"]'));
   expect(mockFavs.map((f) => f.id)).toEqual(['B#KR1']);
 });
+
+test('지금 게임 중: 이름을 누르면 그 사람, 열 명 랭크 · 팀 평균 · 주문/룬 자리', async () => {
+  const LIVE = {
+    queue: 420,
+    mode: 'CLASSIC',
+    start: Date.now() - 600000,
+    length: 0,
+    bans: [{ champId: 103, team: 200 }],
+    players: [
+      { puuid: 'P1', name: 'Faker#KR1', champId: 103, team: 100, spells: [4, 14], keystone: 8112, runeStyle: 8100, runeSub: 8300 },
+      { puuid: 'P2', name: 'Chovy#KR1', champId: 103, team: 200, spells: [4, 12], keystone: 8010, runeStyle: 8000, runeSub: 8400 },
+    ],
+  };
+  BODIES.profile = { ...PROFILE, live: { data: LIVE } };
+  BODIES.liveRanks = {
+    P1: { queue: 'RANKED_SOLO_5x5', tier: 'CHALLENGER', rank: 'I', lp: 1500, wins: 60, losses: 40 },
+    P2: null,
+  };
+  const el = await render('/info?id=Faker%23KR1');
+  const rows = [...el.querySelectorAll('.riot-live-team li')];
+  expect(rows).toHaveLength(2);
+  expect(rows[0].textContent).toContain('챌린저');
+  expect(rows[0].textContent).toContain('1500LP · 60%');
+  expect(rows[1].textContent).toContain('언랭');
+  expect(el.querySelector('.riot-live-head').textContent).toContain('평균 챌린저');
+  /* 경과 시간 10분 */
+  expect(el.querySelector('.riot-live-clock').textContent).toMatch(/^10:0\d$/);
+  /* 이름을 누르면 그 사람 전적으로 */
+  global.fetch.mockClear();
+  await click(rows[1].querySelector('.riot-link'));
+  expect(global.fetch.mock.calls.some(([u]) => u.includes('fn=profile') && u.includes('name=Chovy'))).toBe(true);
+  BODIES.profile = PROFILE;
+  delete BODIES.liveRanks;
+});

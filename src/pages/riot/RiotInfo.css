@@ -443,10 +443,9 @@
 .riot-live-team {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  margin: 0;
-  padding: 0.5rem;
-  list-style: none;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.55rem 0.6rem;
   border-radius: 10px;
   border-left: 3px solid var(--riot-blue);
   background: rgba(255, 255, 255, 0.025);
@@ -456,36 +455,167 @@
   border-left-color: var(--riot-red);
 }
 
+.riot-live-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  color: #a8b4c8;
+}
+
+.riot-live-head strong {
+  font-size: 0.85rem;
+  color: #e6ecf7;
+}
+
+.riot-live-bans {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: auto;
+  color: #6b7a94;
+}
+
+.riot-live-bans img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  filter: grayscale(0.85);
+  opacity: 0.8;
+}
+
+.riot-live-team ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 한 줄: 챔피언 | 주문 · 룬(2×2) | 이름 · 챔피언 이름 | 티어 그림 · 티어 · LP/승률 */
 .riot-live-team li {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 34px 38px minmax(0, 1fr) 8.6rem;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  padding: 0.25rem;
+  border-radius: 8px;
   font-size: 0.8rem;
   color: #cbd5e5;
 }
 
-.riot-live-team img {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-}
-
 .riot-live-team li.is-me {
-  color: var(--gg-gold-light);
-  font-weight: 700;
+  background: rgba(200, 170, 110, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.3);
 }
 
-.riot-live-name {
+.riot-live-champ img {
+  display: block;
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+}
+
+.riot-live-kit {
+  display: grid;
+  grid-template-columns: repeat(2, 18px);
+  gap: 2px;
+}
+
+.riot-live-kit img,
+.riot-live-kit i {
+  display: block;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.riot-live-who {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.riot-live-who .riot-link {
+  font-weight: 600;
+  color: #e6ecf7;
+}
+
+.riot-live-team li.is-me .riot-live-who .riot-link {
+  color: var(--gg-gold-light);
+}
+
+.riot-live-sub {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #6b7a94;
 }
 
-.riot-live-team em {
+.riot-live-sub .riot-alias {
+  font-weight: 700;
+}
+
+.riot-live-rank {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.riot-live-rank img,
+.riot-live-rank > i {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.riot-live-rank > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.riot-live-rank b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.riot-live-rank em {
   font-style: normal;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
+  color: #8b98ae;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.riot-live-rank small {
+  font-size: inherit;
   color: #6b7a94;
+}
+
+.riot-live-clock {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 좁은 화면: 랭크를 이름 밑으로 */
+@media (max-width: 520px) {
+  .riot-live-team li {
+    grid-template-columns: 34px 38px minmax(0, 1fr);
+  }
+
+  .riot-live-rank {
+    grid-column: 3;
+  }
 }
 
 /* 왼쪽 좁은 칸(랭크 · 숙련도 · 도전 과제) | 오른쪽 넓은 칸(매치) */
@@ -2426,4 +2556,35 @@
 .riot-summary strong {
   font-size: 0.88rem;
   color: #e6ecf7;
+}
+
+/* OP.GG 바로가기. 사이트 밖으로 나가는 길이라 눈에 띄지 않게 */
+.riot-opgg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 5px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #5b6b85;
+  text-decoration: none;
+  vertical-align: middle;
+  opacity: 0.75;
+}
+
+.riot-opgg img {
+  width: 11px;
+  height: 11px;
+  filter: grayscale(1);
+}
+
+.riot-opgg:hover {
+  color: #a8b4c8;
+  opacity: 1;
+}
+
+.riot-opgg:hover img {
+  filter: none;
 }

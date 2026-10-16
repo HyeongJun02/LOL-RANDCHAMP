@@ -13,6 +13,10 @@ export const parseRiotId = (text) => {
 
 export const riotIdText = ({ name, tag }) => `${name}#${tag}`;
 
+/* OP.GG 전적 주소. '이름#태그'를 '이름-태그'로 */
+export const opggUrl = ({ name, tag }) =>
+  `https://op.gg/ko/lol/summoners/kr/${encodeURIComponent(`${name}-${tag}`)}`;
+
 /* 자주 보는 큐. 번호는 라이엇 queues.json 기준 */
 const QUEUES = {
   0: '사용자 설정',
@@ -248,4 +252,26 @@ export const groupFavs = (list = []) => {
     if (key) byAlias.set(key, g);
   });
   return groups;
+};
+
+/* ---------- 관전: 팀 평균 티어 ---------- */
+
+const LADDER = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'];
+const DIVS = { IV: 0, III: 1, II: 2, I: 3 };
+const ROMAN = ['IV', 'III', 'II', 'I'];
+const APEX = 7; // 마스터부터는 디비전이 없다
+
+/* 아이언 IV = 0, 한 디비전에 1씩. 마스터 이상은 한 칸씩 */
+export const tierScore = (tier, rank) => {
+  const i = LADDER.indexOf(tier);
+  if (i < 0) return null;
+  return i >= APEX ? APEX * 4 + (i - APEX) : i * 4 + (DIVS[rank] ?? 0);
+};
+
+/* 평균 점수 → '골드 II' (반올림) */
+export const tierFromScore = (score) => {
+  if (score == null) return null;
+  const s = Math.round(score);
+  if (s >= APEX * 4) return tierText(LADDER[Math.min(LADDER.length - 1, APEX + (s - APEX * 4))]);
+  return tierText(LADDER[Math.floor(s / 4)], ROMAN[s % 4]);
 };

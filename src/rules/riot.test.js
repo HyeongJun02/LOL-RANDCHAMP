@@ -89,3 +89,22 @@ test('큐 이름: 번호를 모르면 게임 모드를 한국어로', () => {
   expect(queueName(99999, 'CHERRY')).toBe('아레나');
   expect(queueName(99999, 'NEWMODE')).toBe('NEWMODE');
 });
+
+test('관전 팀 평균 티어', () => {
+  const { tierScore, tierFromScore } = require('./riot');
+  expect(tierScore('IRON', 'IV')).toBe(0);
+  expect(tierScore('GOLD', 'II')).toBe(14);
+  expect(tierScore('MASTER', 'I')).toBe(28);
+  expect(tierScore(null)).toBeNull();
+  /* 골드 II(14)와 플래티넘 IV(16)의 평균 15 → 골드 I */
+  expect(tierFromScore((14 + 16) / 2)).toBe('골드 I');
+  expect(tierFromScore(28)).toBe('마스터');
+  expect(tierFromScore(null)).toBeNull();
+});
+
+test('OP.GG 주소: 이름#태그 → 이름-태그', () => {
+  const { opggUrl } = require('./riot');
+  expect(opggUrl({ name: '행복한 돌잔치', tag: 'KR1' })).toBe(
+    'https://op.gg/ko/lol/summoners/kr/%ED%96%89%EB%B3%B5%ED%95%9C%20%EB%8F%8C%EC%9E%94%EC%B9%98-KR1'
+  );
+});
