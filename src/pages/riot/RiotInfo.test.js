@@ -315,6 +315,8 @@ test('지금 게임 중: 이름을 누르면 그 사람, 열 명 랭크 · 팀 �
   const el = await render('/info?id=Faker%23KR1');
   const rows = [...el.querySelectorAll('.riot-live-team li')];
   expect(rows).toHaveLength(2);
+  /* 다섯이 안 되는 팀이라 라인은 추정하지 않는다 (빈 자리만) */
+  expect(el.querySelector('.riot-live-note')).toBeNull();
   expect(rows[0].textContent).toContain('챌린저');
   expect(rows[0].textContent).toContain('1500LP · 60%');
   expect(rows[1].textContent).toContain('언랭');

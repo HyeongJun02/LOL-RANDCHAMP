@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { FaBroadcastTower } from 'react-icons/fa';
 import { riotGet, champIconUrl, loadGameData } from '../../server/riot';
-import { queueName, clock, tierText, tierIconOf, winRate, tierScore, tierFromScore } from '../../rules/riot';
+import {
+  queueName,
+  clock,
+  tierText,
+  tierIconOf,
+  winRate,
+  tierScore,
+  tierFromScore,
+  positionName,
+} from '../../rules/riot';
+import { guessLiveLanes, LIVE_POS } from '../../rules/riotStats';
+import { lanesOf } from '../../rules/champLanes';
+import { Lane } from './RiotBits';
 import { useAliasOf } from './useRiotFavs';
 
 /* 지금 게임 중. 관전 API는 게임 시작 3분 뒤부터 잡힌다.
@@ -54,6 +66,23 @@ const LiveGame = ({ g, champs, me, onSearch }) => {
     };
   }, [puuids]);
 
+  /* 라인은 관전 API에 없다. 강타 · 챔피언 주 라인으로 추정한다 (rules/riotStats.js).
+     소환사의 협곡 5대5에서만 - 칼바람 · 아레나는 라인이 없다 */
+  const laned = g.mode === 'CLASSIC';
+  const lanes = {};
+  if (laned) {
+    [100, 200].forEach((team) =>
+      Object.assign(
+        lanes,
+        guessLiveLanes(
+          g.players.filter((p) => p.team === team),
+          (p) => lanesOf(champs?.byKey.get(p.champId)?.id)
+        )
+      )
+    );
+  }
+  const laneOrder = (p) => (lanes[p.puuid] ? LIVE_POS.indexOf(lanes[p.puuid]) : 9);
+
   /* 팀 평균 티어. 랭크가 없는 사람은 빼고 센다 */
   const avgTier = (team) => {
     const scores = g.players
@@ -72,6 +101,11 @@ const LiveGame = ({ g, champs, me, onSearch }) => {
         <em className="riot-h-sub">
           {queueName(g.queue, g.mode)} · <time className="riot-live-clock">{clock(elapsed)}</time>
         </em>
+        {Object.keys(lanes).length > 0 && (
+          <em className="riot-live-note" title="관전 정보에는 라인이 없어서 강타와 챔피언 주 라인으로 짐작했어요">
+            라인은 추정
+          </em>
+        )}
       </h2>
       <div className="riot-live-teams">
         {TEAMS.map(([team, label, tone]) => {
@@ -97,6 +131,7 @@ const LiveGame = ({ g, champs, me, onSearch }) => {
               <ul>
                 {g.players
                   .filter((p) => p.team === team)
+                  .sort((a, b) => laneOrder(a) - laneOrder(b))
                   .map((p) => {
                     const c = champs?.byKey.get(p.champId);
                     const r = ranks[p.puuid];
@@ -105,6 +140,12 @@ const LiveGame = ({ g, champs, me, onSearch }) => {
                     const [nick, tag] = p.name.split('#');
                     return (
                       <li key={p.puuid || p.name} className={p.puuid === me ? 'is-me' : ''}>
+                        <span
+                          className="riot-live-lane"
+                          title={lanes[p.puuid] ? `${positionName(lanes[p.puuid])} (추정)` : ''}
+                        >
+                          <Lane pos={lanes[p.puuid]} iconOnly />
+                        </span>
                         <span className="riot-live-champ" title={c?.name || ''}>
                           {c && <img src={champIconUrl(champs.version, c.id)} alt="" />}
                         </span>

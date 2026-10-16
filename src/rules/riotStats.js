@@ -193,3 +193,53 @@ export const summarize = (matches, me) => {
       .sort((x, y) => y.games - x.games || y.wins - x.wins),
   };
 };
+
+/* ---------- 관전: 라인 추정 ----------
+   관전 API는 라인을 주지 않는다. 참가자 순서도 라인 순서가 아니다.
+   강타 = 정글은 거의 확실하고, 나머지는 챔피언의 주 라인(rules/champLanes.js,
+   모델이 분류한 참고 데이터)과 소환사 주문으로 점수를 매겨 다섯 자리에 하나씩 둔다.
+   5! = 120가지라 다 따져 본다. 공식 정보가 아니니 화면에 '추정'이라고 쓴다 */
+
+export const LIVE_POS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'];
+const KO_POS = { 탑: 'TOP', 정글: 'JUNGLE', 미드: 'MIDDLE', 원딜: 'BOTTOM', 서폿: 'UTILITY' };
+const SPELL = { SMITE: 11, TELEPORT: 12, HEAL: 7, EXHAUST: 3 };
+
+/* p: { spells: [id, id] }, lanes: ['탑', '미드'] (주 라인 순) */
+const laneFit = (p, lanes, pos) => {
+  const spells = p.spells || [];
+  const smite = spells.includes(SPELL.SMITE);
+  if (pos === 'JUNGLE') return smite ? 20 : -5 + fitOf(lanes, pos);
+  if (smite) return -20;
+  let s = fitOf(lanes, pos);
+  if (pos === 'TOP' && spells.includes(SPELL.TELEPORT)) s += 1;
+  if (pos === 'BOTTOM' && spells.includes(SPELL.HEAL)) s += 1;
+  if (pos === 'UTILITY' && spells.includes(SPELL.EXHAUST)) s += 1;
+  return s;
+};
+
+/* 첫 번째 주 라인 3점, 두 번째 2점, 세 번째 1점 */
+const fitOf = (lanes = [], pos) => {
+  const i = lanes.map((l) => KO_POS[l]).indexOf(pos);
+  return i < 0 ? 0 : 3 - i;
+};
+
+const permutations = (arr) =>
+  arr.length <= 1
+    ? [arr]
+    : arr.flatMap((x, i) => permutations([...arr.slice(0, i), ...arr.slice(i + 1)]).map((r) => [x, ...r]));
+
+/* team: 한 팀 다섯 명. lanesOf(p) → 그 챔피언의 주 라인 목록.
+   돌려주는 값: puuid(없으면 순번) → 'TOP' 등. 다섯이 아니면 빈 객체 */
+export const guessLiveLanes = (team, lanesOf) => {
+  if (team.length !== LIVE_POS.length) return {};
+  let best = null;
+  permutations(LIVE_POS).forEach((order) => {
+    const score = order.reduce((s, pos, i) => s + laneFit(team[i], lanesOf(team[i]), pos), 0);
+    if (!best || score > best.score) best = { score, order };
+  });
+  const out = {};
+  team.forEach((p, i) => {
+    out[p.puuid || i] = best.order[i];
+  });
+  return out;
+};

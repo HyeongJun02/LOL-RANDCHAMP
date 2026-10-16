@@ -494,10 +494,10 @@
   list-style: none;
 }
 
-/* 한 줄: 챔피언 | 주문 · 룬(2×2) | 이름 · 챔피언 이름 | 티어 그림 · 티어 · LP/승률 */
+/* 한 줄: 라인(추정) | 챔피언 | 주문 · 룬(2×2) | 이름 · 챔피언 이름 | 티어 · LP/승률 */
 .riot-live-team li {
   display: grid;
-  grid-template-columns: 34px 38px minmax(0, 1fr) 8.6rem;
+  grid-template-columns: 16px 34px 38px minmax(0, 1fr) 8.6rem;
   align-items: center;
   gap: 0.45rem;
   padding: 0.25rem;
@@ -610,11 +610,11 @@
 /* 좁은 화면: 랭크를 이름 밑으로 */
 @media (max-width: 520px) {
   .riot-live-team li {
-    grid-template-columns: 34px 38px minmax(0, 1fr);
+    grid-template-columns: 16px 34px 38px minmax(0, 1fr);
   }
 
   .riot-live-rank {
-    grid-column: 3;
+    grid-column: 4;
   }
 }
 
@@ -2587,4 +2587,22 @@
 
 .riot-opgg:hover img {
   filter: none;
+}
+
+/* 관전 라인 · '추정' 표시 */
+.riot-live-lane {
+  display: grid;
+  place-items: center;
+}
+
+.riot-live-note {
+  margin-left: auto;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  font-style: normal;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #8b98ae;
+  cursor: help;
 }

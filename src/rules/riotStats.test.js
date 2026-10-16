@@ -90,3 +90,21 @@ test('최근 판들: 연승 · 평균 · 챔피언 · 같이 한 사람, 다시�
   expect(s.avg.kp).toBe(Math.round(((12 / 20 + 4 / 20 + 4 / 20) / 3) * 100));
   expect(summarize([], me)).toBeNull();
 });
+
+test('관전 라인 추정: 강타는 정글, 나머지는 주 라인 · 주문으로', () => {
+  const { guessLiveLanes } = require('./riotStats');
+  const LANES = { Garen: ['탑'], LeeSin: ['정글'], Ahri: ['미드'], Ezreal: ['원딜'], Thresh: ['서폿'], Lux: ['미드', '서폿'] };
+  const p = (puuid, champ, spells = [4, 14]) => ({ puuid, champ, spells });
+  const lanesOf = (x) => LANES[x.champ] || [];
+
+  /* 순서를 섞어 넣어도 제자리를 찾는다 */
+  const team = [p('t', 'Thresh', [4, 3]), p('a', 'Ahri'), p('g', 'Garen', [4, 12]), p('e', 'Ezreal', [4, 7]), p('l', 'LeeSin', [4, 11])];
+  expect(guessLiveLanes(team, lanesOf)).toEqual({ t: 'UTILITY', a: 'MIDDLE', g: 'TOP', e: 'BOTTOM', l: 'JUNGLE' });
+
+  /* 미드 서폿 둘 다 되는 럭스가 있고 미드에 아리가 있으면 럭스는 서폿 */
+  const team2 = [p('x', 'Lux', [4, 14]), p('a', 'Ahri'), p('g', 'Garen'), p('e', 'Ezreal'), p('l', 'LeeSin', [11, 4])];
+  expect(guessLiveLanes(team2, lanesOf).x).toBe('UTILITY');
+
+  /* 다섯이 아니면(아레나 등) 추정하지 않는다 */
+  expect(guessLiveLanes(team.slice(0, 2), lanesOf)).toEqual({});
+});
