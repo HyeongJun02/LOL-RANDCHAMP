@@ -5,6 +5,12 @@
   command = "npm run build"
   publish = "build"
 
+# 라이엇 API 중계. 아래 '없는 경로는 index.html'보다 먼저 와야 한다
+[[redirects]]
+  from = "/api/riot"
+  to = "/.netlify/functions/riot"
+  status = 200
+
 # 없는 경로는 index.html로. 라우팅은 브라우저의 react-router가 한다.
 [[redirects]]
   from = "/*"

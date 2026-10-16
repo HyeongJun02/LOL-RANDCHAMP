@@ -25,6 +25,7 @@ const RoomList = lazy(() => import('./pages/rooms/RoomList'));
 const Room = lazy(() => import('./pages/rooms/Room'));
 /* 관리자 한 사람 때문에 모든 방문자가 이 화면을 내려받을 이유가 없다 */
 const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
+const RiotInfo = lazy(() => import('./pages/riot/RiotInfo'));
 
 const TOAST_LIMIT = 3;
 
@@ -61,6 +62,7 @@ const App = () => {
               <Route path="/pick" element={<RandomPick />} />
               <Route path="/rooms" element={<RoomList />} />
               <Route path="/rooms/:id" element={<Room />} />
+              <Route path="/info" element={<RiotInfo />} />
               {/* 헤더 nav에는 없다. 관리자만 프로필 메뉴에서 보이고,
                   주소를 직접 쳐도 DB 함수가 거절한다 */}
               <Route path="/admin" element={<AdminPage />} />

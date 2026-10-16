@@ -1,9 +1,9 @@
 import React from 'react';
-import { FaRandom, FaUsers, FaBan, FaClipboardList, FaGem, FaChartBar } from 'react-icons/fa';
+import { FaRandom, FaUsers, FaBan, FaClipboardList, FaGem, FaChartBar, FaSearch } from 'react-icons/fa';
 import { GiPathDistance, GiCardRandom } from 'react-icons/gi';
 
 /* 도구 추가 = 여기 한 항목. 헤더 nav와 홈 카드가 같이 따라온다.
-   category: 'game' 게임 도구 / 'scrim' 내전
+   category: 'game' 게임 도구 / 'scrim' 내전 / 'info' 전적·정보
    `to`가 없으면 아직 준비 중인 도구다 (category는 무시된다). */
 export const TOOLS = [
   {
@@ -57,6 +57,17 @@ export const TOOLS = [
     accent: 'teal',
   },
 
+  {
+    to: '/info',
+    category: 'info',
+    name: '전적 · 정보',
+    title: '전적 · 정보',
+    short: '라이엇 ID로 롤 · TFT 전적 보기',
+    desc: '라이엇 ID로 롤 · TFT 전적과 랭크, 숙련도를 본다. 무료 로테이션과 챌린저 순위도.',
+    icon: <FaSearch />,
+    accent: 'teal',
+  },
+
   /* ---------- 준비 중 ---------- */
   {
     name: '랜덤 밴픽',
@@ -106,5 +117,11 @@ export const TOOL_SECTIONS = [
     label: '게임 도구',
     hint: '정하기 귀찮은 것들을 주사위한테 맡깁니다',
     tools: READY_TOOLS.filter((t) => t.category === 'game'),
+  },
+  {
+    key: 'info',
+    label: '정보',
+    hint: '라이엇 API로 전적과 랭킹을 봅니다',
+    tools: READY_TOOLS.filter((t) => t.category === 'info'),
   },
 ];

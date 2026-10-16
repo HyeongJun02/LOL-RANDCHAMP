@@ -1,0 +1,1157 @@
+/* ---------- 전적 · 정보 ---------- */
+/* 간격 리듬: 패널 사이 1rem · 패널 안 묶음 사이 0.6rem · 목록 줄 사이 0.35rem.
+   여백(margin)은 쓰지 않고 부모의 gap으로만 띄운다 - 위아래 여백이 겹쳐
+   한 곳만 넓어지는 일이 없게 */
+
+.riot-page {
+  --page-width: 1100px;
+  /* 블루팀 · 레드팀. GoldChart.jsx와 같은 값 (색약 검사 통과) */
+  --riot-blue: #5b8def;
+  --riot-red: #e0575b;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* 페이지 머리는 자기 아래 여백이 있어서 여기서는 뺀다 (gap이 맡는다) */
+.riot-page > .page-head {
+  margin-bottom: 0;
+}
+
+.riot-home,
+.riot-profile,
+.riot-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.riot-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.riot-h {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.riot-h svg {
+  font-size: 0.85rem;
+  color: var(--gg-gold);
+}
+
+.riot-h-sub {
+  font-style: normal;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8b98ae;
+}
+
+.riot-refresh {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  margin-left: auto;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 8px;
+  background: transparent;
+  color: #8b98ae;
+  cursor: pointer;
+}
+
+.riot-refresh svg {
+  color: inherit;
+}
+
+.riot-muted {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #6b7a94;
+}
+
+.riot-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8b98ae;
+}
+
+.riot-loading {
+  padding: 2rem 0;
+  text-align: center;
+  color: #8b98ae;
+  font-size: 0.85rem;
+}
+
+.riot-legal {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.6;
+  color: #4f5d74;
+}
+
+/* 이름을 누르면 그 사람을 찾는다 */
+.riot-link {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riot-link:hover {
+  color: var(--gg-gold-light);
+  text-decoration: underline;
+}
+
+.riot-link em {
+  margin-left: 0.15rem;
+  font-style: normal;
+  color: #6b7a94;
+}
+
+.riot-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.riot-tag {
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #a8b4c8;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.riot-tag.is-blue {
+  background: color-mix(in srgb, var(--riot-blue) 16%, transparent);
+  color: #b9cdf7;
+}
+
+.riot-tag.is-red {
+  background: color-mix(in srgb, var(--riot-red) 16%, transparent);
+  color: #f3b5b6;
+}
+
+.riot-tag.is-fb {
+  background: rgba(192, 132, 252, 0.15);
+  color: #dcc2fb;
+}
+
+/* ---------- 검색 ---------- */
+
+.riot-searchbox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.riot-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.35rem 0.35rem 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.riot-search:focus-within {
+  border-color: var(--gg-gold);
+}
+
+.riot-search-icon {
+  flex: none;
+  color: #6b7a94;
+}
+
+.riot-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--gg-text);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.riot-search .primary-btn {
+  flex: none;
+}
+
+.riot-recent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.riot-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.riot-chip button {
+  padding: 0.22rem 0.6rem;
+  border: 0;
+  background: none;
+  color: #cbd5e5;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.riot-chip.is-home {
+  padding: 0.22rem 0.7rem;
+  color: var(--gg-gold-light);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.riot-chip .riot-chip-x {
+  padding: 0.22rem 0.5rem 0.22rem 0.1rem;
+  color: #6b7a94;
+  font-size: 0.6rem;
+}
+
+/* ---------- 오늘의 정보 ---------- */
+
+.riot-status {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.riot-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.riot-status-card strong {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.riot-status-state {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.riot-status-card.is-ok .riot-status-state {
+  color: #86efac;
+}
+
+.riot-status-card.is-issue {
+  border-color: rgba(250, 204, 21, 0.35);
+}
+
+.riot-status-card.is-issue .riot-status-state {
+  color: #facc15;
+}
+
+.riot-status-card.is-unknown .riot-status-state {
+  color: #6b7a94;
+}
+
+.riot-status-card ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.72rem;
+  color: #cbd5e5;
+}
+
+.riot-status-card li em {
+  margin-left: 0.3rem;
+  font-style: normal;
+  color: #6b7a94;
+}
+
+.riot-champ-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 0.5rem;
+}
+
+.riot-champ {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.riot-champ img {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--gg-panel-border);
+}
+
+.riot-champ em {
+  max-width: 100%;
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #cbd5e5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riot-rank-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.riot-rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.riot-rank-list li {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #cbd5e5;
+}
+
+.riot-rank-no {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #8b98ae;
+}
+
+.riot-rank-list li:first-child .riot-rank-no {
+  color: var(--gg-gold);
+}
+
+.riot-rank-val {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--gg-gold-light);
+}
+
+.riot-muted-name {
+  color: #6b7a94;
+}
+
+.riot-val {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.riot-val > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* ---------- 프로필 ---------- */
+
+.riot-head {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.riot-avatar {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  border: 1px solid rgba(200, 170, 110, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.riot-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.riot-head-text h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riot-head-text h2 em {
+  margin-left: 0.25rem;
+  font-style: normal;
+  font-size: 0.85em;
+  color: #6b7a94;
+}
+
+.riot-head .ghost-btn {
+  flex: none;
+}
+
+.riot-live {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.riot-live .riot-h svg {
+  color: #f87171;
+}
+
+.riot-live-teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.riot-live-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.5rem;
+  list-style: none;
+  border-radius: 10px;
+  border-left: 3px solid var(--riot-blue);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.riot-live-team.is-red {
+  border-left-color: var(--riot-red);
+}
+
+.riot-live-team li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #cbd5e5;
+}
+
+.riot-live-team img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.riot-live-team li.is-me {
+  color: var(--gg-gold-light);
+  font-weight: 700;
+}
+
+.riot-live-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riot-live-team em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #6b7a94;
+}
+
+/* 왼쪽 좁은 칸(랭크 · 숙련도 · 도전 과제) | 오른쪽 넓은 칸(매치) */
+.riot-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.riot-leagues {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.riot-league {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--gg-panel-border);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.riot-league strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.riot-league-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  color: #8b98ae;
+}
+
+.riot-league-meta b {
+  color: var(--gg-gold-light);
+}
+
+.riot-hot {
+  font-style: normal;
+  color: #fb923c;
+  font-weight: 700;
+}
+
+.riot-league.tier-challenger strong,
+.riot-league.tier-grandmaster strong,
+.riot-league.tier-master strong {
+  color: #e9d5ff;
+}
+
+.riot-mastery {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.riot-mastery li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #cbd5e5;
+}
+
+.riot-mastery img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.riot-mastery-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riot-mastery em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #8b98ae;
+}
+
+.riot-mastery b {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--gg-gold-light);
+}
+
+.riot-chal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.riot-chal-total {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.riot-chal-total strong {
+  font-size: 0.95rem;
+  color: #f1f5f9;
+}
+
+.riot-chal-total span {
+  font-size: 0.72rem;
+  color: #8b98ae;
+}
+
+.riot-chal-top {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.riot-chal-top li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: #cbd5e5;
+}
+
+.riot-chal-top li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riot-chal-top em {
+  flex: none;
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #8b98ae;
+}
+
+/* ---------- 매치 ---------- */
+
+.riot-tabs {
+  align-self: flex-start;
+}
+
+.riot-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.riot-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  color: #8b98ae;
+}
+
+.riot-summary strong {
+  font-size: 0.88rem;
+  color: #e6ecf7;
+}
+
+.riot-match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 한 판. 왼쪽 띠 색이 결과 (승 파랑 · 패 빨강 · 다시하기 회색).
+   띠와 글자(승리/패배)가 같이 말한다 - 색만으로 말하지 않는다 */
+.riot-match {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 3px solid #475569;
+  background: rgba(255, 255, 255, 0.025);
+  overflow: hidden;
+}
+
+.riot-match.is-win {
+  border-left-color: var(--riot-blue);
+}
+
+.riot-match.is-lose {
+  border-left-color: var(--riot-red);
+}
+
+.riot-match.is-loading {
+  height: 3.6rem;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+}
+
+.riot-match.is-error {
+  padding: 0.7rem 0.8rem;
+}
+
+.riot-match-row,
+.riot-tft-row {
+  display: grid;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.riot-match-row {
+  grid-template-columns: 5.6rem 44px minmax(6rem, 1fr) minmax(6.5rem, 1fr) auto 0.8rem;
+}
+
+.riot-match-row:hover,
+.riot-tft-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.riot-match-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.riot-match-result strong {
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.riot-match.is-win .riot-match-result strong {
+  color: #9db9f5;
+}
+
+.riot-match.is-lose .riot-match-result strong {
+  color: #f0a3a4;
+}
+
+.riot-match.is-remake .riot-match-result strong {
+  color: #8b98ae;
+}
+
+.riot-match-result em,
+.riot-match-kda em,
+.riot-match-stat em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #8b98ae;
+  white-space: nowrap;
+}
+
+.riot-champ-icon {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.riot-champ-icon.is-small {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.riot-champ-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.riot-match-kda,
+.riot-match-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.riot-match-kda strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #e6ecf7;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-match-kda strong i {
+  font-style: normal;
+  color: #f0a3a4;
+}
+
+.riot-match-stat b {
+  font-size: 0.7rem;
+  color: #fb923c;
+}
+
+.riot-items {
+  display: grid;
+  grid-template-columns: repeat(7, 22px);
+  gap: 2px;
+}
+
+.riot-items img,
+.riot-items i {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.riot-items.is-small {
+  grid-template-columns: repeat(7, 16px);
+}
+
+.riot-items.is-small img,
+.riot-items.is-small i {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.riot-chev {
+  font-size: 0.7rem;
+  color: #6b7a94;
+  transition: transform 0.15s ease;
+}
+
+.riot-chev.is-open {
+  transform: rotate(180deg);
+}
+
+/* 펼친 판 */
+.riot-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.riot-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--riot-blue);
+}
+
+.riot-team.is-red {
+  border-left-color: var(--riot-red);
+}
+
+.riot-team-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  color: #8b98ae;
+}
+
+.riot-team-head strong {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.riot-team-head strong em {
+  font-style: normal;
+  color: var(--gg-gold-light);
+}
+
+.riot-team ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.riot-team li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 4.2rem 4.2rem 3.6rem auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #cbd5e5;
+}
+
+.riot-team li.is-me {
+  color: var(--gg-gold-light);
+  font-weight: 700;
+}
+
+.riot-detail-kda,
+.riot-detail-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.riot-detail-num {
+  color: #8b98ae;
+}
+
+.riot-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.riot-gold {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.riot-gold figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: #8b98ae;
+}
+
+.riot-gold figcaption b {
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-gold svg {
+  display: block;
+  width: 100%;
+  height: 120px;
+}
+
+.riot-gold-base {
+  stroke: rgba(148, 163, 184, 0.35);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.riot-gold-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.7rem;
+  color: #8b98ae;
+}
+
+.riot-gold-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.riot-gold-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.riot-gold-legend .riot-muted {
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+/* ---------- TFT ---------- */
+
+.riot-tft.is-first {
+  border-left-color: var(--gg-gold);
+}
+
+.riot-tft.is-top {
+  border-left-color: var(--riot-blue);
+}
+
+.riot-tft-row {
+  grid-template-columns: 2.6rem 5rem minmax(0, 1fr) minmax(0, 1.3fr);
+}
+
+.riot-tft-place {
+  display: flex;
+  align-items: baseline;
+  gap: 0.1rem;
+}
+
+.riot-tft-place strong {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.riot-tft.is-first .riot-tft-place strong {
+  color: var(--gg-gold-light);
+}
+
+.riot-tft.is-bottom .riot-tft-place strong {
+  color: #8b98ae;
+}
+
+.riot-tft-place em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #8b98ae;
+}
+
+/* 특성 등급 (style 1 브론즈 ~ 4 프리즘) */
+.riot-tag.tft-style-2 {
+  color: #d6dde8;
+}
+
+.riot-tag.tft-style-3 {
+  background: rgba(200, 170, 110, 0.16);
+  color: var(--gg-gold-light);
+}
+
+.riot-tag.tft-style-4 {
+  background: rgba(192, 132, 252, 0.18);
+  color: #e9d5ff;
+}
+
+.riot-tft-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  min-width: 0;
+  font-size: 0.72rem;
+  color: #cbd5e5;
+}
+
+.riot-tft-unit em {
+  margin-left: 0.1rem;
+  font-style: normal;
+  font-size: 0.6rem;
+  color: var(--gg-gold);
+}
+
+.riot-tft-all {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.6rem 0.75rem 0.75rem;
+  list-style: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.riot-tft-all li {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 10rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #cbd5e5;
+}
+
+.riot-tft-all li.is-me {
+  color: var(--gg-gold-light);
+  font-weight: 700;
+}
+
+.riot-tft-all .riot-muted {
+  font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 좁은 화면 ---------- */
+
+@media (max-width: 900px) {
+  .riot-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .riot-rank-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .riot-status {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .riot-head {
+    flex-wrap: wrap;
+  }
+
+  /* 결과 · 챔피언 · KDA를 윗줄에, 숫자와 아이템을 아랫줄에 */
+  .riot-match-row {
+    grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 0.8rem;
+    grid-template-areas:
+      'champ result kda chev'
+      'champ stat items items';
+    gap: 0.35rem 0.6rem;
+  }
+
+  .riot-match-row .riot-champ-icon { grid-area: champ; align-self: start; }
+  .riot-match-row .riot-match-result { grid-area: result; }
+  .riot-match-row .riot-match-kda { grid-area: kda; }
+  .riot-match-row .riot-match-stat { grid-area: stat; }
+  .riot-match-row .riot-items { grid-area: items; }
+  .riot-match-row .riot-chev { grid-area: chev; }
+
+  /* 펼친 판의 한 줄: 챔피언 · 이름 · KDA, 숫자는 접는다 */
+  .riot-team li {
+    grid-template-columns: 24px minmax(0, 1fr) 4rem;
+  }
+
+  .riot-team li .riot-detail-num,
+  .riot-team li .riot-items {
+    display: none;
+  }
+
+  .riot-live-teams {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .riot-tft-row {
+    grid-template-columns: 2.6rem minmax(0, 1fr);
+    gap: 0.35rem 0.6rem;
+  }
+
+  .riot-tft-row .riot-tags,
+  .riot-tft-row .riot-tft-units {
+    grid-column: 1 / -1;
+  }
+}

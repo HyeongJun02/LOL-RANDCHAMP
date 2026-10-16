@@ -1,0 +1,193 @@
+/* api/_riot.js - 라이엇 API 중계 서버 함수.
+   라이엇에 실제로 가지 않는다. fetch를 가짜로 바꿔 모양만 본다 */
+const riot = require('../../api/_riot');
+
+const reply = (status, body) =>
+  Promise.resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) });
+
+afterEach(() => {
+  delete global.fetch;
+});
+
+test('정해둔 fn만 받는다', async () => {
+  const out = await riot.run({ fn: 'anything' }, 'KEY');
+  expect(out.status).toBe(400);
+  expect(out.headers['Cache-Control']).toBe('no-store');
+});
+
+test('키가 없으면 503 no_key (라이엇에 가지 않는다)', async () => {
+  global.fetch = jest.fn();
+  const out = await riot.run({ fn: 'home' }, undefined);
+  expect(out.status).toBe(503);
+  expect(out.body.error).toBe('no_key');
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('라이엇 ID · 매치 번호 모양을 확인한다 (주소를 바꾸는 글자는 막는다)', () => {
+  expect(riot.validName('Hide on bush', 'KR1')).toBe(true);
+  expect(riot.validName('한글이름', 'KR1')).toBe(true);
+  expect(riot.validName('a/../b', 'KR1')).toBe(false);
+  expect(riot.validName('name', 'K?R')).toBe(false);
+  expect(riot.validName('', 'KR1')).toBe(false);
+  expect(riot.validName('12345678901234567', 'KR1')).toBe(false);
+  expect(riot.validMatchId('KR_7012345678')).toBe(true);
+  expect(riot.validMatchId('NA1_7012345678')).toBe(false);
+  expect(riot.validMatchId('KR_1/../x')).toBe(false);
+});
+
+test('없는 라이엇 ID는 404, 캐시하지 않는다', async () => {
+  global.fetch = jest.fn(() => reply(404, {}));
+  const out = await riot.run({ fn: 'profile', name: '없는사람', tag: 'KR1' }, 'KEY');
+  expect(out.status).toBe(404);
+  expect(out.headers['Cache-Control']).toBe('no-store');
+  /* 키는 헤더로만 간다. 주소에 실으면 로그에 남는다 */
+  const [url, init] = global.fetch.mock.calls[0];
+  expect(url).not.toContain('KEY');
+  expect(init.headers['X-Riot-Token']).toBe('KEY');
+  expect(url).toContain('/riot/account/v1/accounts/by-riot-id/');
+});
+
+test('프로필: 한 칸이 403이어도 나머지는 온다, 게임 중이 아니면(404) live는 null', async () => {
+  global.fetch = jest.fn((url) => {
+    if (url.includes('/accounts/by-riot-id/')) {
+      return reply(200, { puuid: 'P1', gameName: 'Faker', tagLine: 'KR1' });
+    }
+    if (url.includes('/summoners/by-puuid/')) return reply(200, { summonerLevel: 700, profileIconId: 6 });
+    if (url.includes('/spectator/')) return reply(404, {});
+    if (url.includes('/challenges/')) return reply(403, {});
+    if (url.includes('/lol/match/v5/matches/by-puuid/')) return reply(200, ['KR_1', 'KR_2']);
+    return reply(200, []);
+  });
+  const out = await riot.run({ fn: 'profile', name: 'Faker', tag: 'KR1' }, 'KEY');
+  expect(out.status).toBe(200);
+  expect(out.body.account).toEqual({ puuid: 'P1', name: 'Faker', tag: 'KR1' });
+  expect(out.body.summoner.data).toEqual({ level: 700, icon: 6 });
+  expect(out.body.live).toEqual({ data: null });
+  expect(out.body.challenges).toEqual({ error: 403 });
+  expect(out.body.matches.data).toEqual(['KR_1', 'KR_2']);
+  expect(out.headers['Cache-Control']).toContain('s-maxage=120');
+});
+
+test('라이엇이 막히면(429) 그대로 알린다', async () => {
+  global.fetch = jest.fn(() => reply(429, {}));
+  const out = await riot.run({ fn: 'match', id: 'KR_123456' }, 'KEY');
+  expect(out.status).toBe(429);
+});
+
+test('끝난 매치는 하루 캐시하고, 필요한 칸만 보낸다', async () => {
+  global.fetch = jest.fn(() =>
+    reply(200, {
+      metadata: { matchId: 'KR_123456' },
+      info: {
+        queueId: 420,
+        gameMode: 'CLASSIC',
+        gameDuration: 1800,
+        gameEndTimestamp: 1,
+        participants: [
+          {
+            puuid: 'P1',
+            riotIdGameName: 'Faker',
+            riotIdTagline: 'KR1',
+            teamId: 100,
+            win: true,
+            championName: 'Ahri',
+            kills: 10,
+            deaths: 2,
+            assists: 5,
+            totalMinionsKilled: 200,
+            neutralMinionsKilled: 10,
+            item0: 3089,
+            somethingHuge: 'x'.repeat(1000),
+          },
+        ],
+        teams: [{ teamId: 100, win: true, objectives: { champion: { kills: 30 }, dragon: { kills: 3 } } }],
+      },
+    })
+  );
+  const out = await riot.run({ fn: 'match', id: 'KR_123456' }, 'KEY');
+  expect(out.headers['Cache-Control']).toContain(`s-maxage=${24 * 60 * 60}`);
+  const p = out.body.players[0];
+  expect(p).toMatchObject({ name: 'Faker', tag: 'KR1', champ: 'Ahri', k: 10, d: 2, a: 5, cs: 210 });
+  expect(p.somethingHuge).toBeUndefined();
+  expect(out.body.teams[0]).toMatchObject({ kills: 30, dragon: 3, baron: 0 });
+});
+
+test('타임라인: 골드 차이는 블루팀(1~5번)이 앞서면 +', () => {
+  const t = riot.slimTimeline({
+    info: {
+      participants: [
+        { participantId: 1, puuid: 'A' },
+        { participantId: 6, puuid: 'B' },
+      ],
+      frames: [
+        {
+          participantFrames: { 1: { participantId: 1, totalGold: 500 }, 6: { participantId: 6, totalGold: 500 } },
+          events: [],
+        },
+        {
+          participantFrames: { 1: { participantId: 1, totalGold: 1800 }, 6: { participantId: 6, totalGold: 1200 } },
+          events: [
+            { type: 'CHAMPION_KILL', timestamp: 95000, killerId: 6, victimId: 1 },
+            { type: 'ELITE_MONSTER_KILL', timestamp: 300000, monsterType: 'DRAGON', monsterSubType: 'FIRE_DRAGON', killerTeamId: 100 },
+          ],
+        },
+      ],
+    },
+  });
+  expect(t.goldDiff).toEqual([0, 600]);
+  expect(t.firstKill).toEqual({ t: 95000, killer: 'B', victim: 'A' });
+  expect(t.objectives).toEqual([{ t: 300000, type: 'DRAGON', sub: 'FIRE_DRAGON', team: 100 }]);
+});
+
+test('TFT 매치: 등수 순으로, 켜진 특성만 등급 높은 순', () => {
+  const m = riot.slimTftMatch({
+    metadata: { match_id: 'KR_9' },
+    info: {
+      tft_game_type: 'standard',
+      participants: [
+        { puuid: 'B', placement: 3, traits: [], units: [] },
+        {
+          puuid: 'A',
+          placement: 1,
+          traits: [
+            { name: 'TFT13_Off', tier_current: 0, style: 0, num_units: 1 },
+            { name: 'TFT13_Low', tier_current: 1, style: 1, num_units: 2 },
+            { name: 'TFT13_High', tier_current: 3, style: 3, num_units: 6 },
+          ],
+          units: [{ character_id: 'TFT13_Jinx', tier: 2, itemNames: ['a', 'b'] }],
+        },
+      ],
+    },
+  });
+  expect(m.players.map((p) => p.puuid)).toEqual(['A', 'B']);
+  expect(m.players[0].traits.map((t) => t.name)).toEqual(['TFT13_High', 'TFT13_Low']);
+  expect(m.players[0].units).toEqual([{ id: 'TFT13_Jinx', star: 2, items: 2 }]);
+});
+
+test('서버 상태는 한국어 제목을 고르고, 없으면 영어', () => {
+  const s = riot.slimStatus({
+    maintenances: [{ titles: [{ locale: 'en_US', content: 'Maint' }, { locale: 'ko_KR', content: '점검' }] }],
+    incidents: [{ incident_severity: 'warning', titles: [{ locale: 'en_US', content: 'Login issue' }] }],
+  });
+  expect(s.map((x) => [x.kind, x.title])).toEqual([
+    ['maintenance', '점검'],
+    ['incident', 'Login issue'],
+  ]);
+});
+
+test('도전 과제는 드문 것(상위 % 낮은 것) 다섯 개만, 이름을 붙여서', () => {
+  const config = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ id, localizedNames: { ko_KR: { name: `과제${id}` } } }));
+  const out = riot.slimChallenges(
+    {
+      totalPoints: { level: 'GOLD', current: 100, max: 200, percentile: 0.3 },
+      challenges: [1, 2, 3, 4, 5, 6, 7].map((id) => ({
+        challengeId: id,
+        level: 'GOLD',
+        percentile: id / 10,
+      })),
+    },
+    config
+  );
+  expect(out.top.map((c) => c.name)).toEqual(['과제1', '과제2', '과제3', '과제4', '과제5']);
+  expect(out.total.level).toBe('GOLD');
+});

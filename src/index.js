@@ -31,6 +31,7 @@ import './components/common/RankList.css';
 import './pages/season/Season.css';
 import './pages/rooms/RoomHome.css';
 import './pages/NotFound.css';
+import './pages/riot/RiotInfo.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
