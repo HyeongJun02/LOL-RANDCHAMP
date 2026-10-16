@@ -13,7 +13,7 @@ export const parseRiotId = (text) => {
 
 export const riotIdText = ({ name, tag }) => `${name}#${tag}`;
 
-/* 자주 보는 큐만. 없는 번호는 게임 모드 이름을 그대로 쓴다 */
+/* 자주 보는 큐. 번호는 라이엇 queues.json 기준 */
 const QUEUES = {
   0: '사용자 설정',
   400: '일반',
@@ -21,13 +21,35 @@ const QUEUES = {
   430: '일반',
   440: '자유 랭크',
   450: '칼바람',
+  480: '신속 플레이',
   490: '빠른 대전',
   700: '격전',
+  720: '격전 (칼바람)',
   900: 'URF',
+  1020: '단일 챔피언',
+  1300: '넥서스 돌격',
+  1400: '궁극기 주문서',
   1700: '아레나',
+  1710: '아레나',
   1900: 'URF',
 };
-export const queueName = (queue, mode) => QUEUES[queue] || mode || '기타';
+
+/* 번호를 모르는 큐는 게임 모드로. 원문(SWIFTPLAY · CHERRY)이 그대로 나오던 것 */
+const MODES = {
+  CLASSIC: '일반',
+  ARAM: '칼바람',
+  SWIFTPLAY: '신속 플레이',
+  CHERRY: '아레나',
+  URF: 'URF',
+  ARURF: 'URF',
+  ONEFORALL: '단일 챔피언',
+  NEXUSBLITZ: '넥서스 돌격',
+  ULTBOOK: '궁극기 주문서',
+  CLASH: '격전',
+  TUTORIAL: '튜토리얼',
+  PRACTICETOOL: '연습',
+};
+export const queueName = (queue, mode) => QUEUES[queue] || MODES[mode] || mode || '기타';
 
 export const LEAGUE_QUEUES = {
   RANKED_SOLO_5x5: '솔로 랭크',

@@ -79,3 +79,13 @@ test('즐겨찾기 상한이 DB와 같다', () => {
   expect(sql).toContain(`jsonb_array_length(new.list) > ${FAV_MAX}`);
   expect(sql).toContain(`length(coalesce(x ->> 'alias', '')) > ${ALIAS_MAX}`);
 });
+
+test('큐 이름: 번호를 모르면 게임 모드를 한국어로', () => {
+  const { queueName } = require('./riot');
+  expect(queueName(480, 'SWIFTPLAY')).toBe('신속 플레이');
+  expect(queueName(1700, 'CHERRY')).toBe('아레나');
+  /* 처음 보는 번호여도 모드로 알아본다 */
+  expect(queueName(99999, 'SWIFTPLAY')).toBe('신속 플레이');
+  expect(queueName(99999, 'CHERRY')).toBe('아레나');
+  expect(queueName(99999, 'NEWMODE')).toBe('NEWMODE');
+});
