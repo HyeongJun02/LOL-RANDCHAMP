@@ -128,9 +128,10 @@ const RiotHome = ({ champs, onSearch }) => {
                   );
                 })}
               </div>
-              {r.newbieLevel != null && (
+              {r.newbie.length > 0 && (
                 <p className="riot-muted">
-                  소환사 레벨 {r.newbieLevel} 이하는 따로 {r.newbie.length}개 챔피언을 무료로 씁니다.
+                  {r.newbieLevel != null ? `소환사 레벨 ${r.newbieLevel} 이하` : '신규 플레이어'}는 따로{' '}
+                  {r.newbie.length}개 챔피언을 무료로 씁니다.
                 </p>
               )}
             </>

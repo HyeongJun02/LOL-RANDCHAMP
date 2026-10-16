@@ -294,9 +294,11 @@ const home = async (key) => {
   return {
     maxAge: 10 * MIN,
     body: {
+      // 라이엇이 응답 이름을 바꿨다 (freeChampionIds → sr, …ForNewPlayers → newplayer).
+      // 옛 이름만 읽어서 로테이션이 빈 칸으로 나왔다. 둘 다 읽는다
       rotation: mapPart(rotation, (r) => ({
-        ids: r.freeChampionIds || [],
-        newbie: r.freeChampionIdsForNewPlayers || [],
+        ids: r.sr || r.freeChampionIds || [],
+        newbie: r.newplayer || r.freeChampionIdsForNewPlayers || [],
         newbieLevel: r.maxNewPlayerLevel ?? null,
       })),
       status: {

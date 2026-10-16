@@ -191,3 +191,16 @@ test('도전 과제는 드문 것(상위 % 낮은 것) 다섯 개만, 이름을 
   expect(out.top.map((c) => c.name)).toEqual(['과제1', '과제2', '과제3', '과제4', '과제5']);
   expect(out.total.level).toBe('GOLD');
 });
+
+test('로테이션: 라이엇의 새 응답 이름(sr · newplayer)도 옛 이름도 읽는다', async () => {
+  const rotations = [
+    { sr: [1, 2], newplayer: [3] },
+    { freeChampionIds: [1, 2], freeChampionIdsForNewPlayers: [3], maxNewPlayerLevel: 10 },
+  ];
+  for (const body of rotations) {
+    global.fetch = jest.fn((url) => reply(url.includes('champion-rotations') ? 200 : 403, body));
+    const out = await riot.run({ fn: 'home' }, 'KEY');
+    expect(out.body.rotation.data.ids).toEqual([1, 2]);
+    expect(out.body.rotation.data.newbie).toEqual([3]);
+  }
+});
