@@ -476,6 +476,7 @@ const tftMatch = async (key, { id }) => {
   return { maxAge: DAY, body: slimTftMatch(r.data) };
 };
 
+/* 화면이 붙이는 v=(응답 모양 버전)는 캐시를 가르는 데만 쓰고 여기서는 안 본다 */
 const FNS = { home, profile, matchIds, match, timeline, tftMatch };
 
 /* 어느 서버에서 부르든 같은 모양으로 돌려준다: { status, headers, body } */

@@ -194,5 +194,8 @@ export const durationText = (sec) => {
   return `${Math.floor(s / 60)}분 ${s % 60}초`;
 };
 
+/* 숫자 칸. 값이 없으면(옛 응답 · 라이엇이 안 준 칸) 죽지 않고 '-' */
+export const num = (n) => (typeof n === 'number' ? n.toLocaleString() : '-');
+
 /* 61234 → 61.2k */
 export const kilo = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n || 0));

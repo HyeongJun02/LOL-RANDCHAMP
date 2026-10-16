@@ -21,6 +21,7 @@ import {
   dragonIconOf,
   kdaRatio,
   kilo,
+  num,
 } from '../../rules/riot';
 import GoldChart from './GoldChart';
 import { Champ, Items, Lane, champName } from './RiotBits';
@@ -244,20 +245,20 @@ const PlayerTable = ({ m, team, me, champs, onSearch, maxDmg }) => {
                 </td>
                 <td>
                   <span className="riot-dmg">
-                    {p.dmg.toLocaleString()}
+                    {num(p.dmg)}
                     <i style={{ width: `${maxDmg ? (p.dmg / maxDmg) * 100 : 0}%` }} />
                   </span>
                 </td>
-                <td>{p.taken.toLocaleString()}</td>
-                <td>{p.gold.toLocaleString()}</td>
+                <td>{num(p.taken)}</td>
+                <td>{num(p.gold)}</td>
                 <td>
                   {p.cs}
                   <em className="riot-table-sub">{(p.cs / minutes).toFixed(1)}/분</em>
                 </td>
-                <td>{p.vision}</td>
+                <td>{num(p.vision)}</td>
                 <td title="설치 / 제거 · 제어 와드 구매">
-                  {p.wards}/{p.wardsKilled}
-                  <em className="riot-table-sub">제어 {p.pinks}</em>
+                  {num(p.wards)}/{num(p.wardsKilled)}
+                  <em className="riot-table-sub">제어 {num(p.pinks)}</em>
                 </td>
                 <td>
                   <Items items={p.items} version={champs?.version} small />

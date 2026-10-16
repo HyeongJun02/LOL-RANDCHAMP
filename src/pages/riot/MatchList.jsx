@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FaChevronDown, FaSearchPlus } from 'react-icons/fa';
 import { riotGet } from '../../server/riot';
-import { queueName, clock, kdaRatio, errorText, MATCH_TABS, kilo } from '../../rules/riot';
+import { queueName, clock, kdaRatio, errorText, MATCH_TABS, kilo, num } from '../../rules/riot';
 import { timeAgo } from '../../lib/timeAgo';
 import { Champ, Items, Lane } from './RiotBits';
 
@@ -97,7 +97,7 @@ const MatchRow = ({ m, me, champs, onSearch, onDetail }) => {
           <em>
             CS {p.cs} ({(p.cs / minutes).toFixed(1)})
           </em>
-          <em>피해 {p.dmg.toLocaleString()}</em>
+          <em>피해 {num(p.dmg)}</em>
           {p.multi >= 3 && <b>{['', '', '', '트리플킬', '쿼드라킬', '펜타킬'][p.multi]}</b>}
         </span>
         <Items items={p.items} version={champs?.version} />

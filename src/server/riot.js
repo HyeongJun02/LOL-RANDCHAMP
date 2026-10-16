@@ -5,6 +5,11 @@ import { fetchChampionData } from '../services/api';
 
 const cache = new Map();
 
+/* 서버 응답 모양(api/_riot.js)을 바꾸면 이 숫자를 올린다. 주소가 달라져서
+   브라우저 · CDN에 남은 옛 응답(하루 캐시)을 안 쓴다. 안 올리면 새 칸이 없는
+   옛 매치가 와서 화면이 죽는다 (받은 피해 칸이 그랬다) */
+const API_VERSION = '2';
+
 /* 한 번에 나가는 요청 수. 매치 20판을 한꺼번에 부르면 라이엇 한도(1초 20번)에
    바로 닿는다 - 서버 캐시를 못 탄 판이 많을수록. 다섯씩 줄 세운다 */
 const MAX_INFLIGHT = 5;
@@ -23,7 +28,7 @@ const release = () => {
 /* 끝난 판(match·timeline)은 안 바뀌니 탭을 오가도 다시 안 부른다.
    프로필·첫 화면은 '새로고침'을 누르면 다시 받는다 */
 export const riotGet = async (params, { fresh = false } = {}) => {
-  const qs = new URLSearchParams(params).toString();
+  const qs = new URLSearchParams({ ...params, v: API_VERSION }).toString();
   if (!fresh && cache.has(qs)) return cache.get(qs);
   const p = slot()
     .then(() => fetch(`/api/riot?${qs}`))

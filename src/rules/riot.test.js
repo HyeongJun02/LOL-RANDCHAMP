@@ -45,3 +45,10 @@ test('매치 상세 글자 · 아이콘', () => {
   expect(r.durationText(1884)).toBe('31분 24초');
   expect(r.kilo(61234)).toBe('61.2k');
 });
+
+test('숫자 칸은 값이 없어도 죽지 않는다 (옛 응답)', () => {
+  const { num } = require('./riot');
+  expect(num(30000)).toBe('30,000');
+  expect(num(undefined)).toBe('-');
+  expect(num(null)).toBe('-');
+});
