@@ -331,3 +331,13 @@ test('관전: 주문 · 룬 · 라이엇 ID를 추린다, 열 명 랭크는 따�
   expect(ranks.body[other]).toBeNull();
   expect((await riot.run({ fn: 'liveRanks', puuids: 'x/../y' }, 'KEY')).status).toBe(400);
 });
+
+test('랭크 조회 only=solo면 자유 랭크로 대신하지 않는다', async () => {
+  global.fetch = jest.fn(() =>
+    reply(200, [{ queueType: 'RANKED_FLEX_SR', tier: 'GOLD', rank: 'II', leaguePoints: 1, wins: 1, losses: 1 }])
+  );
+  const any = await riot.run({ fn: 'liveRanks', puuids: PUUID }, 'KEY');
+  expect(any.body[PUUID]).toMatchObject({ queue: 'RANKED_FLEX_SR' });
+  const solo = await riot.run({ fn: 'liveRanks', puuids: PUUID, only: 'solo' }, 'KEY');
+  expect(solo.body[PUUID]).toBeNull();
+});

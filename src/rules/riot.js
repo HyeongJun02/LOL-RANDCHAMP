@@ -83,6 +83,9 @@ export const tierText = (tier, rank) => {
 };
 export const tierName = (tier) => TIERS[tier] || tier || '';
 
+/* 작은 표시용. 마스터 이상은 디비전이 없다 */
+export const isApex = (tier) => ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier);
+
 export const CHALLENGE_CATEGORIES = {
   VETERANCY: '베테랑',
   COLLECTION: '수집',

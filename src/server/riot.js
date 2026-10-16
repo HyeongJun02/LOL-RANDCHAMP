@@ -104,3 +104,18 @@ export const loadGameData = (version) => {
   }
   return gameData;
 };
+
+/* 솔로 랭크를 사람별로 기억해 둔다. 펼친 판마다 열 명을 다시 부르면
+   같이 자주 나오는 사람(나 자신 포함)을 매번 또 묻는다. 모르는 사람만 묻는다.
+   값: puuid → 랭크 줄 또는 null(언랭) */
+const soloRanks = new Map();
+export const loadSoloRanks = async (puuids) => {
+  const missing = [...new Set(puuids)].filter((p) => p && !soloRanks.has(p));
+  for (let i = 0; i < missing.length; i += 10) {
+    const chunk = missing.slice(i, i + 10);
+    // eslint-disable-next-line no-await-in-loop
+    const r = await riotGet({ fn: 'liveRanks', puuids: chunk.join(','), only: 'solo' });
+    if (r.data) chunk.forEach((p) => soloRanks.set(p, r.data[p] ?? null));
+  }
+  return new Map(puuids.map((p) => [p, soloRanks.get(p)]));
+};

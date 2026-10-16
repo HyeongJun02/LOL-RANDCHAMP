@@ -471,9 +471,10 @@ const matchIds = async ({ lol: key }, { puuid, filter = 'all', start = '0' }) =>
   return { maxAge: 2 * MIN, body: { ids: r.data, more: r.data.length === PAGE } };
 };
 
-/* 지금 게임 중인 열 명의 랭크. 관전 화면에서 따로 부른다 (프로필을 안 늦추게).
-   솔로 랭크가 없으면 자유 랭크, 둘 다 없으면 null */
-const liveRanks = async ({ lol: key }, { puuids = '' }) => {
+/* 여러 사람의 랭크. 관전 화면 · 펼친 판에서 따로 부른다 (프로필을 안 늦추게).
+   솔로 랭크가 없으면 자유 랭크, 둘 다 없으면 null.
+   only=solo면 솔로 랭크만 (펼친 판의 티어 표시) */
+const liveRanks = async ({ lol: key }, { puuids = '', only = '' }) => {
   const list = String(puuids).split(',').filter(Boolean);
   if (list.length === 0 || list.length > 10 || !list.every((p) => PUUID_RE.test(p))) {
     return { status: 400, body: { error: 'bad_id' } };
@@ -483,7 +484,7 @@ const liveRanks = async ({ lol: key }, { puuids = '' }) => {
   );
   const pick = (entries = []) =>
     entries.find((e) => e.queueType === 'RANKED_SOLO_5x5') ||
-    entries.find((e) => e.queueType === 'RANKED_FLEX_SR') ||
+    (only === 'solo' ? null : entries.find((e) => e.queueType === 'RANKED_FLEX_SR')) ||
     null;
   const body = {};
   list.forEach((p, i) => {

@@ -1,7 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
-import { riotGet } from '../../server/riot';
-import { queueName, clock, kdaRatio, errorText, MATCH_TABS, kilo, num } from '../../rules/riot';
+import { riotGet, loadSoloRanks } from '../../server/riot';
+import {
+  queueName,
+  clock,
+  kdaRatio,
+  errorText,
+  MATCH_TABS,
+  kilo,
+  num,
+  tierIconOf,
+  tierText,
+  isApex,
+} from '../../rules/riot';
 import { timeAgo } from '../../lib/timeAgo';
 import { Champ, Items, Lane } from './RiotBits';
 import { useAliasOf } from './useRiotFavs';
@@ -33,10 +44,33 @@ const Badge = ({ m, p, ranks }) => {
   );
 };
 
+/* 솔로 랭크 작은 표시: 티어 그림 + 디비전(I~IV). 언랭은 같은 폭의 빈자리 -
+   이름의 시작점이 줄마다 맞게 */
+const MiniRank = ({ r }) =>
+  r === undefined ? (
+    <span className="riot-mini-rank is-loading" aria-hidden="true" />
+  ) : r ? (
+    <span className="riot-mini-rank" title={`솔로 랭크 ${tierText(r.tier, r.rank)} · ${r.lp}LP`}>
+      <img src={tierIconOf(r.tier)} alt={tierText(r.tier, r.rank)} />
+      {!isApex(r.tier) && <b>{r.rank}</b>}
+    </span>
+  ) : (
+    <span className="riot-mini-rank" title="솔로 랭크 없음" />
+  );
+
 /* 펼치면 '간단히'는 두 팀. 더 자세한 건 '상세 정보'가 맡는다 */
 const Teams = ({ m, me, champs, onSearch }) => {
   const aliasOf = useAliasOf();
   const ranks = mvpOf(m);
+  /* 열 명의 솔로 랭크. 이미 아는 사람은 안 묻는다 (server/riot.js) */
+  const [solo, setSolo] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    loadSoloRanks(m.players.map((p) => p.puuid)).then((map) => alive && setSolo(map));
+    return () => {
+      alive = false;
+    };
+  }, [m]);
   return (
   <div className="riot-detail">
     {[100, 200].map((team) => {
@@ -60,9 +94,10 @@ const Teams = ({ m, me, champs, onSearch }) => {
                   <Champ champs={champs} name={p.champ} size="sm" />
                   <button
                     type="button"
-                    className="riot-link"
+                    className="riot-link riot-team-name"
                     onClick={() => p.name && onSearch(`${p.name}#${p.tag}`)}
                   >
+                    <MiniRank r={solo ? solo.get(p.puuid) : undefined} />
                     {p.name || '?'}
                     {aliasOf(`${p.name}#${p.tag}`) && (
                       <em className="riot-alias">{aliasOf(`${p.name}#${p.tag}`)}</em>

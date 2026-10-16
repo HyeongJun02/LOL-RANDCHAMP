@@ -2606,3 +2606,41 @@
   color: #8b98ae;
   cursor: help;
 }
+
+/* 펼친 판 이름 앞 솔로 랭크. 작게, 폭은 늘 같게 (언랭이어도 자리를 비워 둔다) */
+.riot-team-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+}
+
+.riot-mini-rank {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+  width: 2rem;
+}
+
+.riot-mini-rank img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.riot-mini-rank b {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #a8b4c8;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 받아오는 동안은 희미한 자리만 */
+.riot-mini-rank.is-loading::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}

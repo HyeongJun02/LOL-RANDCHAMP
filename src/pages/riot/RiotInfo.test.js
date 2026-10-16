@@ -167,6 +167,7 @@ const click = (node) =>
 const buttonWith = (el, text) => [...el.querySelectorAll('button')].find((b) => b.textContent.includes(text));
 
 test('판을 펼치면 간단히(두 팀), 그 칸 안에서 "상세 정보"로 바꾸면 요약 · 종합 · 팀 분석 · 오브젝트 · 타임라인', async () => {
+  BODIES.liveRanks = { P1: { queue: 'RANKED_SOLO_5x5', tier: 'GOLD', rank: 'II', lp: 10, wins: 1, losses: 1 }, P2: null };
   const el = await render('/info?id=Faker%23KR1');
   /* 큐 탭이 있고 목록이 왔다 */
   expect(buttonWith(el, '솔로 랭크')).toBeDefined();
@@ -181,6 +182,12 @@ test('판을 펼치면 간단히(두 팀), 그 칸 안에서 "상세 정보"로 
   /* 위쪽 탭에는 게임 상세가 없다 - 펼친 칸 안에서 바꾼다 */
   expect([...el.querySelectorAll('.riot-tabs button')].some((b) => b.textContent.includes('게임 상세'))).toBe(false);
   expect(el.querySelector('.riot-match-open .riot-team')).not.toBeNull();
+  /* 이름 앞 솔로 랭크: 티어 그림 + 디비전, 언랭은 빈자리 */
+  const minis = [...el.querySelectorAll('.riot-match-open .riot-mini-rank')];
+  expect(minis).toHaveLength(2);
+  expect(minis[0].querySelector('img').getAttribute('src')).toContain('gold_icon');
+  expect(minis[0].textContent).toBe('II');
+  expect(minis[1].querySelector('img')).toBeNull();
   await click([...el.querySelectorAll('.riot-open-tabs button')].find((b) => b.textContent === '상세 정보'));
   expect(el.querySelector('.riot-match-open .riot-full')).not.toBeNull();
 
