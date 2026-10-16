@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   FaSyncAlt,
   FaUserSlash,
@@ -24,7 +24,6 @@ import {
 } from '../../rules/riot';
 import RiotPart from './RiotPart';
 import MatchList from './MatchList';
-import MatchDetail from './MatchDetail';
 import TftList from './TftList';
 import { AliasInput } from './FavPanel';
 import { useFold } from './RiotBits';
@@ -159,18 +158,8 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(true);
   const [tab, setTab] = useState('lol');
-  /* 게임 상세 탭이 볼 판. 안 고르면 목록의 맨 위 판 */
-  const [detailId, setDetailId] = useState(null);
-  const [listIds, setListIds] = useState([]);
   /* 새로고침하면 매치 목록도 처음부터 다시 받는다 */
   const [rev, setRev] = useState(0);
-  const mainRef = useRef(null);
-
-  const openDetail = useCallback((matchId) => {
-    setDetailId(matchId);
-    setTab('detail');
-    mainRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  }, []);
 
   const load = useCallback(
     (fresh = false) => {
@@ -306,31 +295,28 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
           )}
         </aside>
 
-        <section className="riot-panel riot-main" ref={mainRef}>
-          {/* 최근 매치 | 게임 상세 | TFT (TFT 권한이 없는 키면 TFT 탭은 없다) */}
-          {/* 스크롤해도 헤더 밑에 붙어 따라온다. 긴 목록 끝에서 탭으로 돌아가려고
-              다시 올라갈 일이 없게 */}
+        <section className="riot-panel riot-main">
+          {/* 최근 매치 | TFT. 스크롤해도 헤더 밑에 붙어 따라온다.
+              게임 상세는 여기 탭이 아니라 판을 펼친 칸 안에서 바꾼다.
+              TFT 권한이 없는 키면 탭 없이 제목만 (자리 높이는 같게 - 아래 붙는
+              탭들이 이 높이만큼 내려 붙는다) */}
           <div className="riot-stick">
-          <div className="seg-tabs riot-tabs">
-            <button className={`seg-tab ${tab === 'lol' ? 'active' : ''}`} onClick={() => setTab('lol')}>
-              최근 매치
-            </button>
-            <button
-              className={`seg-tab ${tab === 'detail' ? 'active' : ''}`}
-              onClick={() => setTab('detail')}
-            >
-              게임 상세
-            </button>
-            {!denied(d.tftMatches) && (
-              <button className={`seg-tab ${tab === 'tft' ? 'active' : ''}`} onClick={() => setTab('tft')}>
-                TFT <em className="riot-beta">베타</em>
-              </button>
+            {denied(d.tftMatches) ? (
+              <h2 className="riot-h">최근 매치</h2>
+            ) : (
+              <div className="seg-tabs riot-tabs">
+                <button className={`seg-tab ${tab === 'lol' ? 'active' : ''}`} onClick={() => setTab('lol')}>
+                  최근 매치
+                </button>
+                <button className={`seg-tab ${tab === 'tft' ? 'active' : ''}`} onClick={() => setTab('tft')}>
+                  TFT <em className="riot-beta">베타</em>
+                </button>
+              </div>
             )}
           </div>
-          </div>
 
-          {/* 목록은 탭을 옮겨도 내려두지 않고 숨긴다. 내리면 고른 큐 · 더 받은 판이
-              전부 날아가서, 상세를 보고 돌아올 때마다 처음부터 다시 받는다 */}
+          {/* 목록은 탭을 옮겨도 내려두지 않고 숨긴다. 내리면 고른 큐 · 더 받은 판 ·
+              펼쳐 둔 판이 전부 날아가서, TFT를 보고 돌아올 때마다 처음부터다 */}
           <div hidden={tab !== 'lol'}>
             <MatchList
               key={rev}
@@ -338,21 +324,9 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
               me={me}
               champs={champs}
               onSearch={onSearch}
-              onDetail={openDetail}
-              onLoaded={setListIds}
               fresh={rev > 0}
             />
           </div>
-          {tab === 'detail' && (
-            <MatchDetail
-              id={detailId || listIds[0] || null}
-              ids={listIds}
-              me={me}
-              champs={champs}
-              onSearch={onSearch}
-              onPick={setDetailId}
-            />
-          )}
           {tab === 'tft' && (
             <RiotPart part={d.tftMatches} empty="최근 TFT 매치가 없어요.">
               {/* TFT는 키가 따로라 puuid도 따로다 (api/_riot.js profile) */}

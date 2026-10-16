@@ -166,12 +166,16 @@ const click = (node) =>
   });
 const buttonWith = (el, text) => [...el.querySelectorAll('button')].find((b) => b.textContent.includes(text));
 
-test('판을 펼쳐 "게임 상세 보기"를 누르면 상세: 요약 · 종합 · 팀 분석 · 오브젝트 · 타임라인 탭', async () => {
+test('판을 펼치면 두 팀, 그 칸 안에서 "게임 상세"로 바꾸면 요약 · 종합 · 팀 분석 · 오브젝트 · 타임라인', async () => {
   const el = await render('/info?id=Faker%23KR1');
   /* 큐 탭이 있고 목록이 왔다 */
   expect(buttonWith(el, '솔로 랭크')).toBeDefined();
   await click(el.querySelector('.riot-match-row'));
-  await click(buttonWith(el, '게임 상세 보기'));
+  /* 위쪽 탭에는 게임 상세가 없다 - 펼친 칸 안에서 바꾼다 */
+  expect([...el.querySelectorAll('.riot-tabs button')].some((b) => b.textContent.includes('게임 상세'))).toBe(false);
+  expect(el.querySelector('.riot-match-open .riot-team')).not.toBeNull();
+  await click([...el.querySelectorAll('.riot-open-tabs button')].find((b) => b.textContent === '게임 상세'));
+  expect(el.querySelector('.riot-match-open .riot-full')).not.toBeNull();
 
   expect(el.textContent).toContain('16.20 패치');
   expect(el.textContent).toContain('31분 24초');
@@ -191,10 +195,9 @@ test('판을 펼쳐 "게임 상세 보기"를 누르면 상세: 요약 · 종합
   /* 킬 관여는 팀 합계가 뜻이 없지만 줄은 자리를 지킨다 (막대가 들썩이지 않게) */
   await click(buttonWith(el, '킬 관여'));
   expect(el.querySelector('.riot-share.is-blank')).not.toBeNull();
-  /* 탭은 스크롤을 따라온다: 1단(최근 매치 | 게임 상세) + 2단(상세 탭) */
-  /* 최근 매치 목록은 상세를 보는 동안 내리지 않고 숨겨 두므로 보이는 것만 센다 */
-  expect([...el.querySelectorAll('.riot-stick')].filter((n) => !n.closest('[hidden]'))).toHaveLength(2);
-  expect(el.querySelector('.riot-views.riot-stick.is-sub')).not.toBeNull();
+  /* 탭은 스크롤을 따라온다: 1단(최근 매치) · 2단(큐 탭) · 3단(펼친 판의 상세 탭) */
+  expect(el.querySelectorAll('.riot-stick')).toHaveLength(3);
+  expect(el.querySelector('.riot-match-open .riot-views.riot-stick.is-sub2')).not.toBeNull();
 
   /* 오브젝트: 블루팀이 잡은 화염 용은 가운데 줄 왼쪽 */
   await click(buttonWith(el, '오브젝트'));

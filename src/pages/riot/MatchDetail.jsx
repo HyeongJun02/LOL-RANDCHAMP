@@ -27,7 +27,8 @@ import GoldChart from './GoldChart';
 import { Champ, Items, Lane, champName } from './RiotBits';
 import { useAliasOf } from './useRiotFavs';
 
-/* 게임 상세. 한 판을 정밀하게 - OP.GG의 펼친 판처럼 위에 요약, 아래는 탭.
+/* 게임 상세. 매치 목록에서 판을 펼치고 '게임 상세'를 고르면 그 칸 안에 열린다.
+   한 판을 정밀하게 - OP.GG의 펼친 판처럼 위에 요약, 아래는 탭.
      머리      결과 · 큐 · 패치 · 시작 시각 · 길이 · 이전/다음 판
      요약      두 팀 한 줄씩 (킬 · 골드 · 잡은 용 그림 · 오브젝트 수)
      종합      두 팀 열 명. 한 줄에 한 명 (가로 스크롤 없이)
@@ -560,7 +561,8 @@ const MatchDetail = ({ id, ids = [], me, champs, onSearch, onPick }) => {
         ))}
       </div>
 
-      <div className="riot-views riot-stick is-sub" role="tablist" aria-label="상세 보기">
+      {/* 큐 탭 바로 밑에 붙어 따라온다 (3단) */}
+      <div className="riot-views riot-stick is-sub2" role="tablist" aria-label="상세 보기">
         {VIEWS.map((v) => (
           <button
             key={v.key}

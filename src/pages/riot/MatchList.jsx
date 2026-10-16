@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FaChevronDown, FaSearchPlus } from 'react-icons/fa';
+import { FaChevronDown } from 'react-icons/fa';
 import { riotGet } from '../../server/riot';
 import { queueName, clock, kdaRatio, errorText, MATCH_TABS, kilo, num } from '../../rules/riot';
 import { timeAgo } from '../../lib/timeAgo';
 import { Champ, Items, Lane } from './RiotBits';
 import { useAliasOf } from './useRiotFavs';
+import MatchDetail from './MatchDetail';
 
 /* 롤 최근 매치. 위에서 큐(전체 · 솔로 · 자유 · 일반 · 칼바람)를 고르면 그
    큐의 판만 라이엇이 걸러 준다. 20판씩, '더 보기'로 이어 받는다.
@@ -66,8 +67,16 @@ const Teams = ({ m, me, champs, onSearch }) => {
   );
 };
 
-const MatchRow = ({ m, me, champs, onSearch, onDetail }) => {
+/* 펼친 칸 안에서 고르는 보기. 두 팀(가볍게)이 먼저, 게임 상세는 눌렀을 때만
+   받는다 (타임라인이 커서) */
+const OPEN_VIEWS = [
+  { key: 'teams', label: '두 팀' },
+  { key: 'detail', label: '게임 상세' },
+];
+
+const MatchRow = ({ m, me, champs, onSearch }) => {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState('teams');
   const p = m.players.find((x) => x.puuid === me);
   if (!p) return null;
   const minutes = m.duration / 60 || 1;
@@ -131,20 +140,33 @@ const MatchRow = ({ m, me, champs, onSearch, onDetail }) => {
         <FaChevronDown className={`riot-chev ${open ? 'is-open' : ''}`} aria-hidden="true" />
       </button>
       {open && (
-        <>
-          <Teams m={m} me={me} champs={champs} onSearch={onSearch} />
-          <div className="riot-match-foot">
-            <button type="button" className="ghost-btn" onClick={() => onDetail(m.id)}>
-              <FaSearchPlus /> 게임 상세 보기
-            </button>
+        <div className="riot-match-open">
+          <div className="riot-open-tabs" role="tablist" aria-label="펼쳐 보기">
+            {OPEN_VIEWS.map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                role="tab"
+                aria-selected={view === v.key}
+                className={`riot-queue-tab ${view === v.key ? 'is-on' : ''}`}
+                onClick={() => setView(v.key)}
+              >
+                {v.label}
+              </button>
+            ))}
           </div>
-        </>
+          {view === 'teams' ? (
+            <Teams m={m} me={me} champs={champs} onSearch={onSearch} />
+          ) : (
+            <MatchDetail id={m.id} me={me} champs={champs} onSearch={onSearch} />
+          )}
+        </div>
       )}
     </li>
   );
 };
 
-const MatchList = ({ puuid, me, champs, onSearch, onDetail, onLoaded, fresh = false }) => {
+const MatchList = ({ puuid, me, champs, onSearch, fresh = false }) => {
   const [tab, setTab] = useState('all');
   /* 큐마다 { ids, more, busy, error } */
   const [lists, setLists] = useState({});
@@ -185,11 +207,6 @@ const MatchList = ({ puuid, me, champs, onSearch, onDetail, onLoaded, fresh = fa
   useEffect(() => {
     ids.filter((id) => !asked.current.has(id)).forEach(fetchMatch);
   }, [ids, fetchMatch]);
-
-  /* 게임 상세 탭이 '이전 판 · 다음 판'을 넘길 수 있게 지금 목록을 알려준다 */
-  useEffect(() => {
-    onLoaded?.(ids);
-  }, [ids, onLoaded]);
 
   const list = lists[tab];
   const mine = ids
@@ -251,7 +268,7 @@ const MatchList = ({ puuid, me, champs, onSearch, onDetail, onLoaded, fresh = fa
               );
             }
             return (
-              <MatchRow key={id} m={r.data} me={me} champs={champs} onSearch={onSearch} onDetail={onDetail} />
+              <MatchRow key={id} m={r.data} me={me} champs={champs} onSearch={onSearch} />
             );
           })}
           {list?.busy && ids.length === 0 &&
