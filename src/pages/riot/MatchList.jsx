@@ -202,7 +202,8 @@ const MatchList = ({ puuid, me, champs, onSearch, onDetail, onLoaded, fresh = fa
 
   return (
     <div className="riot-matches">
-      <div className="riot-queue-tabs" role="tablist" aria-label="큐 고르기">
+      {/* 위 '최근 매치 | 게임 상세' 바로 밑에 붙어 같이 따라온다 */}
+      <div className="riot-queue-tabs riot-stick is-sub" role="tablist" aria-label="큐 고르기">
         {MATCH_TABS.map((t) => (
           <button
             key={t.key}

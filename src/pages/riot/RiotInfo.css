@@ -2016,15 +2016,32 @@
 /* 두 팀 몫. 왼쪽 블루 · 오른쪽 레드, 숫자와 %를 바깥에 같이 적는다 */
 .riot-share {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  /* 양옆 숫자 칸을 고정 폭으로. auto였더니 항목을 바꿀 때마다 숫자 길이만큼
+     막대가 좌우로 움직였다 */
+  grid-template-columns: 9.5rem minmax(0, 1fr) 9.5rem;
   align-items: center;
   gap: 0.6rem;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
+.riot-share-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .riot-share-label.is-blue {
   color: #b9cdf7;
+}
+
+.riot-share-label.is-red {
+  text-align: right;
+}
+
+/* 킬 관여: 줄 자리만 지킨다 */
+.riot-share.is-blank {
+  visibility: hidden;
 }
 
 .riot-share-label.is-red {
@@ -2069,7 +2086,8 @@
 
 .riot-bar-list li {
   display: grid;
-  grid-template-columns: 28px minmax(0, 6.5rem) minmax(0, 1fr) 4.2rem;
+  /* 이름 · 막대 · 값 칸 폭을 줄마다, 두 팀 사이에도 똑같이 */
+  grid-template-columns: 28px 6.5rem minmax(0, 1fr) 4.6rem;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.78rem;
@@ -2374,7 +2392,12 @@
   }
 
   .riot-bar-list li {
-    grid-template-columns: 28px minmax(0, 5rem) minmax(0, 1fr) 3.8rem;
+    grid-template-columns: 28px 5rem minmax(0, 1fr) 4rem;
+  }
+
+  .riot-share {
+    grid-template-columns: 7rem minmax(0, 1fr) 7rem;
+    font-size: 0.7rem;
   }
 
   /* 좁으면 시각 칸을 줄이고 카드 글자가 접히게 둔다 */
@@ -2461,4 +2484,40 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-style: normal;
+}
+
+/* ---------- 스크롤 따라오는 탭 ---------- */
+/* 1단: 최근 매치 | 게임 상세 | TFT - 헤더 바로 밑.
+   2단: 큐 탭 · 상세 탭 - 1단 바로 밑 (--riot-stick-h만큼 내려서).
+   패널 안쪽 여백만큼 양옆으로 늘려 바탕을 채운다. 비치면 밑의 줄과 글자가 겹친다 */
+.riot-main {
+  --riot-stick-h: 3.1rem;
+}
+
+.riot-stick {
+  position: sticky;
+  top: var(--header-h, 80px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  min-height: var(--riot-stick-h);
+  margin: -0.5rem -1rem 0;
+  padding: 0.5rem 1rem;
+  background: #0b111d;
+  border-radius: 12px 12px 0 0;
+}
+
+.riot-stick.is-sub {
+  top: calc(var(--header-h, 80px) + var(--riot-stick-h));
+  z-index: 19;
+  min-height: 0;
+  margin: 0 -1rem;
+  padding: 0.45rem 1rem;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* 상세 탭은 밑줄 탭이라 바닥선을 탭 쪽이 그린다 */
+.riot-views.riot-stick.is-sub {
+  padding-bottom: 0;
 }

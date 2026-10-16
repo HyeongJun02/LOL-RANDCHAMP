@@ -308,6 +308,9 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
 
         <section className="riot-panel riot-main" ref={mainRef}>
           {/* 최근 매치 | 게임 상세 | TFT (TFT 권한이 없는 키면 TFT 탭은 없다) */}
+          {/* 스크롤해도 헤더 밑에 붙어 따라온다. 긴 목록 끝에서 탭으로 돌아가려고
+              다시 올라갈 일이 없게 */}
+          <div className="riot-stick">
           <div className="seg-tabs riot-tabs">
             <button className={`seg-tab ${tab === 'lol' ? 'active' : ''}`} onClick={() => setTab('lol')}>
               최근 매치
@@ -323,6 +326,7 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
                 TFT <em className="riot-beta">베타</em>
               </button>
             )}
+          </div>
           </div>
 
           {/* 목록은 탭을 옮겨도 내려두지 않고 숨긴다. 내리면 고른 큐 · 더 받은 판이

@@ -188,6 +188,13 @@ test('판을 펼쳐 "게임 상세 보기"를 누르면 상세: 요약 · 종합
   expect(el.querySelectorAll('.riot-bar-list li')).toHaveLength(2);
   await click(buttonWith(el, '제어 와드'));
   expect([...el.querySelectorAll('.riot-bar-val')].map((n) => n.textContent)).toEqual(['3', '3']);
+  /* 킬 관여는 팀 합계가 뜻이 없지만 줄은 자리를 지킨다 (막대가 들썩이지 않게) */
+  await click(buttonWith(el, '킬 관여'));
+  expect(el.querySelector('.riot-share.is-blank')).not.toBeNull();
+  /* 탭은 스크롤을 따라온다: 1단(최근 매치 | 게임 상세) + 2단(상세 탭) */
+  /* 최근 매치 목록은 상세를 보는 동안 내리지 않고 숨겨 두므로 보이는 것만 센다 */
+  expect([...el.querySelectorAll('.riot-stick')].filter((n) => !n.closest('[hidden]'))).toHaveLength(2);
+  expect(el.querySelector('.riot-views.riot-stick.is-sub')).not.toBeNull();
 
   /* 오브젝트: 블루팀이 잡은 화염 용은 가운데 줄 왼쪽 */
   await click(buttonWith(el, '오브젝트'));

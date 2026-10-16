@@ -251,21 +251,20 @@ const Analysis = ({ m, me, champs }) => {
         ))}
       </div>
 
-      {/* 킬 관여는 팀끼리 더하면 뜻이 없다 (각자 자기 팀 킬로 나눈 값) */}
-      {metric.key !== 'kp' && (
-        <div className="riot-share">
-          <span className="riot-share-label is-blue">
-            블루팀 {num(total(100))} · {blueShare}%
-          </span>
-          <span className="riot-share-bar" aria-hidden="true">
-            <i className="is-blue" style={{ width: `${blueShare}%` }} />
-            <i className="is-red" style={{ width: `${100 - blueShare}%` }} />
-          </span>
-          <span className="riot-share-label is-red">
-            {100 - blueShare}% · {num(total(200))} 레드팀
-          </span>
-        </div>
-      )}
+      {/* 킬 관여는 팀끼리 더하면 뜻이 없다 (각자 자기 팀 킬로 나눈 값).
+          그래도 줄은 남겨 둔다 - 빠지면 아래 막대들이 위로 들썩인다 */}
+      <div className={`riot-share ${metric.key === 'kp' ? 'is-blank' : ''}`} aria-hidden={metric.key === 'kp'}>
+        <span className="riot-share-label is-blue">
+          블루팀 {num(total(100))} · {blueShare}%
+        </span>
+        <span className="riot-share-bar" aria-hidden="true">
+          <i className="is-blue" style={{ width: `${blueShare}%` }} />
+          <i className="is-red" style={{ width: `${100 - blueShare}%` }} />
+        </span>
+        <span className="riot-share-label is-red">
+          {100 - blueShare}% · {num(total(200))} 레드팀
+        </span>
+      </div>
 
       <div className="riot-bars">
         {TEAMS.map((team) => (
@@ -561,7 +560,7 @@ const MatchDetail = ({ id, ids = [], me, champs, onSearch, onPick }) => {
         ))}
       </div>
 
-      <div className="riot-views" role="tablist" aria-label="상세 보기">
+      <div className="riot-views riot-stick is-sub" role="tablist" aria-label="상세 보기">
         {VIEWS.map((v) => (
           <button
             key={v.key}
