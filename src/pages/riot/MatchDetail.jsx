@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaChevronLeft, FaChevronRight, FaClock } from 'react-icons/fa';
+import { FaClock } from 'react-icons/fa';
 import {
   GiCrossedSwords,
   GiStoneTower,
@@ -9,9 +9,8 @@ import {
   GiWorms,
   GiSandSnake,
 } from 'react-icons/gi';
-import { riotGet, champIconUrl } from '../../server/riot';
+import { riotGet } from '../../server/riot';
 import {
-  queueName,
   errorText,
   dateTimeText,
   durationText,
@@ -19,31 +18,25 @@ import {
   monsterName,
   buildingName,
   dragonIconOf,
-  kdaRatio,
-  kilo,
   num,
 } from '../../rules/riot';
 import GoldChart from './GoldChart';
-import { Champ, Items, Lane, champName } from './RiotBits';
-import { useAliasOf } from './useRiotFavs';
+import { Champ, champName } from './RiotBits';
+import { matchInsights } from '../../rules/riotStats';
 
-/* 게임 상세. 매치 목록에서 판을 펼치고 '게임 상세'를 고르면 그 칸 안에 열린다.
-   한 판을 정밀하게 - OP.GG의 펼친 판처럼 위에 요약, 아래는 탭.
-     머리      결과 · 큐 · 패치 · 시작 시각 · 길이 · 이전/다음 판
-     요약      두 팀 한 줄씩 (킬 · 골드 · 잡은 용 그림 · 오브젝트 수)
-     종합      두 팀 열 명. 한 줄에 한 명 (가로 스크롤 없이)
-     팀 분석   항목 하나를 골라 열 명을 막대로 견준다
-     오브젝트  게임 시간 축 위에 '언제 무엇을' + 시각순 목록
-     타임라인  골드 차이 그래프 + 킬 · 오브젝트 · 건물 이벤트
+/* 게임 상세. 매치 목록에서 판을 펼치고 '상세 정보'를 고르면 그 칸 안에 열린다.
+     시각       시작 시각 · 길이 · 패치
+     요약       이 판에서 셈해 낸 몇 줄 (역전승 · 15분 골드 · 처음 가져간 것 · 캐리)
+     팀 분석    항목 하나를 골라 열 명을 막대로 견준다
+     오브젝트   게임 시간 축 위에 '언제 무엇을' + 세로 타임라인
+     타임라인   골드 차이 그래프 + 킬 · 오브젝트 · 건물 이벤트
 
-   한 화면에 다 쌓았더니 세로로 너무 길었다. 탭으로 나눈다.
-   매치와 타임라인은 따로 받는다. 타임라인이 늦거나 실패해도 종합은 먼저 보인다 */
+   결과 · 큐 · 열 명의 KDA와 아이템은 '간단히'와 매치 줄에 있어서 여기 다시 두지 않는다.
+   매치와 타임라인은 따로 받는다. 타임라인이 늦거나 실패해도 팀 분석은 먼저 보인다 */
 
-const TEAM_NAME = { 100: '블루팀', 200: '레드팀' };
 const TEAMS = [100, 200];
 
 const VIEWS = [
-  { key: 'overview', label: '종합' },
   { key: 'analysis', label: '팀 분석' },
   { key: 'objectives', label: '오브젝트' },
   { key: 'timeline', label: '타임라인' },
@@ -78,138 +71,6 @@ const MonsterIcon = ({ monster, sub }) => {
 const killShare = (m, p) => {
   const teamKills = m.teams.find((t) => t.id === p.team)?.kills || 0;
   return teamKills ? Math.round(((p.k + p.a) / teamKills) * 100) : 0;
-};
-
-/* ---------- 요약: 팀 한 줄 ---------- */
-
-const TeamStrip = ({ m, team, dragons }) => {
-  const t = m.teams.find((x) => x.id === team) || {};
-  const gold = m.players.filter((p) => p.team === team).reduce((s, p) => s + (p.gold || 0), 0);
-  const objs = [
-    ['바론', t.baron, <GiSpikedDragonHead key="b" />],
-    ['전령', t.herald, <GiEyeball key="h" />],
-    ['유충', t.grubs, <GiWorms key="g" />],
-    ['아타칸', t.atakhan, <GiSandSnake key="a" />],
-    ['포탑', t.tower, <GiStoneTower key="t" />],
-    ['억제기', t.inhib, <GiCastle key="i" />],
-  ];
-  return (
-    <div className={`riot-strip ${team === 100 ? 'is-blue' : 'is-red'}`}>
-      <span className="riot-strip-name">
-        <strong>{TEAM_NAME[team]}</strong>
-        <em className={t.win ? 'is-win' : 'is-lose'}>{t.win ? '승리' : '패배'}</em>
-      </span>
-      <span className="riot-strip-score">
-        <b>{t.kills}</b>킬 · <b>{kilo(gold)}</b>골드
-      </span>
-      {/* 용은 잡은 순서대로 그 종류의 그림. 숫자만으로는 영혼 각인지 모른다 */}
-      <span className="riot-strip-dragons" aria-label={`용 ${dragons.length}마리`}>
-        {dragons.map((d, i) => (
-          <span key={i} title={`${clockMs(d.t)} ${monsterName('DRAGON', d.sub)}`}>
-            <MonsterIcon monster="DRAGON" sub={d.sub} />
-          </span>
-        ))}
-      </span>
-      <span className="riot-strip-objs">
-        {objs.map(([label, n, icon]) => (
-          <span key={label} className={n ? '' : 'is-zero'} title={label}>
-            {icon}
-            <b>{n ?? 0}</b>
-          </span>
-        ))}
-      </span>
-    </div>
-  );
-};
-
-/* ---------- 종합: 한 줄에 한 명 ---------- */
-
-const PlayerRow = ({ m, p, me, champs, onSearch, maxDmg }) => {
-  const aliasOf = useAliasOf();
-  const alias = aliasOf(`${p.name}#${p.tag}`);
-  const minutes = m.duration / 60 || 1;
-  return (
-    <li className={`riot-prow ${p.puuid === me ? 'is-me' : ''}`}>
-      <span className="riot-prow-champ">
-        <Lane pos={p.pos} iconOnly />
-        <Champ champs={champs} name={p.champ} size="sm" level={p.level} />
-      </span>
-      <span className="riot-prow-name">
-        <button type="button" className="riot-link" onClick={() => p.name && onSearch(`${p.name}#${p.tag}`)}>
-          {p.name || '?'}
-        </button>
-        {alias ? <em className="riot-alias">{alias}</em> : <em className="riot-prow-champname">{champName(champs, p.champ)}</em>}
-      </span>
-      <span className="riot-prow-kda">
-        <strong>
-          {p.k}/<i>{p.d}</i>/{p.a}
-        </strong>
-        <em>
-          {kdaRatio(p.k, p.d, p.a)} · 관여 {killShare(m, p)}%
-        </em>
-      </span>
-      <span className="riot-prow-dmg" title={`가한 피해 ${num(p.dmg)}`}>
-        <b>{num(p.dmg)}</b>
-        <i style={{ width: `${maxDmg ? ((p.dmg || 0) / maxDmg) * 100 : 0}%` }} />
-      </span>
-      <span className="riot-prow-cs">
-        <b>{num(p.cs)}</b>
-        <em>{((p.cs || 0) / minutes).toFixed(1)}/분</em>
-      </span>
-      <span className="riot-prow-ward" title="시야 점수 · 와드 설치/제거">
-        <b>{num(p.vision)}</b>
-        <em>
-          {num(p.wards)}/{num(p.wardsKilled)}
-        </em>
-      </span>
-      <Items items={p.items} version={champs?.version} small />
-    </li>
-  );
-};
-
-const Overview = ({ m, me, champs, onSearch }) => {
-  const maxDmg = Math.max(...m.players.map((p) => p.dmg || 0));
-  return (
-    <div className="riot-overview">
-      {TEAMS.map((team) => {
-        const t = m.teams.find((x) => x.id === team) || {};
-        return (
-          <section key={team} className={`riot-ov-team ${team === 100 ? 'is-blue' : 'is-red'}`}>
-            {/* 머리줄도 선수 줄과 같은 칸 나눔이라 열 이름이 숫자 바로 위에 선다.
-                열 이름은 넓은 화면에서만 (좁으면 칸이 접힌다) */}
-            <header className="riot-ov-head">
-              <strong>
-                {TEAM_NAME[team]} <em className={t.win ? 'is-win' : 'is-lose'}>{t.win ? '승리' : '패배'}</em>
-              </strong>
-              <span className="riot-ov-col">KDA · 관여</span>
-              <span className="riot-ov-col">가한 피해</span>
-              <span className="riot-ov-col">CS</span>
-              <span className="riot-ov-col">시야</span>
-              <span className="riot-ov-col">아이템</span>
-            </header>
-            {t.bans?.length > 0 && (
-                <span className="riot-ov-bans">
-                  밴
-                  {t.bans.map((cid, i) => {
-                    const c = champs?.byKey.get(cid);
-                    return c ? (
-                      <img key={i} src={champIconUrl(champs.version, c.id)} alt={c.name} title={c.name} />
-                    ) : null;
-                  })}
-                </span>
-            )}
-            <ol className="riot-prows">
-              {m.players
-                .filter((p) => p.team === team)
-                .map((p) => (
-                  <PlayerRow key={p.puuid} m={m} p={p} me={me} champs={champs} onSearch={onSearch} maxDmg={maxDmg} />
-                ))}
-            </ol>
-          </section>
-        );
-      })}
-    </div>
-  );
 };
 
 /* ---------- 팀 분석: 항목 하나를 열 명이 막대로 ---------- */
@@ -490,11 +351,10 @@ const Timeline = ({ tl, byPuuid, champs, me }) => {
 
 /* ---------- 본체 ---------- */
 
-const MatchDetail = ({ id, ids = [], me, champs, onSearch, onPick }) => {
+const MatchDetail = ({ id, me, champs }) => {
   const [m, setM] = useState(null);
   const [tl, setTl] = useState(null);
-  /* 판을 넘겨도 보던 탭은 그대로 */
-  const [view, setView] = useState('overview');
+  const [view, setView] = useState('analysis');
 
   useEffect(() => {
     if (!id) return undefined;
@@ -508,58 +368,35 @@ const MatchDetail = ({ id, ids = [], me, champs, onSearch, onPick }) => {
     };
   }, [id]);
 
-  if (!id) return <p className="riot-muted">최근 매치에서 판을 펼치고 '게임 상세 보기'를 눌러 주세요.</p>;
   if (!m) return <div className="riot-loading">불러오는 중…</div>;
   if (m.error !== undefined) return <p className="riot-muted">{errorText(m.error)}</p>;
 
   const d = m.data;
   const byPuuid = new Map(d.players.map((p) => [p.puuid, p]));
-  const meP = byPuuid.get(me);
-  const at = ids.indexOf(id);
   const events = tl?.data?.events || [];
-  const dragonsOf = (team) =>
-    events.filter((e) => e.kind === 'monster' && e.monster === 'DRAGON' && e.team === team);
   const needsTimeline = view === 'objectives' || view === 'timeline';
+  const insights = tl?.data ? matchInsights(d, tl.data, me) : [];
 
   return (
     <div className="riot-full">
-      <div className="riot-full-head">
-        <div className="riot-full-title">
-          {meP && (
-            <span className={`riot-full-result ${meP.win ? 'is-win' : 'is-lose'}`}>
-              {meP.win ? '승리' : '패배'}
-            </span>
-          )}
-          <strong>{queueName(d.queue, d.mode)}</strong>
-          {d.patch && <em>{d.patch} 패치</em>}
-        </div>
-        <div className="riot-full-time">
-          <FaClock aria-hidden="true" />
-          <span>{dateTimeText(d.start)} 시작</span>
-          <span>· {durationText(d.duration)}</span>
-        </div>
-        {ids.length > 1 && at >= 0 && (
-          <div className="riot-full-nav">
-            <button type="button" className="ghost-btn" disabled={at <= 0} onClick={() => onPick(ids[at - 1])}>
-              <FaChevronLeft /> 더 최근 판
-            </button>
-            <button
-              type="button"
-              className="ghost-btn"
-              disabled={at >= ids.length - 1}
-              onClick={() => onPick(ids[at + 1])}
-            >
-              이전 판 <FaChevronRight />
-            </button>
-          </div>
-        )}
+      {/* 결과 · 큐 · 열 명은 '간단히'와 매치 줄에 이미 있다. 여기는 시각과 패치만 */}
+      <div className="riot-full-time">
+        <FaClock aria-hidden="true" />
+        <span>{dateTimeText(d.start)} 시작</span>
+        <span>· {durationText(d.duration)}</span>
+        {d.patch && <span>· {d.patch} 패치</span>}
       </div>
 
-      <div className="riot-strips">
-        {TEAMS.map((team) => (
-          <TeamStrip key={team} m={d} team={team} dragons={dragonsOf(team)} />
-        ))}
-      </div>
+      {/* 이 판에서 셈해 낸 것들 (rules/riotStats.js의 matchInsights) */}
+      {insights.length > 0 && (
+        <ul className="riot-insights">
+          {insights.map((x) => (
+            <li key={x.kind} className={`is-${x.kind}`}>
+              {x.text}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="riot-views" role="tablist" aria-label="상세 보기">
         {VIEWS.map((v) => (
@@ -576,7 +413,6 @@ const MatchDetail = ({ id, ids = [], me, champs, onSearch, onPick }) => {
         ))}
       </div>
 
-      {view === 'overview' && <Overview m={d} me={me} champs={champs} onSearch={onSearch} />}
       {view === 'analysis' && <Analysis m={d} me={me} champs={champs} />}
       {needsTimeline &&
         (!tl ? (

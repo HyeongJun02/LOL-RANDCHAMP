@@ -6,6 +6,8 @@ import { timeAgo } from '../../lib/timeAgo';
 import { Champ, Items, Lane } from './RiotBits';
 import { useAliasOf } from './useRiotFavs';
 import MatchDetail from './MatchDetail';
+import PlayStats from './PlayStats';
+import { mvpOf, contribution, summarize } from '../../rules/riotStats';
 
 /* 롤 최근 매치. 위에서 큐(전체 · 솔로 · 자유 · 일반 · 칼바람)를 고르면 그
    큐의 판만 라이엇이 걸러 준다. 20판씩, '더 보기'로 이어 받는다.
@@ -17,9 +19,24 @@ import MatchDetail from './MatchDetail';
 /* 아직 안 받은 큐의 목록. 렌더마다 새 []를 만들면 아래 effect들이 매번 돈다 */
 const EMPTY = [];
 
-/* 펼치면 두 팀만. 더 자세한 건 '게임 상세' 탭이 맡는다 */
+/* MVP(이긴 팀 1등) · ACE(진 팀 1등). 기여 점수는 rules/riotStats.js */
+const Badge = ({ m, p, ranks }) => {
+  const kind = ranks.mvp === p.puuid ? 'mvp' : ranks.ace === p.puuid ? 'ace' : null;
+  if (!kind) return null;
+  return (
+    <em
+      className={`riot-badge is-${kind}`}
+      title={`기여 점수 ${contribution(m, p)} / 10 (킬 관여 · 피해 · 골드 · 시야 비중)`}
+    >
+      {kind === 'mvp' ? 'MVP' : 'ACE'}
+    </em>
+  );
+};
+
+/* 펼치면 '간단히'는 두 팀. 더 자세한 건 '상세 정보'가 맡는다 */
 const Teams = ({ m, me, champs, onSearch }) => {
   const aliasOf = useAliasOf();
+  const ranks = mvpOf(m);
   return (
   <div className="riot-detail">
     {[100, 200].map((team) => {
@@ -50,6 +67,7 @@ const Teams = ({ m, me, champs, onSearch }) => {
                     {aliasOf(`${p.name}#${p.tag}`) && (
                       <em className="riot-alias">{aliasOf(`${p.name}#${p.tag}`)}</em>
                     )}
+                    <Badge m={m} p={p} ranks={ranks} />
                   </button>
                   <span className="riot-detail-kda">
                     {p.k}/{p.d}/{p.a}
@@ -95,7 +113,10 @@ const MatchRow = ({ m, me, champs, onSearch }) => {
         aria-expanded={open}
       >
         <span className="riot-match-result">
-          <strong>{remake ? '다시하기' : p.win ? '승리' : '패배'}</strong>
+          <strong>
+            {remake ? '다시하기' : p.win ? '승리' : '패배'}
+            <Badge m={m} p={p} ranks={mvpOf(m)} />
+          </strong>
           <em>{queueName(m.queue, m.mode)}</em>
           <em>
             {m.end ? timeAgo(m.end) : ''} · {clock(m.duration)}
@@ -217,13 +238,8 @@ const MatchList = ({ puuid, me, champs, onSearch, fresh = false }) => {
   }, [ids, fetchMatch]);
 
   const list = lists[tab];
-  const mine = ids
-    .map((id) => matches[id]?.data)
-    .filter(Boolean)
-    .map((m) => ({ m, p: m.players.find((x) => x.puuid === me) }))
-    .filter((x) => x.p && x.m.duration >= 300);
-  const wins = mine.filter((x) => x.p.win).length;
-  const sum = (f) => mine.reduce((s, x) => s + x.p[f], 0);
+  /* 받아 둔 판들로 셈한 분석 (rules/riotStats.js) */
+  const stats = summarize(ids.map((id) => matches[id]?.data).filter(Boolean), me);
 
   return (
     <div className="riot-matches" ref={top}>
@@ -243,18 +259,7 @@ const MatchList = ({ puuid, me, champs, onSearch, fresh = false }) => {
         ))}
       </div>
 
-      {mine.length > 0 && (
-        <div className="riot-summary">
-          <strong>
-            {mine.length}판 {wins}승 {mine.length - wins}패
-          </strong>
-          <span>승률 {Math.round((wins / mine.length) * 100)}%</span>
-          <span>
-            평균 {(sum('k') / mine.length).toFixed(1)} / {(sum('d') / mine.length).toFixed(1)} /{' '}
-            {(sum('a') / mine.length).toFixed(1)} · {kdaRatio(sum('k'), sum('d'), sum('a'))} KDA
-          </span>
-        </div>
-      )}
+      <PlayStats s={stats} champs={champs} onSearch={onSearch} />
 
       {list?.error !== undefined && ids.length === 0 ? (
         <p className="riot-muted">{errorText(list.error)}</p>

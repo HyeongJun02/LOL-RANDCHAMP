@@ -170,6 +170,13 @@ test('판을 펼치면 간단히(두 팀), 그 칸 안에서 "상세 정보"로 
   const el = await render('/info?id=Faker%23KR1');
   /* 큐 탭이 있고 목록이 왔다 */
   expect(buttonWith(el, '솔로 랭크')).toBeDefined();
+  /* 이긴 쪽 1등이라 MVP 배지 (rules/riotStats.js) */
+  expect(el.querySelector('.riot-match-row .riot-badge.is-mvp')).not.toBeNull();
+  /* 최근 판 분석: 숫자 타일은 늘, 목록은 펼쳐서 */
+  expect(el.querySelector('.riot-tiles').textContent).toContain('킬 관여');
+  expect(el.querySelector('.riot-stats-lists')).toBeNull();
+  await click(buttonWith(el, '분석 펼치기'));
+  expect(el.querySelector('.riot-stats-lists').textContent).toContain('많이 한 챔피언');
   await click(el.querySelector('.riot-match-row'));
   /* 위쪽 탭에는 게임 상세가 없다 - 펼친 칸 안에서 바꾼다 */
   expect([...el.querySelectorAll('.riot-tabs button')].some((b) => b.textContent.includes('게임 상세'))).toBe(false);
@@ -179,13 +186,13 @@ test('판을 펼치면 간단히(두 팀), 그 칸 안에서 "상세 정보"로 
 
   expect(el.textContent).toContain('16.20 패치');
   expect(el.textContent).toContain('31분 24초');
-  /* 요약 줄: 용은 public/dragon_icon 그림으로 */
-  expect(el.querySelector('.riot-strip-dragons img').getAttribute('src')).toContain('dragon_icon');
-
-  /* 종합: 한 줄에 한 명, 가로 표 없이 */
-  expect(el.querySelectorAll('.riot-prow')).toHaveLength(2);
-  expect(el.querySelector('.riot-prow').textContent).toContain('30,000');
-  expect(el.querySelector('table')).toBeNull();
+  /* 결과 · 종합은 '간단히'에 있어서 상세 정보에는 없다. 기본은 팀 분석 */
+  expect(el.querySelector('.riot-match-open .riot-prow, .riot-match-open .riot-strip')).toBeNull();
+  expect(el.querySelector('.riot-view-tab.is-on').textContent).toBe('팀 분석');
+  /* 이 판 요약: 타임라인으로 셈한 줄들 */
+  const insights = [...el.querySelectorAll('.riot-insights li')].map((n) => n.textContent);
+  expect(insights).toContain('블루팀 첫 킬 · 첫 용 · 첫 포탑');
+  expect(insights).toContain('Faker(나)가 팀 피해의 100%');
 
   /* 팀 분석: 항목을 바꾸면 막대 값이 바뀐다 */
   await click(buttonWith(el, '팀 분석'));
@@ -200,9 +207,10 @@ test('판을 펼치면 간단히(두 팀), 그 칸 안에서 "상세 정보"로 
     'riot-queue-tabs riot-stick is-sub',
   ]);
 
-  /* 오브젝트: 블루팀이 잡은 화염 용은 가운데 줄 왼쪽 */
+  /* 오브젝트: 블루팀이 잡은 화염 용은 가운데 줄 왼쪽 (public/dragon_icon 그림) */
   await click(buttonWith(el, '오브젝트'));
   const dragonRow = [...el.querySelectorAll('.riot-vtl-row')].find((r) => r.textContent.includes('화염 용'));
+  expect(dragonRow.querySelector('img').getAttribute('src')).toContain('dragon_icon');
   expect(dragonRow.querySelector('.riot-vtl-side.is-left').textContent).toContain('화염 용');
   expect(dragonRow.querySelector('.riot-vtl-time').textContent).toBe('10:00');
 

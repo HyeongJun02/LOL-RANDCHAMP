@@ -655,20 +655,6 @@
   gap: 0.6rem;
 }
 
-.riot-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 0.6rem;
-  font-size: 0.78rem;
-  color: #8b98ae;
-}
-
-.riot-summary strong {
-  font-size: 0.88rem;
-  color: #e6ecf7;
-}
-
 .riot-match-list {
   display: flex;
   flex-direction: column;
@@ -1282,67 +1268,6 @@
   gap: 1rem;
 }
 
-.riot-full-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-}
-
-.riot-full-title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.riot-full-title strong {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #f1f5f9;
-}
-
-.riot-full-title em {
-  font-style: normal;
-  font-size: 0.75rem;
-  color: #8b98ae;
-}
-
-.riot-full-result {
-  padding: 0.2rem 0.6rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 800;
-}
-
-.riot-full-result.is-win {
-  background: color-mix(in srgb, var(--riot-blue) 20%, transparent);
-  color: #c3d4fa;
-}
-
-.riot-full-result.is-lose {
-  background: color-mix(in srgb, var(--riot-red) 18%, transparent);
-  color: #f5c0c1;
-}
-
-.riot-full-time {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  color: #a8b4c8;
-  font-variant-numeric: tabular-nums;
-}
-
-.riot-full-time svg {
-  color: #6b7a94;
-}
-
-.riot-full-nav {
-  display: flex;
-  gap: 0.35rem;
-  margin-left: auto;
-}
-
 /* 소제목 단위 (타임라인 · 선수별 기록) */
 .riot-sub {
   display: flex;
@@ -1417,10 +1342,6 @@
 }
 
 @media (max-width: 640px) {
-
-  .riot-full-nav {
-    margin-left: 0;
-  }
 
   .riot-check {
     margin-left: 0;
@@ -1688,117 +1609,20 @@
 
 /* ---------- 게임 상세: 요약 · 탭 ---------- */
 
-/* 팀 한 줄. 이름 · 점수 · 용 그림 · 오브젝트 수 */
-.riot-strips {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.riot-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 1rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 10px;
-  border-left: 3px solid var(--riot-blue);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.riot-strip.is-red {
-  border-left-color: var(--riot-red);
-}
-
-.riot-strip-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 6.5rem;
-}
-
-.riot-strip-name strong {
-  font-size: 0.88rem;
-  color: #e6ecf7;
-}
-
-.riot-strip-name em,
-.riot-ov-head em {
-  font-style: normal;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.riot-strip-name em.is-win,
-.riot-ov-head em.is-win {
-  color: #9db9f5;
-}
-
-.riot-strip-name em.is-lose,
-.riot-ov-head em.is-lose {
-  color: #f0a3a4;
-}
-
-.riot-strip-score {
-  font-size: 0.75rem;
-  color: #8b98ae;
-  font-variant-numeric: tabular-nums;
-}
-
-.riot-strip-score b {
-  margin-right: 0.15rem;
-  font-size: 1rem;
-  font-weight: 800;
-  color: #f1f5f9;
-}
-
-.riot-strip-dragons {
-  display: inline-flex;
-  gap: 0.2rem;
-  min-height: 22px;
-}
-
-.riot-strip-dragons .riot-ev-img {
-  width: 20px;
-  height: 20px;
-}
-
-.riot-strip-objs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.65rem;
-  margin-left: auto;
-}
-
-.riot-strip-objs span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  font-size: 0.78rem;
-  color: #a8b4c8;
-}
-
-.riot-strip-objs svg {
-  font-size: 0.9rem;
-  color: #8b98ae;
-}
-
-.riot-strip-objs b {
-  color: #e6ecf7;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 잡은 게 0이면 한 톤 죽인다 */
-.riot-strip-objs span.is-zero {
-  opacity: 0.4;
-}
-
 /* 상세 안의 탭. 밑줄 탭이라 위의 '최근 매치 | 게임 상세' 버튼 탭과 단이 구분된다 */
+/* 바닥선은 그림자로 그린다. 탭을 1px 내려 선에 겹치게 했더니(margin -1px)
+   가로 스크롤 상자라 그 1px만큼 세로 스크롤이 생겼다 */
 .riot-views {
   display: flex;
   gap: 0.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.riot-views::-webkit-scrollbar {
+  display: none;
 }
 
 .riot-view-tab {
@@ -1806,7 +1630,6 @@
   padding: 0.5rem 0.85rem;
   border: 0;
   border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
   background: none;
   color: #8b98ae;
   font: inherit;
@@ -1826,168 +1649,6 @@
 
 /* ---------- 종합: 한 줄에 한 명 ---------- */
 /* 머리줄과 선수 줄이 같은 칸 나눔이다. 열 이름이 숫자 바로 위에 선다 */
-
-.riot-overview {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.riot-ov-team {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.5rem 0.6rem 0.6rem;
-  border-radius: 10px;
-  border-left: 3px solid var(--riot-blue);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.riot-ov-team.is-red {
-  border-left-color: var(--riot-red);
-}
-
-.riot-ov-head,
-.riot-prow {
-  display: grid;
-  grid-template-columns: 50px minmax(0, 1fr) 6.2rem 6.2rem 3.6rem 3.4rem 8.2rem;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.riot-ov-head strong {
-  grid-column: 1 / 3;
-  font-size: 0.85rem;
-  color: #e6ecf7;
-}
-
-.riot-ov-col {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #6b7a94;
-  text-align: right;
-}
-
-.riot-ov-col:last-child {
-  text-align: left;
-}
-
-.riot-ov-bans {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.7rem;
-  color: #6b7a94;
-}
-
-.riot-ov-bans img {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-  filter: grayscale(0.85);
-  opacity: 0.8;
-}
-
-.riot-prows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.riot-prow {
-  padding: 0.3rem 0.25rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  color: #cbd5e5;
-}
-
-.riot-prow.is-me {
-  background: rgba(200, 170, 110, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.3);
-}
-
-.riot-prow-champ {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.riot-prow-name {
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
-  min-width: 0;
-}
-
-.riot-prow-name .riot-link {
-  font-weight: 600;
-  color: #e6ecf7;
-}
-
-.riot-prow.is-me .riot-prow-name .riot-link {
-  color: var(--gg-gold-light);
-}
-
-.riot-prow-name .riot-alias {
-  align-self: flex-start;
-  margin-left: 0;
-}
-
-.riot-prow-champname {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-style: normal;
-  font-size: 0.68rem;
-  color: #6b7a94;
-}
-
-.riot-prow-kda,
-.riot-prow-dmg,
-.riot-prow-cs,
-.riot-prow-ward {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.1rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.riot-prow-kda strong {
-  font-weight: 800;
-  color: #e6ecf7;
-}
-
-.riot-prow-kda strong i {
-  font-style: normal;
-  color: #f0a3a4;
-}
-
-.riot-prow-kda em,
-.riot-prow-cs em,
-.riot-prow-ward em {
-  font-style: normal;
-  font-size: 0.68rem;
-  color: #8b98ae;
-}
-
-.riot-prow-dmg b,
-.riot-prow-cs b,
-.riot-prow-ward b {
-  font-weight: 600;
-}
-
-/* 가한 피해: 숫자 밑에 그 판 최고 대비 막대 */
-.riot-prow-dmg i {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: #e0975b;
-}
 
 /* ---------- 팀 분석: 열 명 막대 ---------- */
 
@@ -2327,50 +1988,14 @@
 
 /* ---------- 좁은 화면 ---------- */
 
+/* 펼친 판이 좁으면 팀 분석의 두 팀을 위아래로 */
 @container open (max-width: 640px) {
-  /* 종합: 윗줄 챔피언 · 이름 · KDA, 아랫줄 피해 · 아이템. CS · 시야는 팀 분석에 */
-  .riot-ov-head {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .riot-ov-head strong {
-    grid-column: auto;
-  }
-
-  .riot-ov-col {
-    display: none;
-  }
-
-  .riot-prow {
-    grid-template-columns: 50px minmax(0, 1fr) auto;
-    grid-template-areas:
-      'champ name kda'
-      'champ dmg items';
-    gap: 0.25rem 0.6rem;
-  }
-
-  .riot-prow-champ { grid-area: champ; }
-  .riot-prow-name { grid-area: name; }
-  .riot-prow-kda { grid-area: kda; }
-  .riot-prow-dmg { grid-area: dmg; align-items: stretch; }
-  .riot-prow .riot-items { grid-area: items; }
-
-  .riot-prow-cs,
-  .riot-prow-ward {
-    display: none;
-  }
-
   .riot-bars {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .riot-strip-objs {
-    margin-left: 0;
   }
 }
 
 @media (max-width: 640px) {
-  .riot-full-nav,
   .riot-check {
     margin-left: 0;
   }
@@ -2506,7 +2131,6 @@
   padding: 0.45rem 1rem;
 }
 
-
 /* ---------- 펼친 판: 두 팀 | 게임 상세 ---------- */
 
 .riot-match-open {
@@ -2545,4 +2169,261 @@
   .riot-match-row .riot-match-stat { grid-area: stat; }
   .riot-match-row .riot-items { grid-area: items; }
   .riot-match-row .riot-chev { grid-area: chev; }
+}
+
+/* ---------- 셈해 낸 기록 (rules/riotStats.js) ---------- */
+
+/* 이 판 요약 몇 줄. 상세 정보 맨 위 */
+.riot-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  list-style: none;
+  border-radius: 10px;
+  background: rgba(200, 170, 110, 0.07);
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.riot-insights li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.riot-insights li::before {
+  content: '';
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gg-gold);
+  transform: translateY(-2px);
+}
+
+/* 역전승은 한 판에서 제일 이야깃거리라 색을 준다 */
+.riot-insights li.is-comeback {
+  color: #fde68a;
+  font-weight: 700;
+}
+
+/* MVP · ACE */
+.riot-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0 0.32rem;
+  border-radius: 4px;
+  font-style: normal;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.riot-badge.is-mvp {
+  background: rgba(250, 204, 21, 0.2);
+  color: #fde68a;
+}
+
+.riot-badge.is-ace {
+  background: rgba(192, 132, 252, 0.2);
+  color: #e9d5ff;
+}
+
+/* 최근 판 분석 */
+.riot-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.riot-stats-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+}
+
+.riot-stats-head strong {
+  font-size: 0.9rem;
+  color: #e6ecf7;
+}
+
+.riot-stats-head strong em {
+  margin-left: 0.25rem;
+  font-style: normal;
+  color: var(--gg-gold-light);
+}
+
+.riot-streak {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.riot-streak.is-win {
+  background: color-mix(in srgb, var(--riot-blue) 20%, transparent);
+  color: #c3d4fa;
+}
+
+.riot-streak.is-lose {
+  background: color-mix(in srgb, var(--riot-red) 18%, transparent);
+  color: #f5c0c1;
+}
+
+.riot-stats-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+/* 숫자 타일. 칸 폭이 같아야 훑을 때 숫자 자리가 맞는다 */
+.riot-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: 0.4rem;
+}
+
+.riot-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.riot-tile span {
+  font-size: 0.68rem;
+  color: #8b98ae;
+}
+
+.riot-tile b {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-tile em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+  font-size: 0.66rem;
+  color: #8b98ae;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-stats-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.8rem 1rem;
+}
+
+.riot-stats-lists > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.riot-stats-lists h3 {
+  margin: 0;
+}
+
+.riot-stats-lists ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.riot-stats-lists li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: #cbd5e5;
+}
+
+/* 같이 한 사람: 그림 칸 없이 이름부터 */
+.riot-stats-lists li:has(> .riot-link:first-child) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.riot-stats-lists li.riot-muted {
+  display: block;
+}
+
+.riot-stats-lists li > em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #8b98ae;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-stats-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riot-rate {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #a8b4c8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.riot-rate.is-hot {
+  color: #9db9f5;
+}
+
+.riot-rate.is-cold {
+  color: #f0a3a4;
+}
+
+/* 상세 정보의 시각 줄 */
+.riot-full-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #a8b4c8;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-full-time svg {
+  color: #6b7a94;
+}
+
+/* TFT 최근 판 요약 한 줄 (평균 등수 · 순방) */
+.riot-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  color: #8b98ae;
+}
+
+.riot-summary strong {
+  font-size: 0.88rem;
+  color: #e6ecf7;
 }
