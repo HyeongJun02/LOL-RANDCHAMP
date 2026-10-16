@@ -7,12 +7,16 @@ const TABLE = 'riot_favorites';
 /* 표가 아직 없으면(setup.sql을 안 돌렸거나 Data API가 표 목록을 아직 안 읽었으면)
    PostgREST가 'Could not find the table ... in the schema cache'를 준다.
    영어 원문 대신 무엇을 해야 하는지 말한다 */
-const explain = (error) =>
-  new Error(
+const explain = (error) => {
+  /* 안내 문구로 덮으면 진짜 이유가 안 보인다. 원문은 콘솔에 남긴다 */
+  // eslint-disable-next-line no-console
+  console.error('[riot_favorites]', error);
+  return new Error(
     /schema cache|does not exist/i.test(error.message)
-      ? '즐겨찾기 저장소가 아직 준비되지 않았어요. (관리자: sql/setup.sql을 Neon에서 실행)'
+      ? `즐겨찾기 저장소가 아직 준비되지 않았어요. (${error.message})`
       : error.message
   );
+};
 
 export const loadFavs = async (userId) => {
   if (!isNeonConfigured || !userId) return [];
