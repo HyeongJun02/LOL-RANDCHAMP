@@ -829,7 +829,7 @@
 }
 
 .riot-match-row,
-.riot-tft-row {
+.tft-row {
   display: grid;
   align-items: center;
   gap: 0.75rem;
@@ -870,12 +870,12 @@
 
 /* li가 overflow: hidden이 아니라서 눌림 바탕이 둥근 모서리를 넘지 않게 */
 .riot-match-row,
-.riot-tft-row {
+.tft-row {
   border-radius: 0 9px 9px 0;
 }
 
 .riot-match-row:hover,
-.riot-tft-row:hover {
+.tft-row:hover {
   background: rgba(255, 255, 255, 0.03);
 }
 
@@ -1160,106 +1160,6 @@
 
 /* ---------- TFT ---------- */
 
-.riot-tft.is-first {
-  border-left-color: var(--gg-gold);
-}
-
-.riot-tft.is-top {
-  border-left-color: var(--riot-blue);
-}
-
-.riot-tft-row {
-  grid-template-columns: 2.6rem 5rem minmax(0, 1fr) minmax(0, 1.3fr);
-}
-
-.riot-tft-place {
-  display: flex;
-  align-items: baseline;
-  gap: 0.1rem;
-}
-
-.riot-tft-place strong {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #e6ecf7;
-}
-
-.riot-tft.is-first .riot-tft-place strong {
-  color: var(--gg-gold-light);
-}
-
-.riot-tft.is-bottom .riot-tft-place strong {
-  color: #8b98ae;
-}
-
-.riot-tft-place em {
-  font-style: normal;
-  font-size: 0.7rem;
-  color: #8b98ae;
-}
-
-/* 특성 등급 (style 1 브론즈 ~ 4 프리즘) */
-.riot-tag.tft-style-2 {
-  color: #d6dde8;
-}
-
-.riot-tag.tft-style-3 {
-  background: rgba(200, 170, 110, 0.16);
-  color: var(--gg-gold-light);
-}
-
-.riot-tag.tft-style-4 {
-  background: rgba(192, 132, 252, 0.18);
-  color: #e9d5ff;
-}
-
-.riot-tft-units {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  min-width: 0;
-  font-size: 0.72rem;
-  color: #cbd5e5;
-}
-
-.riot-tft-unit em {
-  margin-left: 0.1rem;
-  font-style: normal;
-  font-size: 0.6rem;
-  color: var(--gg-gold);
-}
-
-.riot-tft-all {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin: 0;
-  padding: 0.6rem 0.75rem 0.75rem;
-  list-style: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.riot-tft-all li {
-  display: grid;
-  grid-template-columns: 1.4rem minmax(0, 10rem) minmax(0, 1fr);
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: #cbd5e5;
-}
-
-.riot-tft-all li.is-me {
-  color: var(--gg-gold-light);
-  font-weight: 700;
-}
-
-.riot-tft-all .riot-muted {
-  font-size: 0.7rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* ---------- 좁은 화면 ---------- */
 
 @media (max-width: 900px) {
@@ -1291,15 +1191,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .riot-tft-row {
-    grid-template-columns: 2.6rem minmax(0, 1fr);
-    gap: 0.35rem 0.6rem;
-  }
-
-  .riot-tft-row .riot-tags,
-  .riot-tft-row .riot-tft-units {
-    grid-column: 1 / -1;
-  }
 }
 
 /* ---------- 라인 · 티어 그림 ---------- */
@@ -2543,21 +2434,6 @@
   color: #6b7a94;
 }
 
-/* TFT 최근 판 요약 한 줄 (평균 등수 · 순방) */
-.riot-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 0.6rem;
-  font-size: 0.78rem;
-  color: #8b98ae;
-}
-
-.riot-summary strong {
-  font-size: 0.88rem;
-  color: #e6ecf7;
-}
-
 /* OP.GG 바로가기. 사이트 밖으로 나가는 길이라 눈에 띄지 않게 */
 .riot-opgg {
   display: inline-flex;
@@ -2643,4 +2519,343 @@
   height: 14px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- TFT (베타) ---------- */
+/* 코스트 색: 1 회색 · 2 초록 · 3 파랑 · 4 보라 · 5 금 */
+
+.tft-match.is-first {
+  border-left-color: var(--gg-gold);
+  background: rgba(200, 170, 110, 0.07);
+}
+
+.tft-match.is-top {
+  border-left-color: var(--riot-blue);
+}
+
+/* 한 판 줄: 등수 · 큐 | 증강 | 덱 | 펼치기 */
+.tft-row {
+  grid-template-columns: 8.6rem auto minmax(0, 1fr) 0.8rem;
+}
+
+.tft-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.tft-place-big {
+  display: flex;
+  align-items: baseline;
+  gap: 0.05rem;
+  min-width: 2.2rem;
+}
+
+.tft-place-big strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #e6ecf7;
+}
+
+.tft-match.is-first .tft-place-big strong {
+  color: var(--gg-gold-light);
+}
+
+.tft-match.is-bottom .tft-place-big strong {
+  color: #8b98ae;
+}
+
+.tft-place-big em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #8b98ae;
+}
+
+.tft-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.tft-meta b {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.tft-meta em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #8b98ae;
+  white-space: nowrap;
+}
+
+/* 증강 세 개 (세트에 따라 없을 수도) */
+.tft-augments {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tft-augments img,
+.tft-augments i {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.tft-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.tft-traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+/* 특성 육각형. 바탕이 등급 */
+.tft-trait {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 24px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: #3a4252;
+}
+
+.tft-trait img {
+  width: 14px;
+  height: 14px;
+  filter: brightness(0) invert(1);
+}
+
+.tft-trait b {
+  font-size: 0.5rem;
+  color: #fff;
+}
+
+.tft-trait.style-1 {
+  background: #8a5a35;
+}
+
+.tft-trait.style-2 {
+  background: #7d8a99;
+}
+
+.tft-trait.style-3 {
+  background: #c9a227;
+}
+
+.tft-trait.style-3 img,
+.tft-trait.style-4 img {
+  filter: brightness(0);
+}
+
+.tft-trait.style-4 {
+  background: linear-gradient(135deg, #7fe3d4, #c08cf2 50%, #f5c46b);
+}
+
+.tft-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tft-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 34px;
+}
+
+.tft-stars {
+  height: 0.7rem;
+  font-style: normal;
+  font-size: 0.55rem;
+  line-height: 0.7rem;
+  letter-spacing: -1px;
+  color: #c0c7d2;
+}
+
+.tft-unit.cost-1 { --cost: #9aa4b0; }
+.tft-unit.cost-2 { --cost: #3fbf6f; }
+.tft-unit.cost-3 { --cost: #3b82f6; }
+.tft-unit.cost-4 { --cost: #b45cf0; }
+.tft-unit.cost-5 { --cost: #e8b84a; }
+
+.tft-face {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 2px solid var(--cost, #4b5563);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 데이터 드래곤의 TFT 유닛 그림은 넓은 일러스트라 가운데를 잘라 쓴다 */
+.tft-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 30%;
+}
+
+.tft-face b {
+  font-size: 0.55rem;
+  color: #cbd5e5;
+}
+
+.tft-items {
+  display: flex;
+  gap: 1px;
+  margin-top: 1px;
+}
+
+.tft-items img,
+.tft-items i {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tft-unit.is-small {
+  width: 28px;
+}
+
+.tft-unit.is-small .tft-face {
+  width: 28px;
+  height: 28px;
+}
+
+.tft-unit.is-small .tft-items img,
+.tft-unit.is-small .tft-items i {
+  width: 9px;
+  height: 9px;
+}
+
+/* 펼친 판: 여덟 명 */
+.tft-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tft-lobby li {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 9rem) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 8px;
+  border-left: 3px solid #475569;
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 0.78rem;
+}
+
+.tft-lobby li.is-first {
+  border-left-color: var(--gg-gold);
+}
+
+.tft-lobby li.is-top {
+  border-left-color: var(--riot-blue);
+}
+
+.tft-lobby li.is-me {
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.4);
+}
+
+.tft-place {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #e6ecf7;
+  text-align: center;
+}
+
+.tft-lobby li.is-bottom .tft-place {
+  color: #8b98ae;
+}
+
+.tft-lobby-who {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.tft-lobby-who .riot-link {
+  font-weight: 600;
+  color: #e6ecf7;
+}
+
+.tft-lobby-who > em {
+  font-style: normal;
+  font-size: 0.66rem;
+  color: #8b98ae;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 최근 등수 줄 (최신이 왼쪽) */
+.tft-recent {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.tft-recent b {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.65rem;
+  color: #8b98ae;
+}
+
+.tft-recent b.is-first {
+  background: rgba(200, 170, 110, 0.25);
+  color: var(--gg-gold-light);
+}
+
+.tft-recent b.is-top {
+  background: color-mix(in srgb, var(--riot-blue) 22%, transparent);
+  color: #c3d4fa;
+}
+
+/* 좁은 매치 칸: 등수 · 증강 윗줄, 덱 아랫줄 */
+@container matches (max-width: 600px) {
+  .tft-row {
+    grid-template-columns: minmax(0, 1fr) auto 0.8rem;
+    grid-template-areas:
+      'head aug chev'
+      'board board board';
+    gap: 0.45rem 0.6rem;
+  }
+
+  .tft-row .tft-head { grid-area: head; }
+  .tft-row .tft-augments { grid-area: aug; flex-direction: row; }
+  .tft-row .tft-board { grid-area: board; }
+  .tft-row .riot-chev { grid-area: chev; }
+
+  .tft-lobby li {
+    grid-template-columns: 1.6rem minmax(0, 1fr) auto;
+  }
+
+  .tft-lobby li .tft-board {
+    grid-column: 1 / -1;
+  }
 }

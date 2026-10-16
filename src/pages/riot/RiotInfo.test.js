@@ -337,3 +337,62 @@ test('지금 게임 중: 이름을 누르면 그 사람, 열 명 랭크 · 팀 �
   BODIES.profile = PROFILE;
   delete BODIES.liveRanks;
 });
+
+test('TFT (베타): 등수 · 탈락 라운드 · 큐 탭 거르기 · 펼치면 여덟 명', async () => {
+  const tp = (puuid, name, placement, extra = {}) => ({
+    puuid,
+    name,
+    tag: 'KR1',
+    placement,
+    level: 8,
+    lastRound: 33,
+    damage: 120,
+    gold: 3,
+    pair: null,
+    augments: [],
+    traits: [{ name: 'TFT16_Bilgewater', units: 6, style: 3 }],
+    units: [{ id: 'TFT16_Tristana', star: 2, cost: 1, items: ['TFT_Item_InfinityEdge'] }],
+    ...extra,
+  });
+  BODIES.profile = { ...PROFILE, account: { ...PROFILE.account, tftPuuid: 'T1' }, tftMatches: { data: ['KR_T1'] } };
+  BODIES.tftMatchIds = { ids: ['KR_T1', 'KR_T2'], more: false };
+  BODIES.tftMatch = {
+    id: 'KR_T1',
+    queue: 1100,
+    type: 'standard',
+    at: 1,
+    length: 2000,
+    players: [tp('T1', 'Faker', 1), tp('T9', 'Chovy', 5)],
+  };
+  const el = await render('/info?id=Faker%23KR1');
+  await click([...el.querySelectorAll('.riot-tabs button')].find((b) => b.textContent.includes('TFT')));
+
+  const rows = () => [...el.querySelectorAll('.tft-match')];
+  expect(rows()).toHaveLength(2);
+  expect(rows()[0].querySelector('.tft-place-big').textContent).toBe('1등');
+  expect(rows()[0].textContent).toContain('랭크');
+  expect(rows()[0].textContent).toContain('6-1');
+  /* 최근 판 분석 */
+  /* 롤 목록은 숨겨 둔 채 남아 있어서 보이는 분석 칸만 본다 */
+  const tftStats = [...el.querySelectorAll('.riot-stats')].find((n) => !n.closest('[hidden]'));
+  expect(tftStats.textContent).toContain('평균 1.00등');
+
+  /* 더블업 탭: 랭크 판뿐이라 비어 있다 */
+  await click([...el.querySelectorAll('.riot-queue-tab')].find((b) => b.textContent === '더블업'));
+  expect(rows()).toHaveLength(0);
+  await click(
+    [...el.querySelectorAll('.riot-queue-tab')].find((b) => b.textContent === '전체' && !b.closest('[hidden]'))
+  );
+
+  /* 펼치면 여덟 명(여기선 둘) - 이름을 누르면 그 사람 */
+  await click(rows()[0].querySelector('.tft-row'));
+  const lobby = [...el.querySelectorAll('.tft-lobby li')];
+  expect(lobby).toHaveLength(2);
+  global.fetch.mockClear();
+  await click(lobby[1].querySelector('.riot-link'));
+  expect(global.fetch.mock.calls.some(([u]) => u.includes('fn=profile') && u.includes('name=Chovy'))).toBe(true);
+
+  BODIES.profile = PROFILE;
+  delete BODIES.tftMatchIds;
+  delete BODIES.tftMatch;
+});

@@ -302,7 +302,14 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
           {tab === 'tft' && (
             <RiotPart part={d.tftMatches} empty="최근 TFT 매치가 없어요.">
               {/* TFT는 키가 따로라 puuid도 따로다 (api/_riot.js profile) */}
-              {(ids) => <TftList ids={ids} me={d.account.tftPuuid || me} onSearch={onSearch} />}
+              {() => (
+                <TftList
+                  puuid={d.account.tftPuuid || me}
+                  me={d.account.tftPuuid || me}
+                  champs={champs}
+                  onSearch={onSearch}
+                />
+              )}
             </RiotPart>
           )}
         </section>

@@ -291,13 +291,18 @@ const slimTimeline = (t) => {
   };
 };
 
+/* TFT 한 판. 덱(특성 · 유닛 · 아이템 · 증강)과 끝난 모습(등수 · 탈락 라운드 ·
+   남은 골드 · 플레이어에게 준 피해). 이름 · 그림은 화면이 데이터 드래곤에서 붙인다 */
 const slimTftMatch = (m) => {
   const info = m.info || {};
   return {
     id: m.metadata?.match_id,
     type: info.tft_game_type || null,
+    queue: info.queue_id ?? null,
     set: info.tft_set_number ?? null,
     at: info.game_datetime || null,
+    // 초 단위. 판 길이는 1등이 끝난 시각과 같다
+    length: Math.round(info.game_length || 0),
     players: (info.participants || [])
       .map((p) => ({
         puuid: p.puuid,
@@ -305,18 +310,27 @@ const slimTftMatch = (m) => {
         tag: p.riotIdTagline || '',
         placement: p.placement,
         level: p.level,
+        lastRound: p.last_round ?? null,
+        eliminated: p.time_eliminated ? Math.round(p.time_eliminated) : null,
+        gold: p.gold_left ?? null,
+        damage: p.total_damage_to_players ?? null,
+        kills: p.players_eliminated ?? null,
+        // 더블업: 같은 편끼리 같은 번호
+        pair: p.partner_group_id ?? null,
+        augments: p.augments || [],
+        // 켜진 특성만, 등급 높은 순
         traits: (p.traits || [])
           .filter((x) => x.tier_current > 0)
-          .sort((a, b) => b.style - a.style || b.num_units - a.num_units)
-          .slice(0, 4)
+          .sort((x, y) => y.style - x.style || y.num_units - x.num_units)
           .map((x) => ({ name: x.name, units: x.num_units, style: x.style })),
         units: (p.units || []).map((u) => ({
           id: u.character_id,
           star: u.tier,
-          items: (u.itemNames || []).length,
+          cost: u.rarity ?? null,
+          items: u.itemNames || [],
         })),
       }))
-      .sort((a, b) => a.placement - b.placement),
+      .sort((x, y) => x.placement - y.placement),
   };
 };
 
@@ -431,7 +445,7 @@ const profile = async ({ lol: key, tft }, { name, tag }) => {
       call(key, `${PLATFORM}/lol/challenges/v1/player-data/${puuid}`),
       tftPuuid ? call(tft, `${PLATFORM}/tft/league/v1/by-puuid/${tftPuuid}`) : { error: 403 },
       tftPuuid
-        ? call(tft, `${REGION}/tft/match/v1/matches/by-puuid/${tftPuuid}/ids?count=10`)
+        ? call(tft, `${REGION}/tft/match/v1/matches/by-puuid/${tftPuuid}/ids?count=1`)
         : { error: 403 },
     ]);
 
@@ -494,6 +508,17 @@ const liveRanks = async ({ lol: key }, { puuids = '', only = '' }) => {
   return { maxAge: 5 * MIN, body };
 };
 
+/* TFT 매치 목록. 20판씩, start로 이어 받는다. 라이엇이 큐로 걸러 주지 않아서
+   (롤과 다르다) 큐 탭은 화면이 받아 둔 판에서 거른다 */
+const tftMatchIds = async ({ tft: key }, { puuid, start = '0' }) => {
+  const from = Number(start);
+  if (!PUUID_RE.test(String(puuid || ''))) return { status: 400, body: { error: 'bad_id' } };
+  if (!Number.isInteger(from) || from < 0 || from > 900) return { status: 400, body: { error: 'bad_start' } };
+  const r = await call(key, `${REGION}/tft/match/v1/matches/by-puuid/${puuid}/ids?start=${from}&count=${PAGE}`);
+  if (r.error) return { status: r.error, body: { error: r.error } };
+  return { maxAge: 2 * MIN, body: { ids: r.data, more: r.data.length === PAGE } };
+};
+
 const match = async ({ lol: key }, { id }) => {
   if (!validMatchId(id)) return { status: 400, body: { error: 'bad_id' } };
   const r = await call(key, `${REGION}/lol/match/v5/matches/${id}`);
@@ -517,7 +542,7 @@ const tftMatch = async ({ tft: key }, { id }) => {
 };
 
 /* 화면이 붙이는 v=(응답 모양 버전)는 캐시를 가르는 데만 쓰고 여기서는 안 본다 */
-const FNS = { home, profile, matchIds, match, timeline, tftMatch, liveRanks };
+const FNS = { home, profile, matchIds, match, timeline, tftMatch, tftMatchIds, liveRanks };
 
 /* 어느 서버에서 부르든 같은 모양으로 돌려준다: { status, headers, body }
    keys: { lol, tft }. 키 하나(문자열)를 주면 둘 다 그 키로 본다.

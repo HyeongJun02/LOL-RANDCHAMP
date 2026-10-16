@@ -8,7 +8,7 @@ const cache = new Map();
 /* 서버 응답 모양(api/_riot.js)을 바꾸면 이 숫자를 올린다. 주소가 달라져서
    브라우저 · CDN에 남은 옛 응답(하루 캐시)을 안 쓴다. 안 올리면 새 칸이 없는
    옛 매치가 와서 화면이 죽는다 (받은 피해 칸이 그랬다) */
-const API_VERSION = '3';
+const API_VERSION = '4';
 
 /* 한 번에 나가는 요청 수. 매치 20판을 한꺼번에 부르면 라이엇 한도(1초 20번)에
    바로 닿는다 - 서버 캐시를 못 탄 판이 많을수록. 다섯씩 줄 세운다 */
@@ -119,3 +119,38 @@ export const loadSoloRanks = async (puuids) => {
   }
   return new Map(puuids.map((p) => [p, soloRanks.get(p)]));
 };
+
+/* TFT 유닛 · 특성 · 아이템 · 증강의 이름과 그림. TFT 탭을 열 때 한 번.
+   라이엇 매치는 영어 키(TFT16_Tristana)만 주고, 이름 · 그림은 여기서 붙인다.
+   키는 대소문자를 안 가린다 (매치와 데이터의 표기가 가끔 다르다) */
+let tftData = null;
+export const loadTftData = (version) => {
+  if (!version) return Promise.resolve(null);
+  if (!tftData) {
+    const get = (file) =>
+      fetch(`${DDRAGON}/${version}/data/ko_KR/${file}.json`)
+        .then((r) => r.json())
+        .then((j) => Object.values(j.data || {}));
+    const index = (list, folder) =>
+      new Map(
+        list.map((x) => [
+          String(x.id).toLowerCase(),
+          { name: x.name, cost: x.cost ?? null, icon: `${DDRAGON}/${version}/img/${folder}/${x.image?.full}` },
+        ])
+      );
+    tftData = Promise.all([get('tft-champion'), get('tft-trait'), get('tft-item'), get('tft-augments')])
+      .then(([units, traits, items, augments]) => ({
+        units: index(units, 'tft-champion'),
+        traits: index(traits, 'tft-trait'),
+        items: index(items, 'tft-item'),
+        augments: index(augments, 'tft-augment'),
+      }))
+      .catch(() => {
+        tftData = null;
+        return null;
+      });
+  }
+  return tftData;
+};
+
+export const tftLookup = (map, id) => (map && id ? map.get(String(id).toLowerCase()) : null);

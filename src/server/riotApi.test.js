@@ -162,7 +162,7 @@ test('TFT 매치: 등수 순으로, 켜진 특성만 등급 높은 순', () => {
   });
   expect(m.players.map((p) => p.puuid)).toEqual(['A', 'B']);
   expect(m.players[0].traits.map((t) => t.name)).toEqual(['TFT13_High', 'TFT13_Low']);
-  expect(m.players[0].units).toEqual([{ id: 'TFT13_Jinx', star: 2, items: 2 }]);
+  expect(m.players[0].units).toEqual([{ id: 'TFT13_Jinx', star: 2, cost: null, items: ['a', 'b'] }]);
 });
 
 test('서버 상태는 한국어 제목을 고르고, 없으면 영어', () => {
@@ -340,4 +340,53 @@ test('랭크 조회 only=solo면 자유 랭크로 대신하지 않는다', async
   expect(any.body[PUUID]).toMatchObject({ queue: 'RANKED_FLEX_SR' });
   const solo = await riot.run({ fn: 'liveRanks', puuids: PUUID, only: 'solo' }, 'KEY');
   expect(solo.body[PUUID]).toBeNull();
+});
+
+test('TFT 한 판: 탈락 라운드 · 남은 골드 · 피해 · 더블업 짝 · 증강 · 유닛 코스트', () => {
+  const m = riot.slimTftMatch({
+    metadata: { match_id: 'KR_9' },
+    info: {
+      queue_id: 1160,
+      tft_game_type: 'pairs',
+      game_length: 2201.4,
+      participants: [
+        {
+          puuid: 'A',
+          placement: 2,
+          level: 9,
+          last_round: 33,
+          time_eliminated: 2100.6,
+          gold_left: 12,
+          total_damage_to_players: 140,
+          players_eliminated: 2,
+          partner_group_id: 3,
+          augments: ['TFT16_Augment_IllaoiCarry'],
+          traits: [],
+          units: [{ character_id: 'TFT16_Tristana', tier: 3, rarity: 1, itemNames: ['TFT_Item_InfinityEdge'] }],
+        },
+      ],
+    },
+  });
+  expect(m).toMatchObject({ queue: 1160, type: 'pairs', length: 2201 });
+  expect(m.players[0]).toMatchObject({
+    lastRound: 33,
+    eliminated: 2101,
+    gold: 12,
+    damage: 140,
+    kills: 2,
+    pair: 3,
+    augments: ['TFT16_Augment_IllaoiCarry'],
+    units: [{ id: 'TFT16_Tristana', star: 3, cost: 1, items: ['TFT_Item_InfinityEdge'] }],
+  });
+});
+
+test('TFT 매치 목록: TFT 키 · 20판씩 · start로 이어 받기', async () => {
+  global.fetch = jest.fn(() => reply(200, Array.from({ length: 20 }, (_, i) => `KR_${i}`)));
+  const out = await riot.run({ fn: 'tftMatchIds', puuid: PUUID, start: '20' }, { lol: 'LOL', tft: 'TFT' });
+  expect(out.body.more).toBe(true);
+  const [url, init] = global.fetch.mock.calls[0];
+  expect(url).toContain('/tft/match/v1/matches/by-puuid/');
+  expect(url).toContain('start=20&count=20');
+  expect(init.headers['X-Riot-Token']).toBe('TFT');
+  expect((await riot.run({ fn: 'tftMatchIds', puuid: 'x/../y' }, 'KEY')).status).toBe(400);
 });
