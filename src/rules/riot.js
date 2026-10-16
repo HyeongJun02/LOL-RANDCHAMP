@@ -199,3 +199,31 @@ export const num = (n) => (typeof n === 'number' ? n.toLocaleString() : '-');
 
 /* 61234 → 61.2k */
 export const kilo = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n || 0));
+
+/* ---------- 즐겨찾기 · 최근 검색 ---------- */
+
+/* sql/setup.sql의 enforce_riot_favorites와 같아야 한다 */
+export const FAV_MAX = 20;
+export const ALIAS_MAX = 20;
+export const RECENT_MAX = 10;
+
+/* 라이엇 ID는 대소문자를 안 가린다 */
+export const sameId = (a, b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
+
+/* 별명이 같은 계정끼리 한 묶음 (본계정 · 부계정). 별명이 없으면 혼자 한 묶음.
+   묶음 순서는 그 묶음의 첫 계정이 목록에서 나온 순서 */
+export const groupFavs = (list = []) => {
+  const groups = [];
+  const byAlias = new Map();
+  list.forEach((f) => {
+    const key = (f.alias || '').trim().toLowerCase();
+    if (key && byAlias.has(key)) {
+      byAlias.get(key).ids.push(f.id);
+      return;
+    }
+    const g = { alias: (f.alias || '').trim(), ids: [f.id] };
+    groups.push(g);
+    if (key) byAlias.set(key, g);
+  });
+  return groups;
+};

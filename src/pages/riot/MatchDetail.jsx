@@ -25,6 +25,7 @@ import {
 } from '../../rules/riot';
 import GoldChart from './GoldChart';
 import { Champ, Items, Lane, champName } from './RiotBits';
+import { useAliasOf } from './useRiotFavs';
 
 /* 게임 상세 탭. 한 판을 정밀하게.
      머리     결과 · 큐 · 패치 · 시작 시각 · 길이 · 이전/다음 판
@@ -194,6 +195,7 @@ const EventRow = ({ e, byPuuid, champs, me }) => {
 /* 선수 표. 피해량은 그 판 최고를 100%로 막대를 그린다 */
 const PlayerTable = ({ m, team, me, champs, onSearch, maxDmg }) => {
   const minutes = m.duration / 60 || 1;
+  const aliasOf = useAliasOf();
   return (
     <div className={`riot-table-wrap ${team === 100 ? 'is-blue' : 'is-red'}`}>
       <table className="riot-table">
@@ -236,6 +238,9 @@ const PlayerTable = ({ m, team, me, champs, onSearch, maxDmg }) => {
                     {p.name || '?'}
                     <em>#{p.tag}</em>
                   </button>
+                  {aliasOf(`${p.name}#${p.tag}`) && (
+                    <span className="riot-alias">{aliasOf(`${p.name}#${p.tag}`)}</span>
+                  )}
                 </td>
                 <td>
                   <span className="riot-table-kda">

@@ -334,14 +334,14 @@ const MIN = 60;
 const DAY = 24 * 60 * MIN;
 
 /* 화면 첫머리. 사람을 안 찾아도 보이는 것들 */
-const home = async (key) => {
+const home = async ({ lol: key, tft }) => {
   const [rotation, lolStatus, tftStatus, valStatus, chall, tftChall, valContent] = await Promise.all([
     call(key, `${PLATFORM}/lol/platform/v3/champion-rotations`),
     call(key, `${PLATFORM}/lol/status/v4/platform-data`),
-    call(key, `${PLATFORM}/tft/status/v1/platform-data`),
+    call(tft, `${PLATFORM}/tft/status/v1/platform-data`),
     call(key, `${PLATFORM}/val/status/v1/platform-data`),
     call(key, `${PLATFORM}/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5`),
-    call(key, `${PLATFORM}/tft/league/v1/challenger?queue=RANKED_TFT`),
+    call(tft, `${PLATFORM}/tft/league/v1/challenger?queue=RANKED_TFT`),
     remember('val-content', DAY * 1000, () =>
       call(key, `${PLATFORM}/val/content/v1/contents?locale=ko-KR`)
     ),
@@ -354,7 +354,8 @@ const home = async (key) => {
 
   const [challTop, tftTop] = await Promise.all([
     chall.data ? topWithNames(key, chall.data.entries || [], 10).then((data) => ({ data })) : chall,
-    tftChall.data ? topWithNames(key, tftChall.data.entries || [], 10).then((data) => ({ data })) : tftChall,
+    // TFT 순위의 puuid는 TFT 키로 암호화돼 있다. 이름도 TFT 키로 찾는다
+    tftChall.data ? topWithNames(tft, tftChall.data.entries || [], 10).then((data) => ({ data })) : tftChall,
   ]);
 
   return {
@@ -398,14 +399,21 @@ const home = async (key) => {
 };
 
 /* 라이엇 ID 하나로 볼 수 있는 것 전부 */
-const profile = async (key, { name, tag }) => {
+const profile = async ({ lol: key, tft }, { name, tag }) => {
   if (!validName(name, tag)) return { status: 400, body: { error: 'bad_name' } };
-  const account = await call(
-    key,
-    `${REGION}/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(name.trim())}/${encodeURIComponent(tag.trim())}`
-  );
+  const byRiotId = (k) =>
+    call(
+      k,
+      `${REGION}/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(name.trim())}/${encodeURIComponent(tag.trim())}`
+    );
+  const account = await byRiotId(key);
   if (account.error) return { status: account.error, body: { error: account.error } };
   const puuid = account.data.puuid;
+
+  /* puuid는 키(앱)마다 다르게 암호화된다. TFT 키가 따로 있으면 그 키로 다시
+     찾은 puuid를 TFT에 쓴다 - 롤 키의 puuid를 넘기면 TFT API가 400을 낸다 */
+  const tftPuuid =
+    tft === key ? puuid : (await byRiotId(tft)).data?.puuid || null;
 
   const [summoner, leagues, mastery, live, challenges, tftLeagues, tftMatches] =
     await Promise.all([
@@ -414,8 +422,10 @@ const profile = async (key, { name, tag }) => {
       call(key, `${PLATFORM}/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=8`),
       call(key, `${PLATFORM}/lol/spectator/v5/active-games/by-summoner/${puuid}`),
       call(key, `${PLATFORM}/lol/challenges/v1/player-data/${puuid}`),
-      call(key, `${PLATFORM}/tft/league/v1/by-puuid/${puuid}`),
-      call(key, `${REGION}/tft/match/v1/matches/by-puuid/${puuid}/ids?count=5`),
+      tftPuuid ? call(tft, `${PLATFORM}/tft/league/v1/by-puuid/${tftPuuid}`) : { error: 403 },
+      tftPuuid
+        ? call(tft, `${REGION}/tft/match/v1/matches/by-puuid/${tftPuuid}/ids?count=10`)
+        : { error: 403 },
     ]);
 
   const config = challenges.data
@@ -427,7 +437,7 @@ const profile = async (key, { name, tag }) => {
   return {
     maxAge: 2 * MIN,
     body: {
-      account: { puuid, name: account.data.gameName, tag: account.data.tagLine },
+      account: { puuid, tftPuuid, name: account.data.gameName, tag: account.data.tagLine },
       summoner: mapPart(summoner, (s) => ({ level: s.summonerLevel, icon: s.profileIconId })),
       leagues: mapPart(leagues, slimLeague),
       mastery: mapPart(mastery, slimMastery),
@@ -441,7 +451,7 @@ const profile = async (key, { name, tag }) => {
 };
 
 /* 롤 매치 목록. 큐로 걸러서 20판씩. start로 이어 받는다 ('더 보기') */
-const matchIds = async (key, { puuid, filter = 'all', start = '0' }) => {
+const matchIds = async ({ lol: key }, { puuid, filter = 'all', start = '0' }) => {
   const from = Number(start);
   if (!PUUID_RE.test(String(puuid || ''))) return { status: 400, body: { error: 'bad_id' } };
   if (!(filter in MATCH_FILTERS)) return { status: 400, body: { error: 'bad_filter' } };
@@ -454,7 +464,7 @@ const matchIds = async (key, { puuid, filter = 'all', start = '0' }) => {
   return { maxAge: 2 * MIN, body: { ids: r.data, more: r.data.length === PAGE } };
 };
 
-const match = async (key, { id }) => {
+const match = async ({ lol: key }, { id }) => {
   if (!validMatchId(id)) return { status: 400, body: { error: 'bad_id' } };
   const r = await call(key, `${REGION}/lol/match/v5/matches/${id}`);
   if (r.error) return { status: r.error, body: { error: r.error } };
@@ -462,14 +472,14 @@ const match = async (key, { id }) => {
   return { maxAge: DAY, body: slimMatch(r.data) };
 };
 
-const timeline = async (key, { id }) => {
+const timeline = async ({ lol: key }, { id }) => {
   if (!validMatchId(id)) return { status: 400, body: { error: 'bad_id' } };
   const r = await call(key, `${REGION}/lol/match/v5/matches/${id}/timeline`);
   if (r.error) return { status: r.error, body: { error: r.error } };
   return { maxAge: DAY, body: slimTimeline(r.data) };
 };
 
-const tftMatch = async (key, { id }) => {
+const tftMatch = async ({ tft: key }, { id }) => {
   if (!validMatchId(id)) return { status: 400, body: { error: 'bad_id' } };
   const r = await call(key, `${REGION}/tft/match/v1/matches/${id}`);
   if (r.error) return { status: r.error, body: { error: r.error } };
@@ -479,8 +489,14 @@ const tftMatch = async (key, { id }) => {
 /* 화면이 붙이는 v=(응답 모양 버전)는 캐시를 가르는 데만 쓰고 여기서는 안 본다 */
 const FNS = { home, profile, matchIds, match, timeline, tftMatch };
 
-/* 어느 서버에서 부르든 같은 모양으로 돌려준다: { status, headers, body } */
-const run = async (query = {}, key) => {
+/* 어느 서버에서 부르든 같은 모양으로 돌려준다: { status, headers, body }
+   keys: { lol, tft }. 키 하나(문자열)를 주면 둘 다 그 키로 본다.
+   라이엇 개인 키는 게임마다 따로 받는다 - 롤 키로는 TFT가 403이다 */
+const run = async (query = {}, keyOrKeys) => {
+  const keys =
+    typeof keyOrKeys === 'string' || !keyOrKeys
+      ? { lol: keyOrKeys, tft: keyOrKeys }
+      : { lol: keyOrKeys.lol, tft: keyOrKeys.tft || keyOrKeys.lol };
   const json = (status, body, maxAge = 0) => ({
     status,
     headers: {
@@ -496,19 +512,25 @@ const run = async (query = {}, key) => {
 
   const fn = FNS[query.fn];
   if (!fn) return json(400, { error: 'bad_fn' });
-  if (!key) return json(503, { error: 'no_key' });
+  if (!keys.lol) return json(503, { error: 'no_key' });
 
   try {
-    const out = await fn(key, query);
+    const out = await fn(keys, query);
     return json(out.status || 200, out.body, out.maxAge);
   } catch {
     return json(500, { error: 'server' });
   }
 };
 
+/* 환경변수의 키. TFT 키(RIOT_TFT_API_KEY)가 없으면 롤 키로 해본다 */
+const envKeys = () => ({
+  lol: process.env.RIOT_API_KEY,
+  tft: process.env.RIOT_TFT_API_KEY || process.env.RIOT_API_KEY,
+});
+
 /* Vercel과 로컬 개발 서버(express)는 req/res 모양이 같다 */
 const nodeHandler = async (req, res) => {
-  const out = await run(req.query || {}, process.env.RIOT_API_KEY);
+  const out = await run(req.query || {}, envKeys());
   Object.entries(out.headers).forEach(([k, v]) => res.setHeader(k, v));
   res.status(out.status).send(JSON.stringify(out.body));
 };
@@ -516,6 +538,7 @@ const nodeHandler = async (req, res) => {
 module.exports = {
   run,
   nodeHandler,
+  envKeys,
   // 테스트용
   validName,
   validMatchId,

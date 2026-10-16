@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FaSearch, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaTimes, FaTrashAlt } from 'react-icons/fa';
 import PageHeader from '../../components/common/PageHeader';
 import { usePageMeta, PAGE_META } from '../../lib/seo';
-import { parseRiotId, riotIdText } from '../../rules/riot';
+import { parseRiotId, riotIdText, RECENT_MAX } from '../../rules/riot';
 import { loadChampions } from '../../server/riot';
 import RiotHome from './RiotHome';
 import RiotProfile from './RiotProfile';
+import FavPanel from './FavPanel';
+import useRiotFavs, { FavsContext } from './useRiotFavs';
 import './RiotInfo.css';
 
 /* 전적·정보. 라이엇 ID를 넣으면 그 사람, 안 넣으면 오늘의 정보(로테이션 ·
@@ -17,7 +19,6 @@ import './RiotInfo.css';
    보내줄 수 있다 */
 
 const RECENT_KEY = 'lrc.riotRecent';
-const RECENT_MAX = 6;
 
 const loadRecent = () => {
   try {
@@ -44,6 +45,7 @@ export default function RiotInfo() {
   const [text, setText] = useState(raw);
   const [recent, setRecent] = useState(loadRecent);
   const [champs, setChamps] = useState(null);
+  const favs = useRiotFavs();
 
   useEffect(() => {
     loadChampions().then(setChamps);
@@ -85,7 +87,13 @@ export default function RiotInfo() {
       return next;
     });
 
+  const forgetAll = () => {
+    saveRecent([]);
+    setRecent([]);
+  };
+
   return (
+    <FavsContext.Provider value={favs}>
     <div className="page riot-page">
       <PageHeader
         title="전적 · 정보"
@@ -128,12 +136,26 @@ export default function RiotInfo() {
                 </button>
               </span>
             ))}
+            {recent.length > 0 && (
+              <button type="button" className="riot-recent-clear" onClick={forgetAll}>
+                <FaTrashAlt /> 기록 지우기
+              </button>
+            )}
           </div>
         )}
       </div>
 
+      <FavPanel favs={favs} onSearch={go} />
+
       {id ? (
-        <RiotProfile key={riotIdText(id)} id={id} champs={champs} onFound={remember} onSearch={go} />
+        <RiotProfile
+          key={riotIdText(id)}
+          id={id}
+          champs={champs}
+          onFound={remember}
+          onSearch={go}
+          favs={favs}
+        />
       ) : (
         <RiotHome champs={champs} onSearch={go} />
       )}
@@ -145,5 +167,6 @@ export default function RiotInfo() {
         레전드와 Riot Games는 Riot Games, Inc.의 상표 또는 등록 상표입니다.
       </p>
     </div>
+    </FavsContext.Provider>
   );
 }

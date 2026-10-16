@@ -60,7 +60,7 @@ test('프로필: 한 칸이 403이어도 나머지는 온다, 게임 중이 아�
   });
   const out = await riot.run({ fn: 'profile', name: 'Faker', tag: 'KR1' }, 'KEY');
   expect(out.status).toBe(200);
-  expect(out.body.account).toEqual({ puuid: 'P1', name: 'Faker', tag: 'KR1' });
+  expect(out.body.account).toEqual({ puuid: 'P1', tftPuuid: 'P1', name: 'Faker', tag: 'KR1' });
   expect(out.body.summoner.data).toEqual({ level: 700, icon: 6 });
   expect(out.body.live).toEqual({ data: null });
   expect(out.body.challenges).toEqual({ error: 403 });
@@ -264,4 +264,24 @@ test('타임라인 이벤트: 킬 · 오브젝트 · 건물만, 건물은 부순
     ['monster', 200],
   ]);
   expect(t.events[1]).toMatchObject({ tower: 'OUTER_TURRET', lane: 'MID_LANE', killer: 'A' });
+});
+
+test('TFT 키가 따로 있으면 TFT 요청은 그 키로, puuid도 그 키로 다시 찾는다', async () => {
+  global.fetch = jest.fn((url, init) => {
+    const k = init.headers['X-Riot-Token'];
+    if (url.includes('/accounts/by-riot-id/')) {
+      return reply(200, { puuid: k === 'TFT' ? 'TFT_PUUID' : 'LOL_PUUID', gameName: 'A', tagLine: 'KR1' });
+    }
+    return reply(200, []);
+  });
+  const out = await riot.run({ fn: 'profile', name: 'A', tag: 'KR1' }, { lol: 'LOL', tft: 'TFT' });
+  expect(out.body.account).toMatchObject({ puuid: 'LOL_PUUID', tftPuuid: 'TFT_PUUID' });
+  const calls = global.fetch.mock.calls.map(([u, i]) => [u, i.headers['X-Riot-Token']]);
+  calls
+    .filter(([u]) => u.includes('/tft/'))
+    .forEach(([u, k]) => {
+      expect(k).toBe('TFT');
+      expect(u).toContain('TFT_PUUID');
+    });
+  calls.filter(([u]) => u.includes('/lol/')).forEach(([, k]) => expect(k).toBe('LOL'));
 });

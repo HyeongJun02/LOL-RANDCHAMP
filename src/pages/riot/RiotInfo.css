@@ -726,7 +726,21 @@
 }
 
 .riot-match-row {
-  grid-template-columns: 5.6rem 44px minmax(6rem, 1fr) minmax(6.5rem, 1fr) auto 0.8rem;
+  grid-template-columns: 5.6rem auto minmax(6rem, 1fr) minmax(6.5rem, 1fr) auto 0.8rem;
+}
+
+/* 라인 | 초상화. 라인이 없는 판(칼바람 등)도 자리를 비워 둬서 초상화가 안 밀린다 */
+.riot-match-champ {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.riot-match-champ .riot-lane.is-icon,
+.riot-match-champ .riot-lane.is-blank,
+.riot-match-champ .riot-lane.is-icon img {
+  width: 18px;
+  height: 18px;
 }
 
 .riot-match-row:hover,
@@ -1136,14 +1150,14 @@
 
   /* 결과 · 챔피언 · KDA를 윗줄에, 숫자와 아이템을 아랫줄에 */
   .riot-match-row {
-    grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 0.8rem;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) 0.8rem;
     grid-template-areas:
       'champ result kda chev'
       'champ stat items items';
     gap: 0.35rem 0.6rem;
   }
 
-  .riot-match-row .riot-champ-icon { grid-area: champ; align-self: start; }
+  .riot-match-row .riot-match-champ { grid-area: champ; align-self: start; }
   .riot-match-row .riot-match-result { grid-area: result; }
   .riot-match-row .riot-match-kda { grid-area: kda; }
   .riot-match-row .riot-match-stat { grid-area: stat; }
@@ -1738,5 +1752,264 @@
 
   .riot-check {
     margin-left: 0;
+  }
+}
+
+/* ---------- 최근 검색 지우기 · 즐겨찾기 ---------- */
+
+.riot-recent-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.6rem;
+  border: 0;
+  background: none;
+  color: #6b7a94;
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.riot-recent-clear:hover {
+  color: #f0a3a4;
+}
+
+.riot-fav-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.riot-fav-hint svg {
+  color: var(--gg-gold);
+}
+
+.riot-fav-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 8px;
+  background: transparent;
+  color: #a8b4c8;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.riot-fav-edit svg {
+  color: inherit;
+  font-size: 0.65rem;
+}
+
+.riot-fav-edit.is-on {
+  border-color: rgba(200, 170, 110, 0.6);
+  color: var(--gg-gold-light);
+}
+
+/* 평소: 별명으로 묶은 칸들 */
+.riot-fav-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.riot-fav-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* 부계정까지 묶인 칸은 테두리로 한 덩어리임을 보인다 */
+.riot-fav-group.is-multi {
+  border-color: rgba(200, 170, 110, 0.35);
+}
+
+.riot-fav-alias {
+  padding: 0 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--gg-gold-light);
+}
+
+.riot-fav-id-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e5;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.riot-fav-id-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+}
+
+.riot-fav-id-btn em {
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #8b98ae;
+}
+
+/* 편집: 한 줄에 하나 */
+.riot-fav-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.riot-fav-rows li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 11rem) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.riot-fav-order {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.riot-fav-order button,
+.riot-fav-del {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 6px;
+  background: transparent;
+  color: #8b98ae;
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.riot-fav-order button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.riot-fav-del:hover {
+  color: #f0a3a4;
+  border-color: rgba(240, 163, 164, 0.4);
+}
+
+.riot-fav-id {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.riot-alias-input {
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 7px;
+  background: rgba(8, 12, 20, 0.5);
+  color: var(--gg-text);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.riot-alias-input:focus {
+  outline: none;
+  border-color: var(--gg-gold);
+}
+
+/* 프로필 머리의 별명 칸. 이름 밑에 작게 */
+.riot-alias-input.is-head {
+  align-self: flex-start;
+  width: 12rem;
+  max-width: 100%;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+}
+
+.riot-star {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--gg-panel-border);
+  border-radius: 10px;
+  background: transparent;
+  color: #a8b4c8;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.riot-star svg {
+  color: #8b98ae;
+}
+
+.riot-star.is-on {
+  border-color: rgba(250, 204, 21, 0.5);
+  color: #fde68a;
+}
+
+.riot-star.is-on svg {
+  color: #facc15;
+}
+
+/* 이름 옆 별명. 금색 꼬리표 */
+.riot-alias {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(200, 170, 110, 0.16);
+  color: var(--gg-gold-light);
+  font-style: normal;
+  font-size: 0.65rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.riot-beta {
+  margin-left: 0.25rem;
+  padding: 0.02rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(192, 132, 252, 0.18);
+  color: #e9d5ff;
+  font-style: normal;
+  font-size: 0.6rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+@media (max-width: 640px) {
+  .riot-fav-rows li {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .riot-fav-rows .riot-alias-input {
+    grid-column: 2 / 3;
+  }
+
+  .riot-star {
+    padding: 0.4rem 0.6rem;
   }
 }

@@ -1,5 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FaSyncAlt, FaUserSlash, FaTrophy, FaStar, FaBroadcastTower, FaMedal } from 'react-icons/fa';
+import {
+  FaSyncAlt,
+  FaUserSlash,
+  FaTrophy,
+  FaStar,
+  FaRegStar,
+  FaBroadcastTower,
+  FaMedal,
+} from 'react-icons/fa';
 import Empty from '../../components/common/Empty';
 import { riotGet, champIconUrl, profileIconUrl } from '../../server/riot';
 import {
@@ -18,6 +26,8 @@ import RiotPart from './RiotPart';
 import MatchList from './MatchList';
 import MatchDetail from './MatchDetail';
 import TftList from './TftList';
+import { AliasInput } from './FavPanel';
+import { useAliasOf } from './useRiotFavs';
 
 /* 라이엇 ID 하나로 보는 것 전부. 서버 함수가 한 번에 모아 준다(api/_riot.js의
    profile). 매치 상세는 목록에서 한 판씩 따로 받는다 - 한 판이 커서 */
@@ -46,6 +56,7 @@ const LeagueCard = ({ l }) => {
 
 /* 지금 게임 중. 관전 API는 게임 시작 3분 뒤부터 잡힌다 */
 const LiveGame = ({ g, champs, me }) => {
+  const aliasOf = useAliasOf();
   const elapsed = g.start ? Math.max(0, (Date.now() - g.start) / 1000) : g.length;
   return (
     <section className="riot-panel riot-live">
@@ -65,7 +76,10 @@ const LiveGame = ({ g, champs, me }) => {
                 return (
                   <li key={p.puuid || p.name} className={p.puuid === me ? 'is-me' : ''}>
                     {c && <img src={champIconUrl(champs.version, c.id)} alt="" />}
-                    <span className="riot-live-name">{p.name || '?'}</span>
+                    <span className="riot-live-name">
+                      {p.name || '?'}
+                      {aliasOf(p.name) && <em className="riot-alias">{aliasOf(p.name)}</em>}
+                    </span>
                     <em>{c?.name || ''}</em>
                   </li>
                 );
@@ -77,7 +91,7 @@ const LiveGame = ({ g, champs, me }) => {
   );
 };
 
-const RiotProfile = ({ id, champs, onFound, onSearch }) => {
+const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(true);
   const [tab, setTab] = useState('lol');
@@ -138,6 +152,7 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
 
   const d = res.data;
   const me = d.account.puuid;
+  const riotId = `${d.account.name}#${d.account.tag}`;
   const icon = profileIconUrl(champs?.version, d.summoner.data?.icon);
   const leagues = [...(d.leagues.data || []), ...(d.tftLeagues.data || [])];
 
@@ -151,7 +166,26 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
             <em>#{d.account.tag}</em>
           </h2>
           {d.summoner.data && <span className="riot-muted">레벨 {d.summoner.data.level}</span>}
+          {/* 즐겨찾기에 있으면 별명을 바로 적을 수 있다 */}
+          {favs.has(riotId) && (
+            <AliasInput
+              key={riotId}
+              value={favs.aliasOf(riotId)}
+              onSave={(a) => favs.setAlias(riotId, a)}
+              className="is-head"
+            />
+          )}
         </div>
+        <button
+          type="button"
+          className={`riot-star ${favs.has(riotId) ? 'is-on' : ''}`}
+          onClick={() => (favs.has(riotId) ? favs.remove(riotId) : favs.add(riotId))}
+          aria-pressed={favs.has(riotId)}
+          title={favs.loggedIn ? '즐겨찾기' : '로그인하면 즐겨찾기를 쓸 수 있어요'}
+        >
+          {favs.has(riotId) ? <FaStar /> : <FaRegStar />}
+          즐겨찾기
+        </button>
         <button
           className="ghost-btn"
           onClick={() => {
@@ -271,7 +305,7 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
             </button>
             {!denied(d.tftMatches) && (
               <button className={`seg-tab ${tab === 'tft' ? 'active' : ''}`} onClick={() => setTab('tft')}>
-                TFT
+                TFT <em className="riot-beta">베타</em>
               </button>
             )}
           </div>
@@ -302,7 +336,8 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
           )}
           {tab === 'tft' && (
             <RiotPart part={d.tftMatches} empty="최근 TFT 매치가 없어요.">
-              {(ids) => <TftList ids={ids} me={me} onSearch={onSearch} />}
+              {/* TFT는 키가 따로라 puuid도 따로다 (api/_riot.js profile) */}
+              {(ids) => <TftList ids={ids} me={d.account.tftPuuid || me} onSearch={onSearch} />}
             </RiotPart>
           )}
         </section>

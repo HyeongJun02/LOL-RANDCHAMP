@@ -52,3 +52,30 @@ test('숫자 칸은 값이 없어도 죽지 않는다 (옛 응답)', () => {
   expect(num(undefined)).toBe('-');
   expect(num(null)).toBe('-');
 });
+
+test('즐겨찾기: 별명이 같으면 한 묶음(부계정), 순서는 첫 계정 기준', () => {
+  const { groupFavs, sameId } = require('./riot');
+  const groups = groupFavs([
+    { id: 'A#KR1', alias: '철수' },
+    { id: 'B#KR1', alias: '' },
+    { id: 'C#KR1', alias: ' 철수 ' },
+    { id: 'D#KR1' },
+    { id: 'E#KR1', alias: '영희' },
+  ]);
+  expect(groups).toEqual([
+    { alias: '철수', ids: ['A#KR1', 'C#KR1'] },
+    { alias: '', ids: ['B#KR1'] },
+    { alias: '', ids: ['D#KR1'] },
+    { alias: '영희', ids: ['E#KR1'] },
+  ]);
+  expect(sameId('Faker#KR1', 'faker#kr1')).toBe(true);
+});
+
+test('즐겨찾기 상한이 DB와 같다', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { FAV_MAX, ALIAS_MAX } = require('./riot');
+  const sql = fs.readFileSync(path.join(__dirname, '../../sql/setup.sql'), 'utf8');
+  expect(sql).toContain(`jsonb_array_length(new.list) > ${FAV_MAX}`);
+  expect(sql).toContain(`length(coalesce(x ->> 'alias', '')) > ${ALIAS_MAX}`);
+});

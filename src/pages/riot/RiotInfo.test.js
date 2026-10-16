@@ -15,6 +15,20 @@ jest.mock('react-router-dom', () => {
   };
 }, { virtual: true });
 
+/* 로그인 상태는 테스트마다 바꾼다 (즐겨찾기는 로그인해야 쓴다) */
+let mockUser = null;
+jest.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ user: mockUser }) }));
+
+/* 즐겨찾기 저장소. 서버 대신 메모리 */
+let mockFavs = [];
+jest.mock('../../server/riotFavs', () => ({
+  loadFavs: () => Promise.resolve(mockFavs),
+  saveFavs: (uid, list) => {
+    mockFavs = list;
+    return Promise.resolve();
+  },
+}));
+
 jest.mock('../../services/api', () => ({
   fetchChampionData: () =>
     Promise.resolve({
@@ -98,6 +112,8 @@ const render = async (url) => {
 };
 
 beforeEach(() => {
+  mockUser = null;
+  mockFavs = [];
   document.body.innerHTML = '';
   localStorage.clear();
   global.fetch = jest.fn((url) => {
@@ -172,4 +188,64 @@ test('판을 펼쳐 "게임 상세 보기"를 누르면 상세 탭: 용 그림 �
   /* 선수 표 */
   expect(el.querySelectorAll('.riot-table tbody tr')).toHaveLength(2);
   expect(el.querySelector('.riot-table').textContent).toContain('30,000');
+});
+
+test('최근 검색은 10개까지, 한 번에 지우기', async () => {
+  localStorage.setItem('lrc.riotRecent', JSON.stringify(Array.from({ length: 12 }, (_, i) => `n${i}#KR1`)));
+  const el = await render('/info?id=Faker%23KR1');
+  const saved = JSON.parse(localStorage.getItem('lrc.riotRecent'));
+  expect(saved).toHaveLength(10);
+  expect(saved[0]).toBe('Faker#KR1');
+  await click(buttonWith(el, '기록 지우기'));
+  expect(JSON.parse(localStorage.getItem('lrc.riotRecent'))).toEqual([]);
+  expect(el.querySelectorAll('.riot-recent .riot-chip:not(.is-home)')).toHaveLength(0);
+});
+
+test('로그인 안 하면 즐겨찾기 대신 안내', async () => {
+  const el = await render('/info');
+  expect(el.textContent).toContain('로그인하면 자주 보는 사람을 즐겨찾기');
+});
+
+test('즐겨찾기: 별로 넣고, 별명이 같으면 본 · 부계정으로 묶이고, 매치 표에 별명이 붙는다', async () => {
+  mockUser = { id: 'u1' };
+  mockFavs = [{ id: 'Chovy#KR1', alias: '상혁' }];
+  const el = await render('/info?id=Faker%23KR1');
+  await click(el.querySelector('.riot-star'));
+  expect(mockFavs.map((f) => f.id)).toEqual(['Chovy#KR1', 'Faker#KR1']);
+
+  /* 프로필 머리의 별명 칸에 적으면 저장된다 */
+  const input = el.querySelector('.riot-alias-input.is-head');
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '상혁');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => {
+    input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 0));
+  });
+  expect(mockFavs.find((f) => f.id === 'Faker#KR1').alias).toBe('상혁');
+
+  /* 별명이 같은 둘은 한 칸 */
+  const groups = [...el.querySelectorAll('.riot-fav-group')];
+  expect(groups).toHaveLength(1);
+  expect(groups[0].textContent).toContain('상혁');
+  expect(groups[0].querySelectorAll('.riot-fav-id-btn')).toHaveLength(2);
+
+  /* 펼친 판의 팀 표에 별명 꼬리표 */
+  await click(el.querySelector('.riot-match-row'));
+  expect([...el.querySelectorAll('.riot-team .riot-alias')].map((n) => n.textContent)).toContain('상혁');
+});
+
+test('즐겨찾기 편집: 순서 바꾸기 · 빼기', async () => {
+  mockUser = { id: 'u1' };
+  mockFavs = [
+    { id: 'A#KR1', alias: '' },
+    { id: 'B#KR1', alias: '' },
+  ];
+  const el = await render('/info');
+  await click(buttonWith(el, '편집'));
+  await click(el.querySelector('[aria-label="B#KR1 위로"]'));
+  expect(mockFavs.map((f) => f.id)).toEqual(['B#KR1', 'A#KR1']);
+  await click(el.querySelector('[aria-label="A#KR1 즐겨찾기에서 빼기"]'));
+  expect(mockFavs.map((f) => f.id)).toEqual(['B#KR1']);
 });

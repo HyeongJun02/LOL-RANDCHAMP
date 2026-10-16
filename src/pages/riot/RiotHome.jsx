@@ -10,7 +10,7 @@ import RiotPart from './RiotPart';
 
 const STATUS_GAMES = [
   ['lol', '리그 오브 레전드'],
-  ['tft', 'TFT'],
+  ['tft', 'TFT (베타)'],
   ['val', '발로란트'],
 ];
 
@@ -154,7 +154,7 @@ const RiotHome = ({ champs, onSearch }) => {
         {!denied(d.tftChallenger) && (
         <section className="riot-panel">
           <h2 className="riot-h">
-            <FaCrown /> TFT 챌린저
+            <FaCrown /> TFT 챌린저 <em className="riot-beta">베타</em>
           </h2>
           <RiotPart part={d.tftChallenger}>
             {(rows) => (

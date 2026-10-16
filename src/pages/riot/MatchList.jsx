@@ -4,6 +4,7 @@ import { riotGet } from '../../server/riot';
 import { queueName, clock, kdaRatio, errorText, MATCH_TABS, kilo, num } from '../../rules/riot';
 import { timeAgo } from '../../lib/timeAgo';
 import { Champ, Items, Lane } from './RiotBits';
+import { useAliasOf } from './useRiotFavs';
 
 /* 롤 최근 매치. 위에서 큐(전체 · 솔로 · 자유 · 일반 · 칼바람)를 고르면 그
    큐의 판만 라이엇이 걸러 준다. 20판씩, '더 보기'로 이어 받는다.
@@ -16,7 +17,9 @@ import { Champ, Items, Lane } from './RiotBits';
 const EMPTY = [];
 
 /* 펼치면 두 팀만. 더 자세한 건 '게임 상세' 탭이 맡는다 */
-const Teams = ({ m, me, champs, onSearch }) => (
+const Teams = ({ m, me, champs, onSearch }) => {
+  const aliasOf = useAliasOf();
+  return (
   <div className="riot-detail">
     {[100, 200].map((team) => {
       const t = m.teams.find((x) => x.id === team) || {};
@@ -43,6 +46,9 @@ const Teams = ({ m, me, champs, onSearch }) => (
                     onClick={() => p.name && onSearch(`${p.name}#${p.tag}`)}
                   >
                     {p.name || '?'}
+                    {aliasOf(`${p.name}#${p.tag}`) && (
+                      <em className="riot-alias">{aliasOf(`${p.name}#${p.tag}`)}</em>
+                    )}
                   </button>
                   <span className="riot-detail-kda">
                     {p.k}/{p.d}/{p.a}
@@ -57,7 +63,8 @@ const Teams = ({ m, me, champs, onSearch }) => (
       );
     })}
   </div>
-);
+  );
+};
 
 const MatchRow = ({ m, me, champs, onSearch, onDetail }) => {
   const [open, setOpen] = useState(false);
@@ -83,15 +90,16 @@ const MatchRow = ({ m, me, champs, onSearch, onDetail }) => {
             {m.end ? timeAgo(m.end) : ''} · {clock(m.duration)}
           </em>
         </span>
-        <Champ champs={champs} name={p.champ} level={p.level} />
+        {/* 라인은 초상화 바로 왼쪽. KDA 글자 끝에 붙여뒀더니 눈에 안 걸렸다 */}
+        <span className="riot-match-champ">
+          <Lane pos={p.pos} iconOnly />
+          <Champ champs={champs} name={p.champ} level={p.level} />
+        </span>
         <span className="riot-match-kda">
           <strong>
             {p.k} / <i>{p.d}</i> / {p.a}
           </strong>
-          <em>
-            {kdaRatio(p.k, p.d, p.a)} KDA
-            <Lane pos={p.pos} />
-          </em>
+          <em>{kdaRatio(p.k, p.d, p.a)} KDA</em>
         </span>
         <span className="riot-match-stat">
           <em>

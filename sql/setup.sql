@@ -3256,4 +3256,63 @@ grant execute on function
   public.merge_room_players(bigint, bigint)
 to authenticated;
 
+-- ============================================================
+-- 14. 전적 · 정보 즐겨찾기
+-- ============================================================
+-- 라이엇 ID 즐겨찾기. 사용자마다 한 줄에 목록을 통째로 둔다
+--   list: [{"id": "Faker#KR1", "alias": "상혁"}, ...]  (순서 = 화면 순서)
+-- 순서 바꾸기 · 별명 고치기가 전부 '목록 갈아 끼우기' 한 번이라 줄을 쪼갤 이유가 없다.
+-- 별명이 같은 계정끼리 화면에서 묶는다(부계정) - 그건 화면이 한다.
+create table if not exists public.riot_favorites (
+  user_id    text primary key default auth.user_id(),
+  list       jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.riot_favorites enable row level security;
+grant select, insert, update, delete on public.riot_favorites to authenticated;
+
+drop policy if exists riot_favorites_own on public.riot_favorites;
+create policy riot_favorites_own on public.riot_favorites
+  for all to authenticated
+  using (auth.user_id() = user_id)
+  with check (auth.user_id() = user_id);
+
+-- 브라우저가 직접 쓰는 표라 모양과 크기를 여기서 막는다 (app_state와 같은 이유).
+-- 20개는 src/rules/riot.js의 FAV_MAX와 같아야 한다
+create or replace function public.enforce_riot_favorites()
+returns trigger language plpgsql as $fn$
+declare x jsonb;
+begin
+  if jsonb_typeof(new.list) <> 'array' then
+    raise exception '즐겨찾기 모양이 이상해요.' using errcode = 'check_violation';
+  end if;
+  if jsonb_array_length(new.list) > 20 then
+    raise exception '즐겨찾기는 20개까지예요.' using errcode = 'check_violation';
+  end if;
+  for x in select * from jsonb_array_elements(new.list) loop
+    if jsonb_typeof(x) <> 'object'
+       or jsonb_typeof(x -> 'id') <> 'string'
+       or length(x ->> 'id') not between 3 and 30
+       or position('#' in x ->> 'id') = 0
+       or length(coalesce(x ->> 'alias', '')) > 20 then
+      raise exception '즐겨찾기 항목이 이상해요.' using errcode = 'check_violation';
+    end if;
+  end loop;
+  if (select count(distinct lower(e ->> 'id')) from jsonb_array_elements(new.list) e)
+     <> jsonb_array_length(new.list) then
+    raise exception '같은 라이엇 ID가 두 번 있어요.' using errcode = 'check_violation';
+  end if;
+  new.updated_at := now();
+  return new;
+end; $fn$;
+
+drop trigger if exists riot_favorites_limits on public.riot_favorites;
+create trigger riot_favorites_limits
+  before insert or update on public.riot_favorites
+  for each row execute function public.enforce_riot_favorites();
+
+revoke execute on function public.enforce_riot_favorites() from public;
+
+
 notify pgrst, 'reload schema';
