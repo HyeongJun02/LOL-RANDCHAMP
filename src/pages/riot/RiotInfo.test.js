@@ -44,6 +44,37 @@ const PROFILE = {
   tftMatches: { error: 403 },
 };
 
+const player = (puuid, team, name, champ, win) => ({
+  puuid, name, tag: 'KR1', team, win, champ, level: 18, pos: 'MIDDLE',
+  k: 5, d: 2, a: 7, cs: 250, gold: 15000, dmg: 30000, taken: 20000, vision: 30,
+  wards: 12, wardsKilled: 4, pinks: 3, items: [3089, 0, 0, 0, 0, 0, 3340], fb: false, multi: 1,
+});
+const MATCH = {
+  id: 'KR_100001', queue: 420, mode: 'CLASSIC', duration: 1884, start: 1, end: 2, patch: '16.20',
+  players: [player('P1', 100, 'Faker', 'Ahri', true), player('P2', 200, 'Chovy', 'Ahri', false)],
+  teams: [
+    { id: 100, win: true, kills: 30, dragon: 1, baron: 1, tower: 9, inhib: 2, herald: 1, grubs: 3, atakhan: 0, bans: [103] },
+    { id: 200, win: false, kills: 12, dragon: 0, baron: 0, tower: 2, inhib: 0, herald: 0, grubs: 3, atakhan: 0, bans: [] },
+  ],
+};
+const TIMELINE = {
+  goldDiff: [0, 300, 900],
+  firstKill: null,
+  objectives: [],
+  events: [
+    { t: 95000, kind: 'kill', killer: 'P1', victim: 'P2', assists: [], team: 100 },
+    { t: 600000, kind: 'monster', monster: 'DRAGON', sub: 'FIRE_DRAGON', killer: 'P1', team: 100 },
+    { t: 700000, kind: 'building', building: 'TOWER_BUILDING', tower: 'OUTER_TURRET', lane: 'MID_LANE', killer: null, team: 100 },
+  ],
+};
+const BODIES = {
+  home: HOME,
+  profile: PROFILE,
+  matchIds: { ids: ['KR_100001'], more: false },
+  match: MATCH,
+  timeline: TIMELINE,
+};
+
 let act;
 const render = async (url) => {
   mockSearch = url.split('?')[1] || '';
@@ -71,7 +102,7 @@ beforeEach(() => {
   localStorage.clear();
   global.fetch = jest.fn((url) => {
     const fn = new URL(url, 'http://x').searchParams.get('fn');
-    const body = fn === 'home' ? HOME : fn === 'profile' ? PROFILE : {};
+    const body = BODIES[fn] || {};
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
   });
 });
@@ -110,4 +141,35 @@ test('키가 아직 없으면 그렇게 말한다', async () => {
   );
   const el = await render('/info');
   expect(el.textContent).toContain('API 키가 아직 설정되지 않았어요.');
+});
+
+const click = (node) =>
+  act(async () => {
+    node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 0));
+  });
+const buttonWith = (el, text) => [...el.querySelectorAll('button')].find((b) => b.textContent.includes(text));
+
+test('판을 펼쳐 "게임 상세 보기"를 누르면 상세 탭: 용 그림 · 이벤트 · 선수 표', async () => {
+  const el = await render('/info?id=Faker%23KR1');
+  /* 큐 탭이 있고 목록이 왔다 */
+  expect(buttonWith(el, '솔로 랭크')).toBeDefined();
+  await click(el.querySelector('.riot-match-row'));
+  await click(buttonWith(el, '게임 상세 보기'));
+
+  expect(el.textContent).toContain('16.20 패치');
+  expect(el.textContent).toContain('31분 24초');
+  /* 용은 public/dragon_icon 그림으로 */
+  expect(el.querySelector('.riot-board-dragon img').getAttribute('src')).toContain('dragon_icon');
+  /* 이벤트: 초 단위 시각과 무슨 일 */
+  const evs = [...el.querySelectorAll('.riot-ev')].map((n) => n.textContent);
+  expect(evs[0]).toContain('1:35');
+  expect(evs[1]).toContain('화염 용');
+  expect(evs[2]).toContain('미드 1차 포탑 파괴');
+  /* 건물만 걸러 보기 */
+  await click([...el.querySelectorAll('.riot-ev-filters button')].find((b) => b.textContent.startsWith('건물')));
+  expect(el.querySelectorAll('.riot-ev')).toHaveLength(1);
+  /* 선수 표 */
+  expect(el.querySelectorAll('.riot-table tbody tr')).toHaveLength(2);
+  expect(el.querySelector('.riot-table').textContent).toContain('30,000');
 });

@@ -64,7 +64,8 @@ test('프로필: 한 칸이 403이어도 나머지는 온다, 게임 중이 아�
   expect(out.body.summoner.data).toEqual({ level: 700, icon: 6 });
   expect(out.body.live).toEqual({ data: null });
   expect(out.body.challenges).toEqual({ error: 403 });
-  expect(out.body.matches.data).toEqual(['KR_1', 'KR_2']);
+  /* 매치 목록은 큐별로 따로 받는다 (matchIds) */
+  expect(out.body.matches).toBeUndefined();
   expect(out.headers['Cache-Control']).toContain('s-maxage=120');
 });
 
@@ -203,4 +204,64 @@ test('로테이션: 라이엇의 새 응답 이름(sr · newplayer)도 옛 이�
     expect(out.body.rotation.data.ids).toEqual([1, 2]);
     expect(out.body.rotation.data.newbie).toEqual([3]);
   }
+});
+
+const PUUID = 'QK4MRJe80C71DvtdsZGOIhAioIp9jErARylp-KkhTJ9eMKvK-5sWJI3HHOKvbS0zFAMlJYzV0y8fcw';
+
+test('매치 목록: 큐로 걸러 20판씩, start로 이어 받는다', async () => {
+  global.fetch = jest.fn(() => reply(200, Array.from({ length: 20 }, (_, i) => `KR_${i}`)));
+  const out = await riot.run({ fn: 'matchIds', puuid: PUUID, filter: 'solo', start: '20' }, 'KEY');
+  expect(out.status).toBe(200);
+  expect(out.body.more).toBe(true);
+  const url = global.fetch.mock.calls[0][0];
+  expect(url).toContain('start=20&count=20&queue=420');
+
+  global.fetch = jest.fn(() => reply(200, ['KR_1']));
+  const normal = await riot.run({ fn: 'matchIds', puuid: PUUID, filter: 'normal' }, 'KEY');
+  expect(global.fetch.mock.calls[0][0]).toContain('&type=normal');
+  /* 20판보다 적게 오면 더 없다 */
+  expect(normal.body.more).toBe(false);
+});
+
+test('매치 목록: 정해둔 큐 · 모양 맞는 puuid · 범위 안의 start만', async () => {
+  global.fetch = jest.fn(() => reply(200, []));
+  const bad = [
+    { puuid: PUUID, filter: 'urf' },
+    { puuid: 'abc/../x', filter: 'all' },
+    { puuid: PUUID, filter: 'all', start: '-1' },
+    { puuid: PUUID, filter: 'all', start: '5000' },
+  ];
+  for (const q of bad) {
+    const out = await riot.run({ fn: 'matchIds', ...q }, 'KEY');
+    expect(out.status).toBe(400);
+  }
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('타임라인 이벤트: 킬 · 오브젝트 · 건물만, 건물은 부순 팀으로', () => {
+  const t = riot.slimTimeline({
+    info: {
+      participants: [
+        { participantId: 1, puuid: 'A' },
+        { participantId: 6, puuid: 'B' },
+      ],
+      frames: [
+        {
+          participantFrames: {},
+          events: [
+            { type: 'WARD_PLACED', timestamp: 1 },
+            { type: 'CHAMPION_KILL', timestamp: 60000, killerId: 1, victimId: 6, assistingParticipantIds: [] },
+            { type: 'BUILDING_KILL', timestamp: 700000, buildingType: 'TOWER_BUILDING', towerType: 'OUTER_TURRET', laneType: 'MID_LANE', teamId: 200, killerId: 1 },
+            { type: 'ELITE_MONSTER_KILL', timestamp: 800000, monsterType: 'HORDE', killerTeamId: 200, killerId: 6 },
+          ],
+        },
+      ],
+    },
+  });
+  expect(t.events.map((e) => [e.kind, e.team])).toEqual([
+    ['kill', 100],
+    ['building', 100],
+    ['monster', 200],
+  ]);
+  expect(t.events[1]).toMatchObject({ tower: 'OUTER_TURRET', lane: 'MID_LANE', killer: 'A' });
 });

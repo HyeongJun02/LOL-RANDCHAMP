@@ -23,6 +23,18 @@ const REGION = 'https://asia.api.riotgames.com';
 const NAME_RE = /^[^/?#\\]{1,16}$/;
 const TAG_RE = /^[^/?#\\]{1,5}$/;
 const MATCH_RE = /^KR_\d{5,15}$/;
+const PUUID_RE = /^[A-Za-z0-9_-]{40,100}$/;
+
+/* 매치 목록 걸러 받기. 라이엇이 큐 번호(queue)나 종류(type)로 걸러 준다.
+   화면의 탭과 같은 목록이다 - 아무 값이나 넘기지 못하게 정해둔다 */
+const MATCH_FILTERS = {
+  all: '',
+  solo: '&queue=420',
+  flex: '&queue=440',
+  normal: '&type=normal',
+  aram: '&queue=450',
+};
+const PAGE = 20;
 
 const validName = (name, tag) =>
   typeof name === 'string' &&
@@ -150,7 +162,10 @@ const slimMatch = (m) => {
     mode: info.gameMode,
     // 2021년 이후 매치는 초 단위다
     duration: info.gameDuration || 0,
+    start: info.gameStartTimestamp || info.gameCreation || null,
     end: info.gameEndTimestamp || null,
+    // '14.20.123.4567' → '14.20' 패치
+    patch: (info.gameVersion || '').split('.').slice(0, 2).join('.'),
     players: (info.participants || []).map((p) => ({
       puuid: p.puuid,
       name: p.riotIdGameName || p.summonerName || '',
@@ -166,7 +181,11 @@ const slimMatch = (m) => {
       cs: (p.totalMinionsKilled || 0) + (p.neutralMinionsKilled || 0),
       gold: p.goldEarned,
       dmg: p.totalDamageDealtToChampions,
+      taken: p.totalDamageTaken,
       vision: p.visionScore,
+      wards: p.wardsPlaced ?? 0,
+      wardsKilled: p.wardsKilled ?? 0,
+      pinks: p.visionWardsBoughtInGame ?? 0,
       items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6],
       fb: Boolean(p.firstBloodKill),
       multi: p.largestMultiKill || 0,
@@ -178,11 +197,19 @@ const slimMatch = (m) => {
       dragon: t.objectives?.dragon?.kills ?? 0,
       baron: t.objectives?.baron?.kills ?? 0,
       tower: t.objectives?.tower?.kills ?? 0,
+      inhib: t.objectives?.inhibitor?.kills ?? 0,
+      herald: t.objectives?.riftHerald?.kills ?? 0,
+      grubs: t.objectives?.horde?.kills ?? 0,
+      atakhan: t.objectives?.atakhan?.kills ?? 0,
+      bans: (t.bans || []).map((b) => b.championId).filter((id) => id > 0),
     })),
   };
 };
 
-/* 타임라인. 분마다 두 팀 골드 차이, 첫 킬, 큰 오브젝트만 */
+/* 타임라인. 분마다 두 팀 골드 차이, 그리고 '무슨 일이 언제' -
+   킬 · 큰 오브젝트 · 건물. 와드나 아이템 구매 같은 잔 이벤트는 버린다
+   (원본은 한 판에 1MB가 넘는다).
+   team은 '그 일을 해낸 팀'이다. 건물은 라이엇이 '잃은 팀'을 주므로 뒤집는다 */
 const slimTimeline = (t) => {
   const info = t.info || {};
   const team = new Map(
@@ -200,6 +227,44 @@ const slimTimeline = (t) => {
 
   const events = frames.flatMap((f) => f.events || []);
   const kill = events.find((e) => e.type === 'CHAMPION_KILL');
+  const other = (t) => (t === 100 ? 200 : t === 200 ? 100 : null);
+  const log = events
+    .map((e) => {
+      if (e.type === 'CHAMPION_KILL') {
+        return {
+          t: e.timestamp,
+          kind: 'kill',
+          // 0이면 미니언 · 포탑 · 정글몹
+          killer: puuidOf.get(e.killerId) || null,
+          victim: puuidOf.get(e.victimId) || null,
+          assists: (e.assistingParticipantIds || []).map((id) => puuidOf.get(id)).filter(Boolean),
+          team: other(team.get(e.victimId)),
+        };
+      }
+      if (e.type === 'ELITE_MONSTER_KILL') {
+        return {
+          t: e.timestamp,
+          kind: 'monster',
+          monster: e.monsterType,
+          sub: e.monsterSubType || null,
+          killer: puuidOf.get(e.killerId) || null,
+          team: e.killerTeamId || team.get(e.killerId) || null,
+        };
+      }
+      if (e.type === 'BUILDING_KILL') {
+        return {
+          t: e.timestamp,
+          kind: 'building',
+          building: e.buildingType,
+          tower: e.towerType || null,
+          lane: e.laneType || null,
+          killer: puuidOf.get(e.killerId) || null,
+          team: other(e.teamId),
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
   const objectives = events
     .filter((e) => e.type === 'ELITE_MONSTER_KILL')
     .map((e) => ({
@@ -215,6 +280,7 @@ const slimTimeline = (t) => {
       ? { t: kill.timestamp, killer: puuidOf.get(kill.killerId) || null, victim: puuidOf.get(kill.victimId) || null }
       : null,
     objectives,
+    events: log,
   };
 };
 
@@ -341,14 +407,13 @@ const profile = async (key, { name, tag }) => {
   if (account.error) return { status: account.error, body: { error: account.error } };
   const puuid = account.data.puuid;
 
-  const [summoner, leagues, mastery, live, challenges, matches, tftLeagues, tftMatches] =
+  const [summoner, leagues, mastery, live, challenges, tftLeagues, tftMatches] =
     await Promise.all([
       call(key, `${PLATFORM}/lol/summoner/v4/summoners/by-puuid/${puuid}`),
       call(key, `${PLATFORM}/lol/league/v4/entries/by-puuid/${puuid}`),
       call(key, `${PLATFORM}/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=8`),
       call(key, `${PLATFORM}/lol/spectator/v5/active-games/by-summoner/${puuid}`),
       call(key, `${PLATFORM}/lol/challenges/v1/player-data/${puuid}`),
-      call(key, `${REGION}/lol/match/v5/matches/by-puuid/${puuid}/ids?count=10`),
       call(key, `${PLATFORM}/tft/league/v1/by-puuid/${puuid}`),
       call(key, `${REGION}/tft/match/v1/matches/by-puuid/${puuid}/ids?count=5`),
     ]);
@@ -369,11 +434,24 @@ const profile = async (key, { name, tag }) => {
       // 게임 중이 아니면 404다. 실패가 아니라 '안 하는 중'
       live: live.error === 404 ? { data: null } : mapPart(live, slimLive),
       challenges: mapPart(challenges, (p) => slimChallenges(p, config?.data)),
-      matches: matches,
       tftLeagues: mapPart(tftLeagues, slimLeague),
       tftMatches: tftMatches,
     },
   };
+};
+
+/* 롤 매치 목록. 큐로 걸러서 20판씩. start로 이어 받는다 ('더 보기') */
+const matchIds = async (key, { puuid, filter = 'all', start = '0' }) => {
+  const from = Number(start);
+  if (!PUUID_RE.test(String(puuid || ''))) return { status: 400, body: { error: 'bad_id' } };
+  if (!(filter in MATCH_FILTERS)) return { status: 400, body: { error: 'bad_filter' } };
+  if (!Number.isInteger(from) || from < 0 || from > 900) return { status: 400, body: { error: 'bad_start' } };
+  const r = await call(
+    key,
+    `${REGION}/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${from}&count=${PAGE}${MATCH_FILTERS[filter]}`
+  );
+  if (r.error) return { status: r.error, body: { error: r.error } };
+  return { maxAge: 2 * MIN, body: { ids: r.data, more: r.data.length === PAGE } };
 };
 
 const match = async (key, { id }) => {
@@ -398,7 +476,7 @@ const tftMatch = async (key, { id }) => {
   return { maxAge: DAY, body: slimTftMatch(r.data) };
 };
 
-const FNS = { home, profile, match, timeline, tftMatch };
+const FNS = { home, profile, matchIds, match, timeline, tftMatch };
 
 /* 어느 서버에서 부르든 같은 모양으로 돌려준다: { status, headers, body } */
 const run = async (query = {}, key) => {

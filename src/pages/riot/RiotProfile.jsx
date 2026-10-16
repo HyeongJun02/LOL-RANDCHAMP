@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FaSyncAlt, FaUserSlash, FaTrophy, FaStar, FaBroadcastTower, FaMedal } from 'react-icons/fa';
 import Empty from '../../components/common/Empty';
 import { riotGet, champIconUrl, profileIconUrl } from '../../server/riot';
@@ -12,9 +12,11 @@ import {
   CHALLENGE_CATEGORIES,
   tierName,
   denied,
+  tierIconOf,
 } from '../../rules/riot';
 import RiotPart from './RiotPart';
 import MatchList from './MatchList';
+import MatchDetail from './MatchDetail';
 import TftList from './TftList';
 
 /* 라이엇 ID 하나로 보는 것 전부. 서버 함수가 한 번에 모아 준다(api/_riot.js의
@@ -22,16 +24,21 @@ import TftList from './TftList';
 
 const LeagueCard = ({ l }) => {
   const rate = winRate(l.wins, l.losses);
+  const icon = tierIconOf(l.tier);
   return (
     <div className={`riot-league tier-${(l.tier || 'none').toLowerCase()}`}>
-      <span className="riot-label">{LEAGUE_QUEUES[l.queue] || l.queue}</span>
-      <strong>{l.rated ? `${l.rated}` : tierText(l.tier, l.rank)}</strong>
-      <span className="riot-league-meta">
-        {!l.rated && <b>{l.lp} LP</b>}
-        <span>
-          {l.wins}승 {l.losses}패{rate != null && ` · ${rate}%`}
+      {/* public/lol_tier_icon. 없는 등급(TFT 더블업의 등급 등)은 빈 자리 */}
+      {icon ? <img className="riot-league-icon" src={icon} alt="" /> : <span className="riot-league-icon" />}
+      <span className="riot-league-text">
+        <span className="riot-label">{LEAGUE_QUEUES[l.queue] || l.queue}</span>
+        <strong>{l.rated ? `${l.rated}` : tierText(l.tier, l.rank)}</strong>
+        <span className="riot-league-meta">
+          {!l.rated && <b>{l.lp} LP</b>}
+          <span>
+            {l.wins}승 {l.losses}패{rate != null && ` · ${rate}%`}
+          </span>
+          {l.hot && <em className="riot-hot">연승 중</em>}
         </span>
-        {l.hot && <em className="riot-hot">연승 중</em>}
       </span>
     </div>
   );
@@ -74,6 +81,18 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(true);
   const [tab, setTab] = useState('lol');
+  /* 게임 상세 탭이 볼 판. 안 고르면 목록의 맨 위 판 */
+  const [detailId, setDetailId] = useState(null);
+  const [listIds, setListIds] = useState([]);
+  /* 새로고침하면 매치 목록도 처음부터 다시 받는다 */
+  const [rev, setRev] = useState(0);
+  const mainRef = useRef(null);
+
+  const openDetail = useCallback((matchId) => {
+    setDetailId(matchId);
+    setTab('detail');
+    mainRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   const load = useCallback(
     (fresh = false) => {
@@ -133,7 +152,14 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
           </h2>
           {d.summoner.data && <span className="riot-muted">레벨 {d.summoner.data.level}</span>}
         </div>
-        <button className="ghost-btn" onClick={() => load(true)} disabled={busy}>
+        <button
+          className="ghost-btn"
+          onClick={() => {
+            load(true);
+            setRev((r) => r + 1);
+          }}
+          disabled={busy}
+        >
           <FaSyncAlt /> {busy ? '불러오는 중' : '새로고침'}
         </button>
       </section>
@@ -231,25 +257,50 @@ const RiotProfile = ({ id, champs, onFound, onSearch }) => {
           )}
         </aside>
 
-        <section className="riot-panel">
-          {/* TFT 권한이 없는 키면 탭 없이 롤만 */}
-          {denied(d.tftMatches) ? (
-            <h2 className="riot-h">최근 매치</h2>
-          ) : (
-            <div className="seg-tabs riot-tabs">
-              <button className={`seg-tab ${tab === 'lol' ? 'active' : ''}`} onClick={() => setTab('lol')}>
-                롤 최근 매치
-              </button>
+        <section className="riot-panel riot-main" ref={mainRef}>
+          {/* 최근 매치 | 게임 상세 | TFT (TFT 권한이 없는 키면 TFT 탭은 없다) */}
+          <div className="seg-tabs riot-tabs">
+            <button className={`seg-tab ${tab === 'lol' ? 'active' : ''}`} onClick={() => setTab('lol')}>
+              최근 매치
+            </button>
+            <button
+              className={`seg-tab ${tab === 'detail' ? 'active' : ''}`}
+              onClick={() => setTab('detail')}
+            >
+              게임 상세
+            </button>
+            {!denied(d.tftMatches) && (
               <button className={`seg-tab ${tab === 'tft' ? 'active' : ''}`} onClick={() => setTab('tft')}>
-                TFT 최근 매치
+                TFT
               </button>
-            </div>
+            )}
+          </div>
+
+          {/* 목록은 탭을 옮겨도 내려두지 않고 숨긴다. 내리면 고른 큐 · 더 받은 판이
+              전부 날아가서, 상세를 보고 돌아올 때마다 처음부터 다시 받는다 */}
+          <div hidden={tab !== 'lol'}>
+            <MatchList
+              key={rev}
+              puuid={me}
+              me={me}
+              champs={champs}
+              onSearch={onSearch}
+              onDetail={openDetail}
+              onLoaded={setListIds}
+              fresh={rev > 0}
+            />
+          </div>
+          {tab === 'detail' && (
+            <MatchDetail
+              id={detailId || listIds[0] || null}
+              ids={listIds}
+              me={me}
+              champs={champs}
+              onSearch={onSearch}
+              onPick={setDetailId}
+            />
           )}
-          {tab === 'lol' || denied(d.tftMatches) ? (
-            <RiotPart part={d.matches} empty="최근 매치가 없어요.">
-              {(ids) => <MatchList ids={ids} me={me} champs={champs} onSearch={onSearch} />}
-            </RiotPart>
-          ) : (
+          {tab === 'tft' && (
             <RiotPart part={d.tftMatches} empty="최근 TFT 매치가 없어요.">
               {(ids) => <TftList ids={ids} me={me} onSearch={onSearch} />}
             </RiotPart>

@@ -120,3 +120,79 @@ export const errorText = (code) => {
   if (code === 400 || code === 'bad_name') return '라이엇 ID 형식이 맞지 않아요.';
   return '라이엇 서버가 응답하지 않아요.';
 };
+
+/* ---------- 매치 목록 · 상세 ---------- */
+
+/* 매치 목록 탭. key는 서버(api/_riot.js MATCH_FILTERS)와 같아야 한다 */
+export const MATCH_TABS = [
+  { key: 'all', label: '전체' },
+  { key: 'solo', label: '솔로 랭크' },
+  { key: 'flex', label: '자유 랭크' },
+  { key: 'normal', label: '일반' },
+  { key: 'aram', label: '칼바람' },
+];
+
+const PUBLIC = process.env.PUBLIC_URL || '';
+
+/* 라이엇 포지션 → public/line_icon (일반 게임 또또가 쓰는 금색 그림) */
+const LANE_FILES = {
+  TOP: 'top_gold.svg',
+  JUNGLE: 'jungle_gold.svg',
+  MIDDLE: 'mid_gold.svg',
+  BOTTOM: 'adc_gold.webp',
+  UTILITY: 'support_gold.svg',
+};
+export const laneIconOf = (pos) => (LANE_FILES[pos] ? `${PUBLIC}/line_icon/${LANE_FILES[pos]}` : null);
+
+/* 용 종류 → public/dragon_icon. 장로는 그림이 없다 */
+const DRAGON_FILES = {
+  FIRE_DRAGON: '화염',
+  EARTH_DRAGON: '대지',
+  WATER_DRAGON: '바다',
+  AIR_DRAGON: '바람',
+  HEXTECH_DRAGON: '마법공학',
+  CHEMTECH_DRAGON: '화학공학',
+};
+export const dragonIconOf = (sub) =>
+  DRAGON_FILES[sub] ? `${PUBLIC}/dragon_icon/${DRAGON_FILES[sub]}.svg` : null;
+
+/* 티어 → public/lol_tier_icon */
+export const tierIconOf = (tier) =>
+  TIERS[tier] ? `${PUBLIC}/lol_tier_icon/${tier.toLowerCase()}_icon.webp` : null;
+
+const LANE_NAMES = { TOP_LANE: '탑', MID_LANE: '미드', BOT_LANE: '바텀' };
+const TOWER_NAMES = {
+  OUTER_TURRET: '1차 포탑',
+  INNER_TURRET: '2차 포탑',
+  BASE_TURRET: '3차 포탑',
+  NEXUS_TURRET: '쌍둥이 포탑',
+};
+/* '미드 2차 포탑' · '바텀 억제기' */
+export const buildingName = (building, tower, lane) => {
+  const where = LANE_NAMES[lane] || '';
+  if (building === 'INHIBITOR_BUILDING') return `${where} 억제기`.trim();
+  return tower === 'NEXUS_TURRET' ? TOWER_NAMES[tower] : `${where} ${TOWER_NAMES[tower] || '포탑'}`.trim();
+};
+
+/* 밀리초 → 12:04 (타임라인 이벤트) */
+export const clockMs = (ms) => clock((ms || 0) / 1000);
+
+/* 2026. 10. 16. (금) 21:12 */
+const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+export const dateTimeText = (ts) => {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}. (${WEEK[d.getDay()]}) ${p(
+    d.getHours()
+  )}:${p(d.getMinutes())}`;
+};
+
+/* 31분 24초 */
+export const durationText = (sec) => {
+  const s = Math.max(0, Math.floor(sec || 0));
+  return `${Math.floor(s / 60)}분 ${s % 60}초`;
+};
+
+/* 61234 → 61.2k */
+export const kilo = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n || 0));
