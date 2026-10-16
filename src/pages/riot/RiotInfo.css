@@ -146,9 +146,6 @@
   white-space: nowrap;
 }
 
-
-
-
 /* ---------- 검색 ---------- */
 
 .riot-searchbox {
@@ -729,6 +726,13 @@
   grid-template-columns: 5.6rem auto minmax(6rem, 1fr) minmax(6.5rem, 1fr) auto 0.8rem;
 }
 
+/* 넓은 화면: 오른쪽에 열 명 미니 명단 */
+@media (min-width: 1000px) {
+  .riot-match-row {
+    grid-template-columns: 5.6rem auto minmax(6rem, 1fr) minmax(6.5rem, 1fr) auto 11rem 0.8rem;
+  }
+}
+
 /* 라인 | 초상화. 라인이 없는 판(칼바람 등)도 자리를 비워 둬서 초상화가 안 밀린다 */
 .riot-match-champ {
   display: flex;
@@ -827,7 +831,6 @@
   font-size: 0.55rem;
   line-height: 0.95rem;
 }
-
 
 .riot-champ-icon img {
   display: block;
@@ -970,7 +973,6 @@
 .riot-detail-num {
   color: #8b98ae;
 }
-
 
 .riot-gold {
   display: flex;
@@ -1328,14 +1330,12 @@
   font-weight: 800;
 }
 
-.riot-full-result.is-win,
-.riot-board-result.is-win {
+.riot-full-result.is-win {
   background: color-mix(in srgb, var(--riot-blue) 20%, transparent);
   color: #c3d4fa;
 }
 
-.riot-full-result.is-lose,
-.riot-board-result.is-lose {
+.riot-full-result.is-lose {
   background: color-mix(in srgb, var(--riot-red) 18%, transparent);
   color: #f5c0c1;
 }
@@ -1359,163 +1359,12 @@
   margin-left: auto;
 }
 
-/* 점수판: 블루 | 레드 */
-.riot-boards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.6rem;
-}
-
-.riot-board {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  min-width: 0;
-  padding: 0.75rem 0.85rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-top: 3px solid var(--riot-blue);
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.riot-board.is-red {
-  border-top-color: var(--riot-red);
-}
-
-.riot-board-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.riot-board-head strong {
-  font-size: 0.9rem;
-  color: #e6ecf7;
-}
-
-.riot-board-result {
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.riot-board-score {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.riot-board-score span {
-  display: flex;
-  align-items: baseline;
-  gap: 0.3rem;
-}
-
-.riot-board-score b {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #f1f5f9;
-  font-variant-numeric: tabular-nums;
-}
-
-.riot-board-score em {
-  font-style: normal;
-  font-size: 0.72rem;
-  color: #8b98ae;
-}
-
-.riot-board-dragons {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-  min-height: 26px;
-}
-
-.riot-board-dragon {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.riot-board-dragon .riot-ev-img {
-  width: 20px;
-  height: 20px;
-}
-
-.riot-board-objs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.3rem 0.6rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.riot-board-objs li {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
-  color: #a8b4c8;
-}
-
-.riot-board-objs li svg {
-  flex: none;
-  font-size: 0.9rem;
-  color: #8b98ae;
-}
-
-.riot-board-objs li b {
-  margin-left: auto;
-  font-size: 0.85rem;
-  color: #e6ecf7;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 0인 것은 한 톤 죽인다. 잡은 것만 눈에 들어오게 */
-.riot-board-objs li.is-zero {
-  opacity: 0.45;
-}
-
-.riot-board-bans {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.riot-board-bans .riot-label {
-  margin-right: 0.15rem;
-}
-
-.riot-board-bans img {
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  filter: grayscale(0.85);
-  opacity: 0.8;
-}
-
 /* 소제목 단위 (타임라인 · 선수별 기록) */
 .riot-sub {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   min-width: 0;
-}
-
-.riot-sub-h {
-  margin: 0;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: #e6ecf7;
 }
 
 .riot-check {
@@ -1526,56 +1375,6 @@
   font-size: 0.75rem;
   color: #a8b4c8;
   cursor: pointer;
-}
-
-/* 이벤트 한 줄: 시각 | 아이콘 | 내용. 왼쪽 띠가 해낸 팀 */
-.riot-events {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  max-height: 460px;
-  margin: 0;
-  padding: 0 0.25rem 0 0;
-  list-style: none;
-  overflow-y: auto;
-}
-
-.riot-ev {
-  display: grid;
-  grid-template-columns: 2.9rem 1.6rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: 8px;
-  border-left: 3px solid transparent;
-  background: rgba(255, 255, 255, 0.025);
-  font-size: 0.8rem;
-  color: #cbd5e5;
-}
-
-.riot-ev.is-blue {
-  border-left-color: var(--riot-blue);
-}
-
-.riot-ev.is-red {
-  border-left-color: var(--riot-red);
-}
-
-/* 오브젝트 · 건물은 판의 흐름이라 조금 더 눈에 띄게 */
-.riot-ev.kind-monster,
-.riot-ev.kind-building {
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.riot-ev.is-me {
-  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.35);
-}
-
-.riot-ev time {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #8b98ae;
-  font-variant-numeric: tabular-nums;
 }
 
 .riot-ev-icon {
@@ -1633,118 +1432,7 @@
   color: #8b98ae;
 }
 
-/* 선수 표. 숫자 칸은 오른쪽 정렬 · 고정폭 숫자라 위아래로 자리가 맞는다 */
-.riot-table-wrap {
-  overflow-x: auto;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-left: 3px solid var(--riot-blue);
-}
-
-.riot-table-wrap.is-red {
-  border-left-color: var(--riot-red);
-}
-
-.riot-table {
-  width: 100%;
-  min-width: 760px;
-  border-collapse: collapse;
-  font-size: 0.78rem;
-  color: #cbd5e5;
-}
-
-.riot-table caption {
-  padding: 0.5rem 0.7rem 0.35rem;
-  text-align: left;
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #e6ecf7;
-}
-
-.riot-table th {
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #8b98ae;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.riot-table td {
-  padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.riot-table tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.riot-table th:first-child,
-.riot-table td:first-child,
-.riot-table .is-left {
-  text-align: left;
-}
-
-.riot-table td.is-left {
-  max-width: 11rem;
-}
-
-.riot-table td.is-left .riot-link {
-  display: block;
-  max-width: 100%;
-}
-
-.riot-table tr.is-me td {
-  background: rgba(200, 170, 110, 0.08);
-  color: #f1f5f9;
-}
-
-.riot-table-champ {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.riot-table-kda {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-weight: 700;
-}
-
-.riot-table-kda em,
-.riot-table-sub {
-  display: block;
-  font-style: normal;
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: #8b98ae;
-}
-
-/* 가한 피해: 숫자 밑에 그 판 최고 대비 막대 */
-.riot-dmg {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-  min-width: 4.5rem;
-}
-
-.riot-dmg i {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: #e0975b;
-}
-
 @media (max-width: 640px) {
-  .riot-boards {
-    grid-template-columns: minmax(0, 1fr);
-  }
 
   .riot-full-nav {
     margin-left: 0;
@@ -2012,4 +1700,765 @@
   .riot-star {
     padding: 0.4rem 0.6rem;
   }
+}
+
+/* ---------- 게임 상세: 요약 · 탭 ---------- */
+
+/* 팀 한 줄. 이름 · 점수 · 용 그림 · 오브젝트 수 */
+.riot-strips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.riot-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  border-left: 3px solid var(--riot-blue);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.riot-strip.is-red {
+  border-left-color: var(--riot-red);
+}
+
+.riot-strip-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 6.5rem;
+}
+
+.riot-strip-name strong {
+  font-size: 0.88rem;
+  color: #e6ecf7;
+}
+
+.riot-strip-name em,
+.riot-ov-head em {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.riot-strip-name em.is-win,
+.riot-ov-head em.is-win {
+  color: #9db9f5;
+}
+
+.riot-strip-name em.is-lose,
+.riot-ov-head em.is-lose {
+  color: #f0a3a4;
+}
+
+.riot-strip-score {
+  font-size: 0.75rem;
+  color: #8b98ae;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-strip-score b {
+  margin-right: 0.15rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.riot-strip-dragons {
+  display: inline-flex;
+  gap: 0.2rem;
+  min-height: 22px;
+}
+
+.riot-strip-dragons .riot-ev-img {
+  width: 20px;
+  height: 20px;
+}
+
+.riot-strip-objs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.65rem;
+  margin-left: auto;
+}
+
+.riot-strip-objs span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: #a8b4c8;
+}
+
+.riot-strip-objs svg {
+  font-size: 0.9rem;
+  color: #8b98ae;
+}
+
+.riot-strip-objs b {
+  color: #e6ecf7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 잡은 게 0이면 한 톤 죽인다 */
+.riot-strip-objs span.is-zero {
+  opacity: 0.4;
+}
+
+/* 상세 안의 탭. 밑줄 탭이라 위의 '최근 매치 | 게임 상세' 버튼 탭과 단이 구분된다 */
+.riot-views {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-x: auto;
+}
+
+.riot-view-tab {
+  flex: none;
+  padding: 0.5rem 0.85rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: #8b98ae;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.riot-view-tab:hover {
+  color: #e2e8f0;
+}
+
+.riot-view-tab.is-on {
+  border-bottom-color: var(--gg-gold);
+  color: var(--gg-gold-light);
+}
+
+/* ---------- 종합: 한 줄에 한 명 ---------- */
+/* 머리줄과 선수 줄이 같은 칸 나눔이다. 열 이름이 숫자 바로 위에 선다 */
+
+.riot-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.riot-ov-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.6rem 0.6rem;
+  border-radius: 10px;
+  border-left: 3px solid var(--riot-blue);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.riot-ov-team.is-red {
+  border-left-color: var(--riot-red);
+}
+
+.riot-ov-head,
+.riot-prow {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) 6.2rem 6.2rem 3.6rem 3.4rem 8.2rem;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.riot-ov-head strong {
+  grid-column: 1 / 3;
+  font-size: 0.85rem;
+  color: #e6ecf7;
+}
+
+.riot-ov-col {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #6b7a94;
+  text-align: right;
+}
+
+.riot-ov-col:last-child {
+  text-align: left;
+}
+
+.riot-ov-bans {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  color: #6b7a94;
+}
+
+.riot-ov-bans img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  filter: grayscale(0.85);
+  opacity: 0.8;
+}
+
+.riot-prows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.riot-prow {
+  padding: 0.3rem 0.25rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #cbd5e5;
+}
+
+.riot-prow.is-me {
+  background: rgba(200, 170, 110, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.3);
+}
+
+.riot-prow-champ {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.riot-prow-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.riot-prow-name .riot-link {
+  font-weight: 600;
+  color: #e6ecf7;
+}
+
+.riot-prow.is-me .riot-prow-name .riot-link {
+  color: var(--gg-gold-light);
+}
+
+.riot-prow-name .riot-alias {
+  align-self: flex-start;
+  margin-left: 0;
+}
+
+.riot-prow-champname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #6b7a94;
+}
+
+.riot-prow-kda,
+.riot-prow-dmg,
+.riot-prow-cs,
+.riot-prow-ward {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.riot-prow-kda strong {
+  font-weight: 800;
+  color: #e6ecf7;
+}
+
+.riot-prow-kda strong i {
+  font-style: normal;
+  color: #f0a3a4;
+}
+
+.riot-prow-kda em,
+.riot-prow-cs em,
+.riot-prow-ward em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #8b98ae;
+}
+
+.riot-prow-dmg b,
+.riot-prow-cs b,
+.riot-prow-ward b {
+  font-weight: 600;
+}
+
+/* 가한 피해: 숫자 밑에 그 판 최고 대비 막대 */
+.riot-prow-dmg i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: #e0975b;
+}
+
+/* ---------- 팀 분석: 열 명 막대 ---------- */
+
+.riot-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* 두 팀 몫. 왼쪽 블루 · 오른쪽 레드, 숫자와 %를 바깥에 같이 적는다 */
+.riot-share {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-share-label.is-blue {
+  color: #b9cdf7;
+}
+
+.riot-share-label.is-red {
+  color: #f3b5b6;
+}
+
+.riot-share-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+}
+
+.riot-share-bar i {
+  display: block;
+  height: 100%;
+}
+
+.riot-share-bar i.is-blue {
+  border-radius: 4px 0 0 4px;
+  background: var(--riot-blue);
+}
+
+.riot-share-bar i.is-red {
+  border-radius: 0 4px 4px 0;
+  background: var(--riot-red);
+}
+
+.riot-bars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.riot-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.riot-bar-list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 6.5rem) minmax(0, 1fr) 4.2rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: #cbd5e5;
+}
+
+.riot-bar-list li.is-me .riot-bar-name {
+  color: var(--gg-gold-light);
+  font-weight: 700;
+}
+
+.riot-bar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.riot-bar-track {
+  height: 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.riot-bar-track i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--riot-blue);
+}
+
+.riot-bar-list.is-red .riot-bar-track i {
+  background: var(--riot-red);
+}
+
+.riot-bar-val {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #e6ecf7;
+}
+
+/* ---------- 오브젝트: 시간 축 ---------- */
+
+.riot-objectives {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.riot-axis {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.riot-axis-lane,
+.riot-axis-ticks {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.riot-axis-team {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.riot-axis-lane.is-blue .riot-axis-team {
+  color: #9db9f5;
+}
+
+.riot-axis-lane.is-red .riot-axis-team {
+  color: #f0a3a4;
+}
+
+.riot-axis-track {
+  position: relative;
+  height: 30px;
+  margin: 0 13px;
+}
+
+/* 가로줄. 팀 색으로 */
+.riot-axis-lane .riot-axis-track::before {
+  content: '';
+  position: absolute;
+  left: -13px;
+  right: -13px;
+  top: 50%;
+  height: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--riot-blue) 45%, transparent);
+}
+
+.riot-axis-lane.is-red .riot-axis-track::before {
+  background: color-mix(in srgb, var(--riot-red) 45%, transparent);
+}
+
+.riot-axis-mark {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0f172a;
+  border: 2px solid var(--riot-blue);
+  color: #c4b5fd;
+  font-size: 0.85rem;
+  transform: translate(-50%, -50%);
+}
+
+.riot-axis-lane.is-red .riot-axis-mark {
+  border-color: var(--riot-red);
+}
+
+.riot-axis-mark .riot-ev-img {
+  width: 18px;
+  height: 18px;
+}
+
+.riot-axis-ticks .riot-axis-track {
+  height: 1rem;
+}
+
+.riot-axis-ticks .riot-axis-track span {
+  position: absolute;
+  top: 0;
+  font-size: 0.65rem;
+  color: #6b7a94;
+  transform: translateX(-50%);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 세로 타임라인: 왼쪽 블루 | 시각 | 오른쪽 레드 ---------- */
+
+.riot-vtl {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 가운데 세로줄 */
+.riot-vtl::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: rgba(148, 163, 184, 0.18);
+  transform: translateX(-50%);
+}
+
+.riot-vtl.is-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.riot-vtl-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.riot-vtl-side {
+  display: flex;
+  min-width: 0;
+}
+
+.riot-vtl-side.is-left {
+  justify-content: flex-end;
+}
+
+.riot-vtl-time {
+  z-index: 1;
+  justify-self: center;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: #111a2b;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #a8b4c8;
+  font-variant-numeric: tabular-nums;
+}
+
+.riot-vtl-legend .riot-vtl-time {
+  visibility: hidden;
+}
+
+.riot-vtl-legend .riot-vtl-side {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.riot-vtl-legend .is-left {
+  color: #9db9f5;
+}
+
+.riot-vtl-legend .is-right {
+  color: #f0a3a4;
+}
+
+/* 한 일 하나. 왼쪽 카드는 오른쪽 끝(가운데 줄 쪽)에 팀 색 띠, 오른쪽 카드는 왼쪽 끝 */
+.riot-vtl-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 0.8rem;
+  color: #cbd5e5;
+}
+
+.riot-vtl-side.is-left .riot-vtl-card {
+  flex-direction: row-reverse;
+  border-right: 3px solid var(--riot-blue);
+  text-align: right;
+}
+
+.riot-vtl-side.is-left .riot-ev-body {
+  justify-content: flex-end;
+}
+
+.riot-vtl-side.is-right .riot-vtl-card {
+  border-left: 3px solid var(--riot-red);
+}
+
+/* 오브젝트 · 건물은 판의 흐름이라 한 톤 진하게 */
+.riot-vtl-card.kind-monster,
+.riot-vtl-card.kind-building {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.riot-vtl-card.is-me {
+  box-shadow: inset 0 0 0 1px rgba(200, 170, 110, 0.4);
+}
+
+/* ---------- 좁은 화면 ---------- */
+
+@media (max-width: 760px) {
+  /* 종합: 윗줄 챔피언 · 이름 · KDA, 아랫줄 피해 · 아이템. CS · 시야는 팀 분석에 */
+  .riot-ov-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .riot-ov-head strong {
+    grid-column: auto;
+  }
+
+  .riot-ov-col {
+    display: none;
+  }
+
+  .riot-prow {
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'champ name kda'
+      'champ dmg items';
+    gap: 0.25rem 0.6rem;
+  }
+
+  .riot-prow-champ { grid-area: champ; }
+  .riot-prow-name { grid-area: name; }
+  .riot-prow-kda { grid-area: kda; }
+  .riot-prow-dmg { grid-area: dmg; align-items: stretch; }
+  .riot-prow .riot-items { grid-area: items; }
+
+  .riot-prow-cs,
+  .riot-prow-ward {
+    display: none;
+  }
+
+  .riot-bars {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .riot-strip-objs {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .riot-full-nav,
+  .riot-check {
+    margin-left: 0;
+  }
+
+  .riot-bar-list li {
+    grid-template-columns: 28px minmax(0, 5rem) minmax(0, 1fr) 3.8rem;
+  }
+
+  /* 좁으면 시각 칸을 줄이고 카드 글자가 접히게 둔다 */
+  .riot-vtl-row {
+    grid-template-columns: minmax(0, 1fr) 2.8rem minmax(0, 1fr);
+    gap: 0.3rem;
+  }
+
+  .riot-vtl-card {
+    padding: 0.3rem 0.45rem;
+    font-size: 0.74rem;
+  }
+}
+
+/* 더 보기 · 접기 */
+.riot-fold {
+  align-self: flex-start;
+  padding: 0.2rem 0;
+  border: 0;
+  background: none;
+  color: #8b98ae;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.riot-fold:hover {
+  color: var(--gg-gold-light);
+  text-decoration: underline;
+}
+
+/* 결과에 따라 줄 바탕을 옅게. 띠(왼쪽 3px)만으로는 훑을 때 덜 걸렸다 (OP.GG처럼) */
+.riot-match.is-win {
+  background: color-mix(in srgb, var(--riot-blue) 9%, rgba(255, 255, 255, 0.02));
+}
+
+.riot-match.is-lose {
+  background: color-mix(in srgb, var(--riot-red) 8%, rgba(255, 255, 255, 0.02));
+}
+
+.riot-match-people {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .riot-match-people {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    min-width: 0;
+  }
+}
+
+.riot-match-people-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.riot-match-people-col > span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  font-size: 0.66rem;
+  color: #8b98ae;
+}
+
+.riot-match-people-col > span.is-me {
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.riot-match-people-col .riot-champ-icon.is-xs {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.riot-match-people-col i {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: normal;
 }

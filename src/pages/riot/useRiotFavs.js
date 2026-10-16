@@ -29,7 +29,7 @@ const useRiotFavs = () => {
         setList(l);
         saved.current = l;
       })
-      .catch((e) => toast.error(`즐겨찾기를 못 불러왔어요: ${e.message}`))
+      .catch((e) => toast.error(e.message, { id: 'riot-favs' }))
       .finally(() => alive && setReady(true));
     return () => {
       alive = false;

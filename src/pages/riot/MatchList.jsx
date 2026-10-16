@@ -74,6 +74,8 @@ const MatchRow = ({ m, me, champs, onSearch, onDetail }) => {
   // 5분 안에 끝난 판은 다시하기(리메이크)
   const remake = m.duration < 300;
   const result = remake ? 'is-remake' : p.win ? 'is-win' : 'is-lose';
+  const teamKills = m.teams.find((t) => t.id === p.team)?.kills || 0;
+  const kp = teamKills ? Math.round(((p.k + p.a) / teamKills) * 100) : 0;
 
   return (
     <li className={`riot-match ${result}`}>
@@ -99,7 +101,9 @@ const MatchRow = ({ m, me, champs, onSearch, onDetail }) => {
           <strong>
             {p.k} / <i>{p.d}</i> / {p.a}
           </strong>
-          <em>{kdaRatio(p.k, p.d, p.a)} KDA</em>
+          <em>
+            {kdaRatio(p.k, p.d, p.a)} KDA · 관여 {kp}%
+          </em>
         </span>
         <span className="riot-match-stat">
           <em>
@@ -109,6 +113,21 @@ const MatchRow = ({ m, me, champs, onSearch, onDetail }) => {
           {p.multi >= 3 && <b>{['', '', '', '트리플킬', '쿼드라킬', '펜타킬'][p.multi]}</b>}
         </span>
         <Items items={p.items} version={champs?.version} />
+        {/* 같이 뛴 열 명. 넓은 화면에서만 (OP.GG처럼 오른쪽에 두 줄) */}
+        <span className="riot-match-people" aria-hidden="true">
+          {[100, 200].map((team) => (
+            <span key={team} className="riot-match-people-col">
+              {m.players
+                .filter((x) => x.team === team)
+                .map((x) => (
+                  <span key={x.puuid} className={x.puuid === me ? 'is-me' : ''}>
+                    <Champ champs={champs} name={x.champ} size="xs" />
+                    <i>{x.name || '?'}</i>
+                  </span>
+                ))}
+            </span>
+          ))}
+        </span>
         <FaChevronDown className={`riot-chev ${open ? 'is-open' : ''}`} aria-hidden="true" />
       </button>
       {open && (

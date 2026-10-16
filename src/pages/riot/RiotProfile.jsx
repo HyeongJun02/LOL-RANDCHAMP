@@ -27,6 +27,7 @@ import MatchList from './MatchList';
 import MatchDetail from './MatchDetail';
 import TftList from './TftList';
 import { AliasInput } from './FavPanel';
+import { useFold } from './RiotBits';
 import { useAliasOf } from './useRiotFavs';
 
 /* 라이엇 ID 하나로 보는 것 전부. 서버 함수가 한 번에 모아 준다(api/_riot.js의
@@ -50,6 +51,69 @@ const LeagueCard = ({ l }) => {
           {l.hot && <em className="riot-hot">연승 중</em>}
         </span>
       </span>
+    </div>
+  );
+};
+
+/* 숙련도. 처음엔 셋 */
+const MasteryList = ({ list, champs }) => {
+  const fold = useFold(list.length);
+  return (
+    <>
+      <ul className="riot-mastery">
+        {list.slice(0, fold.shown).map((m) => {
+          const c = champs?.byKey.get(m.champId);
+          return (
+            <li key={m.champId}>
+              {c && <img src={champIconUrl(champs.version, c.id)} alt="" loading="lazy" />}
+              <span className="riot-mastery-name">{c?.name || `#${m.champId}`}</span>
+              <em>Lv.{m.level}</em>
+              <b>{m.points.toLocaleString()}</b>
+            </li>
+          );
+        })}
+      </ul>
+      {fold.button}
+    </>
+  );
+};
+
+/* 도전 과제. 총점과 드문 과제 셋, 나머지(분야별 등급 포함)는 펼쳐서 */
+const ChallengeBox = ({ ch }) => {
+  const fold = useFold(ch.top.length + (ch.categories.length ? 1 : 0));
+  return (
+    <div className="riot-chal">
+      {ch.total && (
+        <div className="riot-chal-total">
+          <strong>{tierName(ch.total.level)}</strong>
+          <span>
+            {ch.total.current.toLocaleString()} / {ch.total.max.toLocaleString()}점
+            {ch.total.percentile != null && ` · 상위 ${(ch.total.percentile * 100).toFixed(1)}%`}
+          </span>
+        </div>
+      )}
+      {ch.top.length > 0 && (
+        <ul className="riot-chal-top">
+          {ch.top.slice(0, fold.open ? ch.top.length : 3).map((c) => (
+            <li key={c.id}>
+              <span>{c.name}</span>
+              <em>
+                {tierName(c.level)} · 상위 {(c.percentile * 100).toFixed(1)}%
+              </em>
+            </li>
+          ))}
+        </ul>
+      )}
+      {fold.open && ch.categories.length > 0 && (
+        <div className="riot-tags">
+          {ch.categories.map((c) => (
+            <span key={c.key} className="riot-tag">
+              {CHALLENGE_CATEGORIES[c.key] || c.key} · {tierName(c.level)}
+            </span>
+          ))}
+        </div>
+      )}
+      {fold.button}
     </div>
   );
 };
@@ -225,24 +289,9 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
               <FaStar /> 챔피언 숙련도
             </h2>
             <RiotPart part={d.mastery} empty="숙련도 기록이 없어요.">
-              {(list) => (
-                <ul className="riot-mastery">
-                  {list.map((m) => {
-                    const c = champs?.byKey.get(m.champId);
-                    return (
-                      <li key={m.champId}>
-                        {c && <img src={champIconUrl(champs.version, c.id)} alt="" loading="lazy" />}
-                        <span className="riot-mastery-name">{c?.name || `#${m.champId}`}</span>
-                        <em>Lv.{m.level}</em>
-                        <b>{m.points.toLocaleString()}</b>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              {(list) => <MasteryList list={list} champs={champs} />}
             </RiotPart>
           </section>
-
           )}
 
           {!denied(d.challenges) && (
@@ -251,41 +300,7 @@ const RiotProfile = ({ id, champs, onFound, onSearch, favs }) => {
               <FaMedal /> 도전 과제
             </h2>
             <RiotPart part={d.challenges}>
-              {(ch) => (
-                <div className="riot-chal">
-                  {ch.total && (
-                    <div className="riot-chal-total">
-                      <strong>{tierName(ch.total.level)}</strong>
-                      <span>
-                        {ch.total.current.toLocaleString()} / {ch.total.max.toLocaleString()}점
-                        {ch.total.percentile != null &&
-                          ` · 상위 ${(ch.total.percentile * 100).toFixed(1)}%`}
-                      </span>
-                    </div>
-                  )}
-                  {ch.categories.length > 0 && (
-                    <div className="riot-tags">
-                      {ch.categories.map((c) => (
-                        <span key={c.key} className="riot-tag">
-                          {CHALLENGE_CATEGORIES[c.key] || c.key} · {tierName(c.level)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {ch.top.length > 0 && (
-                    <ul className="riot-chal-top">
-                      {ch.top.map((c) => (
-                        <li key={c.id}>
-                          <span>{c.name}</span>
-                          <em>
-                            {tierName(c.level)} · 상위 {(c.percentile * 100).toFixed(1)}%
-                          </em>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
+              {(ch) => <ChallengeBox ch={ch} />}
             </RiotPart>
           </section>
           )}

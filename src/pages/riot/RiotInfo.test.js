@@ -166,7 +166,7 @@ const click = (node) =>
   });
 const buttonWith = (el, text) => [...el.querySelectorAll('button')].find((b) => b.textContent.includes(text));
 
-test('판을 펼쳐 "게임 상세 보기"를 누르면 상세 탭: 용 그림 · 이벤트 · 선수 표', async () => {
+test('판을 펼쳐 "게임 상세 보기"를 누르면 상세: 요약 · 종합 · 팀 분석 · 오브젝트 · 타임라인 탭', async () => {
   const el = await render('/info?id=Faker%23KR1');
   /* 큐 탭이 있고 목록이 왔다 */
   expect(buttonWith(el, '솔로 랭크')).toBeDefined();
@@ -175,19 +175,45 @@ test('판을 펼쳐 "게임 상세 보기"를 누르면 상세 탭: 용 그림 �
 
   expect(el.textContent).toContain('16.20 패치');
   expect(el.textContent).toContain('31분 24초');
-  /* 용은 public/dragon_icon 그림으로 */
-  expect(el.querySelector('.riot-board-dragon img').getAttribute('src')).toContain('dragon_icon');
-  /* 이벤트: 초 단위 시각과 무슨 일 */
-  const evs = [...el.querySelectorAll('.riot-ev')].map((n) => n.textContent);
-  expect(evs[0]).toContain('1:35');
-  expect(evs[1]).toContain('화염 용');
-  expect(evs[2]).toContain('미드 1차 포탑 파괴');
-  /* 건물만 걸러 보기 */
+  /* 요약 줄: 용은 public/dragon_icon 그림으로 */
+  expect(el.querySelector('.riot-strip-dragons img').getAttribute('src')).toContain('dragon_icon');
+
+  /* 종합: 한 줄에 한 명, 가로 표 없이 */
+  expect(el.querySelectorAll('.riot-prow')).toHaveLength(2);
+  expect(el.querySelector('.riot-prow').textContent).toContain('30,000');
+  expect(el.querySelector('table')).toBeNull();
+
+  /* 팀 분석: 항목을 바꾸면 막대 값이 바뀐다 */
+  await click(buttonWith(el, '팀 분석'));
+  expect(el.querySelectorAll('.riot-bar-list li')).toHaveLength(2);
+  await click(buttonWith(el, '제어 와드'));
+  expect([...el.querySelectorAll('.riot-bar-val')].map((n) => n.textContent)).toEqual(['3', '3']);
+
+  /* 오브젝트: 블루팀이 잡은 화염 용은 가운데 줄 왼쪽 */
+  await click(buttonWith(el, '오브젝트'));
+  const dragonRow = [...el.querySelectorAll('.riot-vtl-row')].find((r) => r.textContent.includes('화염 용'));
+  expect(dragonRow.querySelector('.riot-vtl-side.is-left').textContent).toContain('화염 용');
+  expect(dragonRow.querySelector('.riot-vtl-time').textContent).toBe('10:00');
+
+  /* 타임라인: 초 단위 시각, 건물만 걸러 보기 */
+  await click(buttonWith(el, '타임라인'));
+  const cards = () => [...el.querySelectorAll('.riot-vtl .riot-vtl-card')].map((n) => n.textContent);
+  expect(cards()).toHaveLength(3);
+  expect(el.querySelector('.riot-vtl .riot-vtl-row:not(.riot-vtl-legend) .riot-vtl-time').textContent).toBe('1:35');
   await click([...el.querySelectorAll('.riot-ev-filters button')].find((b) => b.textContent.startsWith('건물')));
-  expect(el.querySelectorAll('.riot-ev')).toHaveLength(1);
-  /* 선수 표 */
-  expect(el.querySelectorAll('.riot-table tbody tr')).toHaveLength(2);
-  expect(el.querySelector('.riot-table').textContent).toContain('30,000');
+  expect(cards()).toHaveLength(1);
+  expect(cards()[0]).toContain('미드 1차 포탑 파괴');
+});
+
+test('숙련도는 셋만, 더 보기로 펼친다', async () => {
+  PROFILE.mastery = {
+    data: [103, 1, 2, 3, 4].map((id, i) => ({ champId: id, level: 10, points: 1000 - i })),
+  };
+  const el = await render('/info?id=Faker%23KR1');
+  expect(el.querySelectorAll('.riot-mastery li')).toHaveLength(3);
+  await click(buttonWith(el, '2개 더 보기'));
+  expect(el.querySelectorAll('.riot-mastery li')).toHaveLength(5);
+  PROFILE.mastery = { data: [{ champId: 103, level: 10, points: 123456 }] };
 });
 
 test('최근 검색은 10개까지, 한 번에 지우기', async () => {

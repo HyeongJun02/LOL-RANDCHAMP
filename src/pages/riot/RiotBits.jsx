@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { champIconUrl, itemIconUrl } from '../../server/riot';
 import { laneIconOf, positionName } from '../../rules/riot';
 
@@ -25,6 +25,23 @@ export const Items = ({ items, version, small }) => (
     })}
   </span>
 );
+
+/* 처음엔 몇 개만, '더 보기'로 펼친다. 휴대폰은 세로로 길어서 옆 칸
+   (숙련도 · 도전 과제)이 매치 목록을 한참 밀어낸다 */
+export const FOLD = 3;
+export const useFold = (total, limit = FOLD) => {
+  const [open, setOpen] = useState(false);
+  const more = total > limit;
+  return {
+    shown: open || !more ? total : limit,
+    open,
+    button: more ? (
+      <button type="button" className="riot-fold" onClick={() => setOpen((v) => !v)}>
+        {open ? '접기' : `${total - limit}개 더 보기`}
+      </button>
+    ) : null,
+  };
+};
 
 /* 라인 아이콘 + 글자. 아이콘만 두면 서폿 · 원딜을 헷갈린다 */
 export const Lane = ({ pos, iconOnly }) => {
